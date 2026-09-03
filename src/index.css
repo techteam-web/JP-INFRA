@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/* Tailwind CSS v4 theme tokens. The @theme at-rule is intentionally used here. */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@theme {
+  --color-navy-950: #0a1f36;
+  --color-navy-900: #0f2d4d;
+  --color-navy-800: #153a63;
+  --color-navy-700: #19497c;
+  --color-navy-600: #245a94;
+  --color-navy-500: #3670ae;
+  --color-navy-100: #e7edf4;
+  --color-navy-50: #f4f7fa;
+
+  --color-red-700: #d31f22;
+  --color-red-600: #ee3134;
+  --color-red-500: #f2504f;
+  --color-red-50: #fdecec;
+
+  --color-ink: #0c1420;
+  --color-paper: #ffffff;
+  --color-mist: #f5f6f8;
+
+  --font-display: "Bebas Neue", "Arial Narrow", sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-body: "Montserrat", "Segoe UI", sans-serif;
+
+  --shadow-premium: 0 24px 60px -18px rgba(10, 31, 54, 0.45);
+  --shadow-card: 0 12px 32px -14px rgba(10, 31, 54, 0.28);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--color-red-600);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-navy-50);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-navy-700);
+  border-radius: 999px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.bg-noise {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+
+@keyframes kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+.animate-kenburns {
+  animation: kenburns 20s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
