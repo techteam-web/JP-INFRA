@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import Explore from "./pages/Explore";
 
 const Panorama = lazy(() => import("./pages/Panorama"));
+const Gallery = lazy(() => import("./pages/Gallery"));
 
 function App() {
   const [loaded, setLoaded] = useState(false);
@@ -15,12 +16,22 @@ function App() {
     content = <Home animate={loaded} onExplore={() => setScreen("explore")} />;
   } else if (screen === "explore") {
     content = (
-      <Explore onBack={() => setScreen("home")} onOpen360={() => setScreen("panorama")} />
+      <Explore
+        onBack={() => setScreen("home")}
+        onOpen360={() => setScreen("panorama")}
+        onOpenGallery={() => setScreen("gallery")}
+      />
+    );
+  } else if (screen === "panorama") {
+    content = (
+      <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
+        <Panorama onBack={() => setScreen("explore")} />
+      </Suspense>
     );
   } else {
     content = (
       <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
-        <Panorama onBack={() => setScreen("explore")} />
+        <Gallery onBack={() => setScreen("explore")} />
       </Suspense>
     );
   }

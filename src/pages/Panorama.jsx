@@ -114,7 +114,7 @@ export default function Panorama({ onBack }) {
       <div className="relative z-10 flex items-start justify-between px-6 pt-6 sm:px-10 sm:pt-8">
         <div data-anim className="flex items-center gap-3">
           <BackButton onClick={onBack} />
-          <div className="flex items-center gap-2.5 rounded-full bg-navy-950/40 px-3 py-2 backdrop-blur">
+          <div className="flex items-center gap-2.5 rounded-full bg-navy-700/60 px-3 py-2 backdrop-blur">
             <Logo className="h-8 w-auto sm:h-9" />
           </div>
         </div>
@@ -140,7 +140,7 @@ export default function Panorama({ onBack }) {
 
       {/* Scene tabs */}
       <div data-anim className="absolute inset-x-0 bottom-6 z-10 flex justify-center px-4 sm:bottom-10">
-        <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-2xl border border-white/15 bg-navy-950/50 p-1.5 backdrop-blur-md no-scrollbar">
+        <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-2xl border border-white/15 bg-navy-700/50 p-1.5 backdrop-blur-md no-scrollbar">
           {APP_DATA.scenes.map((scene) => (
             <button
               key={scene.id}

@@ -2,220 +2,144 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Logo from "./Logo";
 
-const RINGS = [1, 2, 3, 4];
-
 export default function Preloader({ onFinish }) {
   const rootRef = useRef(null);
-  const glowRef = useRef(null);
-  const ringsRef = useRef(null);
-  const spinRingRef = useRef(null);
-  const markRef = useRef(null);
-  const lineRef = useRef(null);
-  const taglineRef = useRef(null);
-  const barWrapRef = useRef(null);
-  const barFillRef = useRef(null);
-  const barGlowRef = useRef(null);
-  const percentRef = useRef(null);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
+    const els = rootRef.current?.querySelectorAll("[data-anim]");
+    if (!els) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const root = rootRef.current;
-    const fill = barFillRef.current;
-    const percent = percentRef.current;
-    if (!root || !fill) return;
+    if (reduce) {
+      gsap.set(els, { opacity: 1, y: 0 });
+      return;
+    }
+    gsap.fromTo(
+      els,
+      { opacity: 0, y: 16 },
+      { opacity: 1, y: 0, duration: 0.9, stagger: 0.08, delay: 0.2, ease: "power3.out" }
+    );
+  }, []);
 
+  const handleEnter = () => {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+
+    const root = rootRef.current;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const finish = () => {
       setDone(true);
       onFinish?.();
     };
 
-    if (reduce) {
-      const tl = gsap.timeline({ onComplete: finish });
-      tl.to(fill, { width: "100%", duration: 0.3 });
-      tl.to(root, { opacity: 0, duration: 0.3 });
-      return () => tl.kill();
+    if (reduce || !root) {
+      finish();
+      return;
     }
-
-    const ringEls = ringsRef.current ? Array.from(ringsRef.current.children) : [];
-    const introEls = [
-      markRef.current,
-      lineRef.current,
-      taglineRef.current,
-      barWrapRef.current,
-    ].filter(Boolean);
-
-    gsap.set(ringEls, { scale: 0.7, opacity: 0 });
-    gsap.set(introEls, { opacity: 0, y: 14 });
-    gsap.set(glowRef.current, { opacity: 0 });
-    gsap.set(markRef.current, { y: 0, scale: 0.85 });
-    gsap.set(lineRef.current, { scaleX: 0, opacity: 1 });
-    gsap.set(fill, { width: "0%" });
-
-    let pulse;
-    let spin;
-
-    const tl = gsap.timeline({
-      onComplete: () => {
-        pulse?.kill();
-        spin?.kill();
-        gsap.to(root, {
-          opacity: 0,
-          scale: 1.03,
-          duration: 0.7,
-          ease: "power2.inOut",
-          onComplete: finish,
-        });
-      },
-    });
-
-    tl.to(ringEls, {
-      scale: 1,
-      opacity: 1,
-      duration: 1,
-      ease: "power3.out",
-      stagger: { each: 0.08, from: "center" },
-    });
-    tl.to(glowRef.current, { opacity: 1, duration: 0.8, ease: "power2.out" }, "<");
-    tl.to(markRef.current, { opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.6)" }, "<0.1");
-    tl.to(lineRef.current, { scaleX: 1, duration: 0.5, ease: "power2.out" }, "<0.25");
-    tl.to(taglineRef.current, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, "<0.1");
-    tl.to(barWrapRef.current, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, "<0.1");
-
-    tl.add(() => {
-      pulse = gsap.to(ringEls, {
-        scale: 1.12,
-        opacity: 0.12,
-        duration: 1.8,
-        ease: "sine.inOut",
-        stagger: { each: 0.25, from: "center" },
-        repeat: -1,
-        yoyo: true,
-      });
-      spin = gsap.to(spinRingRef.current, {
-        rotate: 360,
-        duration: 22,
-        ease: "none",
-        repeat: -1,
-      });
-    });
-
-    const counter = { value: 0 };
-    tl.to(
-      fill,
-      { width: "100%", duration: 2.2, ease: "power2.inOut" },
-      "<"
-    );
-    tl.to(
-      counter,
-      {
-        value: 100,
-        duration: 2.2,
-        ease: "power2.inOut",
-        onUpdate: () => {
-          if (percent) percent.textContent = String(Math.round(counter.value));
-        },
-      },
-      "<"
-    );
-    if (barGlowRef.current) {
-      tl.to(
-        barGlowRef.current,
-        { left: "100%", duration: 2.2, ease: "power2.inOut" },
-        "<"
-      );
-    }
-
-    tl.to({}, { duration: 0.35 });
-
-    return () => {
-      pulse?.kill();
-      spin?.kill();
-      tl.kill();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    gsap.to(root, { opacity: 0, duration: 0.6, ease: "power2.inOut", onComplete: finish });
+  };
 
   if (done) return null;
 
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-[999] flex flex-col items-center justify-center overflow-hidden bg-navy-950"
-      role="status"
-      aria-live="polite"
-      aria-label="Loading"
+      className="fixed inset-0 z-[999] flex flex-col items-center justify-center overflow-hidden bg-navy-700"
+      role="dialog"
+      aria-label="Enter site"
     >
-      <div className="pointer-events-none absolute inset-0 bg-noise opacity-20" />
+      {/* Architectural line-art accents */}
+      <svg
+        className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 text-white/10 sm:h-96 sm:w-96"
+        viewBox="0 0 200 200"
+        aria-hidden="true"
+      >
+        <circle cx="100" cy="100" r="90" fill="none" stroke="currentColor" strokeWidth="1" />
+        <line x1="100" y1="0" x2="100" y2="200" stroke="currentColor" strokeWidth="1" />
+        <line x1="0" y1="100" x2="200" y2="100" stroke="currentColor" strokeWidth="1" />
+      </svg>
+      <svg
+        className="pointer-events-none absolute -bottom-10 -right-10 h-72 w-96 text-white/10 sm:h-80 sm:w-[28rem]"
+        viewBox="0 0 320 220"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path d="M40 220V90l90-40 150 40v130" stroke="currentColor" strokeWidth="1" />
+        <path d="M40 90l90-40 150 40" stroke="currentColor" strokeWidth="1" />
+        <line x1="90" y1="60" x2="90" y2="220" stroke="currentColor" strokeWidth="1" />
+        <line x1="180" y1="70" x2="180" y2="220" stroke="currentColor" strokeWidth="1" />
+        <line x1="270" y1="90" x2="270" y2="220" stroke="currentColor" strokeWidth="1" />
+        <line x1="40" y1="140" x2="280" y2="140" stroke="currentColor" strokeWidth="1" />
+        <line x1="40" y1="180" x2="280" y2="180" stroke="currentColor" strokeWidth="1" />
+      </svg>
 
-      <Corners />
-
-      <div
-        ref={glowRef}
-        className="pointer-events-none absolute left-1/2 top-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-600/20 blur-[100px]"
-      />
-
-      <div ref={ringsRef} className="pointer-events-none absolute inset-0">
-        {RINGS.map((r) => (
-          <span
-            key={r}
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.12]"
-            style={{ width: `${r * 130}px`, height: `${r * 130}px` }}
-          />
-        ))}
-        <span
-          ref={spinRingRef}
-          className="absolute left-1/2 top-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-red-500/25"
-        />
+      {/* Top-left */}
+      <div data-anim className="absolute left-6 top-6 sm:left-10 sm:top-8">
+        <div className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/70 sm:text-xs">
+          <p>Homes</p>
+          <p>Communities</p>
+          <p>Places</p>
+          <p className="text-white">A Brighter Tomorrow</p>
+        </div>
       </div>
 
-      <div className="relative z-10 flex flex-col items-center px-6 text-center">
-        <div ref={markRef}>
-          <Logo className="h-14 w-auto sm:h-16" />
+      {/* Top-right */}
+      <div
+        data-anim
+        className="absolute right-6 top-6 flex items-start gap-3 sm:right-10 sm:top-8"
+      >
+        <div className="flex flex-col gap-1 text-right text-[10px] font-semibold uppercase tracking-[0.25em] text-white/70 sm:text-xs">
+          <p>People</p>
+          <p>Places</p>
+          <p>Possibilities</p>
         </div>
-        <span
-          ref={lineRef}
-          className="mt-4 h-px w-12 origin-center bg-red-600"
-        />
-        <p
-          ref={taglineRef}
-          className="mt-3 text-[11px] font-semibold uppercase tracking-[0.35em] text-white/45"
-        >
-          Building Landmarks. Creating Lifetimes.
-        </p>
+        <span className="mt-0.5 h-12 w-px bg-white/25" />
+      </div>
 
-        <div ref={barWrapRef} className="mt-10 flex flex-col items-center">
-          <div className="relative h-[3px] w-72 overflow-hidden rounded-full bg-white/10 sm:w-80">
-            <div
-              ref={barFillRef}
-              className="relative h-full w-0 rounded-full bg-gradient-to-r from-red-700 via-red-600 to-red-400"
-            />
-            <div
-              ref={barGlowRef}
-              className="pointer-events-none absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-400 blur-[6px]"
-              style={{ left: "0%" }}
-            />
-          </div>
-          <p className="mt-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/40">
-            Loading Experience
-            <span className="inline-flex text-white/65 [font-variant-numeric:tabular-nums]">
-              <span ref={percentRef}>0</span>%
-            </span>
-          </p>
+      {/* Center */}
+      <div className="relative z-10 flex flex-col items-center px-6 text-center">
+        <div data-anim>
+          <Logo className="h-16 w-auto sm:h-20" />
         </div>
+        <p
+          data-anim
+          className="mt-8 text-sm font-semibold uppercase tracking-[0.35em] text-white sm:text-base"
+        >
+          Building A Better Tomorrow
+        </p>
+        <button
+          type="button"
+          data-anim
+          onClick={handleEnter}
+          className="group mt-9 inline-flex items-center gap-3 rounded-full border border-white/35 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.25em] text-white transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-navy-700 active:translate-y-0 active:scale-[0.97]"
+        >
+          Enter Full Screen
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4 text-red-600 transition-transform duration-300 group-hover:translate-x-1"
+            aria-hidden="true"
+          >
+            <path
+              d="M5 12h14M13 6l6 6-6 6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Bottom-left */}
+      <div
+        data-anim
+        className="absolute bottom-6 left-6 flex flex-col gap-2 sm:left-10 sm:bottom-8"
+      >
+        <span className="h-px w-8 bg-white/30" />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
+          www.jpinfra.com
+        </span>
       </div>
     </div>
-  );
-}
-
-function Corners() {
-  const base = "pointer-events-none absolute h-6 w-6 border-white/20";
-  return (
-    <>
-      <span className={`${base} left-6 top-6 border-l border-t sm:left-9 sm:top-9`} />
-      <span className={`${base} right-6 top-6 border-r border-t sm:right-9 sm:top-9`} />
-      <span className={`${base} bottom-6 left-6 border-b border-l sm:bottom-9 sm:left-9`} />
-      <span className={`${base} bottom-6 right-6 border-b border-r sm:bottom-9 sm:right-9`} />
-    </>
   );
 }
