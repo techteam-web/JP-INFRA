@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { GALLERY_IMAGES } from "../data/gallery";
 import Logo from "../components/Logo";
@@ -20,13 +20,17 @@ function IconChevron({ dir = "left" }) {
 }
 
 // Fullscreen, one image at a time — click the photo (or the arrows / ←→
-// keys) to crossfade to the next one, no grid.
+// keys) to reveal the next one through an expanding clip-path "iris",
+// opening from wherever you clicked (or centered, for arrow/keyboard nav).
+// No grid.
 export default function Gallery({ onBack }) {
   const rootRef = useRef(null);
+  const stageRef = useRef(null);
   const [index, setIndex] = useState(0);
-  const layerARef = useRef(null);
-  const layerBRef = useRef(null);
+  const layerTopRef = useRef(null);
   const prevIndexRef = useRef(0);
+  const originRef = useRef({ x: 0.5, y: 0.5 });
+  const tweenRef = useRef(null);
   const total = GALLERY_IMAGES.length;
 
   useEffect(() => {
@@ -44,38 +48,68 @@ export default function Gallery({ onBack }) {
     );
   }, []);
 
-  useEffect(() => {
-    const inEl = layerARef.current;
-    const outEl = layerBRef.current;
-    if (!inEl) return;
+  // Clip-path iris reveal: the incoming image opens from a point (the
+  // click, or center for arrow/keyboard nav) out to a circle large enough
+  // to cover the whole frame, over the static outgoing image beneath it.
+  // useLayoutEffect (not useEffect) so the reset-to-closed happens before
+  // the browser paints the new image — otherwise there's a frame where the
+  // new src is showing through the *previous* transition's fully-open
+  // clip-path, which reads as "no animation at all".
+  useLayoutEffect(() => {
+    const top = layerTopRef.current;
+    const stage = stageRef.current;
+    if (!top || !stage) return;
+
+    tweenRef.current?.kill();
+
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rect = stage.getBoundingClientRect();
+    const { x, y } = originRef.current;
+    const cx = x * 100;
+    const cy = y * 100;
+    const maxRadius = Math.hypot(rect.width, rect.height);
+
+    const setClip = (px) => {
+      const value = `circle(${px}px at ${cx}% ${cy}%)`;
+      top.style.clipPath = value;
+      top.style.webkitClipPath = value;
+    };
 
     if (reduce) {
-      gsap.set(inEl, { opacity: 1, scale: 1, filter: "blur(0px)" });
-      if (outEl) gsap.set(outEl, { opacity: 0 });
+      setClip(maxRadius);
+      gsap.set(top, { scale: 1 });
       prevIndexRef.current = index;
       return;
     }
 
-    gsap.set(inEl, { opacity: 0, scale: 1.05, filter: "blur(12px)" });
-    gsap.to(inEl, {
-      opacity: 1,
-      scale: 1,
-      filter: "blur(0px)",
-      duration: 0.8,
-      ease: "power3.out",
+    setClip(0);
+    gsap.set(top, { scale: 1.04 });
+
+    const proxy = { r: 0 };
+    tweenRef.current = gsap.to(proxy, {
+      r: maxRadius,
+      duration: 1,
+      ease: "power4.inOut",
+      onUpdate: () => setClip(proxy.r),
     });
-    if (outEl) {
-      gsap.to(outEl, { opacity: 0, scale: 0.97, duration: 0.5, ease: "power2.inOut" });
-    }
+    gsap.to(top, { scale: 1, duration: 1, ease: "power4.inOut" });
 
     prevIndexRef.current = index;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
-  const goRelative = (delta) => {
+  const goRelative = (delta, origin) => {
     if (!total) return;
+    originRef.current = origin ?? { x: 0.5, y: 0.5 };
     setIndex((i) => (i + delta + total) % total);
+  };
+
+  const handleStageClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    goRelative(1, {
+      x: (e.clientX - rect.left) / rect.width,
+      y: (e.clientY - rect.top) / rect.height,
+    });
   };
 
   useEffect(() => {
@@ -113,19 +147,19 @@ export default function Gallery({ onBack }) {
         <>
           {/* Image stage — click to advance */}
           <button
+            ref={stageRef}
             type="button"
-            onClick={() => goRelative(1)}
+            onClick={handleStageClick}
             aria-label="Next image"
-            className="absolute inset-0 z-0 cursor-pointer"
+            className="absolute inset-0 z-0 cursor-pointer overflow-hidden"
           >
             <img
-              ref={layerBRef}
               src={GALLERY_IMAGES[outgoingIndex]}
               alt=""
               className="absolute inset-0 h-full w-full object-cover"
             />
             <img
-              ref={layerARef}
+              ref={layerTopRef}
               src={GALLERY_IMAGES[index]}
               alt=""
               className="absolute inset-0 h-full w-full object-cover"
