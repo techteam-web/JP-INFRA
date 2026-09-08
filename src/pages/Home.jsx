@@ -61,32 +61,32 @@ export default function Home({ animate = false, onExplore }) {
         {/* Logo */}
         <div
           data-anim
-          className="absolute right-6 top-6 flex flex-col items-end gap-1.5 sm:right-10 sm:top-8"
+          className="absolute right-6 top-6 flex flex-col items-end gap-1.5 sm:right-10 sm:top-8 3xl:right-14 3xl:top-10 4xl:right-16 4xl:top-12"
         >
-          <div className="rounded-lg bg-navy-700 p-1.5">
-            <Logo className="h-9 w-auto sm:h-10" />
+          <div className="rounded-lg bg-navy-700 p-1.5 3xl:p-2">
+            <Logo className="h-9 w-auto sm:h-10 2xl:h-11 3xl:h-12 4xl:h-14" />
           </div>
-          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/50 sm:text-[10px]">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/50 sm:text-[10px] 3xl:text-xs 4xl:text-sm">
             Building Landmarks. Creating Lifetimes.
           </p>
         </div>
 
         {/* Hero copy */}
-        <div className="flex h-full items-center px-6 sm:px-12 lg:px-20">
-          <div className="max-w-xl">
+        <div className="flex h-full items-center px-6 sm:px-12 lg:px-20 xl:px-24 2xl:px-28 3xl:px-32 4xl:px-40">
+          <div className="max-w-xl xl:max-w-2xl 3xl:max-w-3xl 4xl:max-w-4xl">
             <div
               data-anim
-              className="text-xs font-semibold uppercase leading-relaxed tracking-[0.3em] text-white/85"
+              className="text-xs font-semibold uppercase leading-relaxed tracking-[0.3em] text-white/85 3xl:text-sm 4xl:text-base"
             >
               <p>Homes For</p>
               <p>A Brighter Tomorrow</p>
             </div>
 
-            <span data-anim className="mt-4 block h-px w-16 bg-white/30" />
+            <span data-anim className="mt-4 block h-px w-16 bg-white/30 3xl:w-20 4xl:w-24" />
 
             <h1
               data-anim
-              className="mt-5 font-display uppercase text-5xl leading-[1.05] text-white sm:text-6xl lg:text-[4.5rem]"
+              className="mt-5 font-display uppercase text-5xl leading-[1.05] text-white sm:text-6xl lg:text-[4.5rem] xl:text-[5rem] 2xl:text-[5.75rem] 3xl:text-[6.75rem] 4xl:text-[8.25rem]"
             >
               A Life Beyond
               <br />
@@ -95,7 +95,7 @@ export default function Home({ animate = false, onExplore }) {
 
             <p
               data-anim
-              className="mt-6 max-w-md text-xs font-medium uppercase leading-relaxed tracking-[0.12em] text-white/70 sm:text-sm"
+              className="mt-6 max-w-md text-xs font-medium uppercase leading-relaxed tracking-[0.12em] text-white/70 sm:text-sm xl:max-w-lg xl:text-base 3xl:max-w-xl 3xl:text-lg"
             >
               Thoughtfully designed residences for a more
               <br />
@@ -106,27 +106,25 @@ export default function Home({ animate = false, onExplore }) {
               type="button"
               data-anim
               onClick={onExplore}
-              className="group relative mt-10 flex h-24 w-24 items-center justify-center rounded-full border border-white/40 text-white transition-all duration-300 ease-out hover:border-white hover:bg-white hover:text-navy-950 active:scale-95 sm:h-28 sm:w-28"
+              className="group relative mt-10 flex w-85 items-center justify-between rounded-2xl border border-white/40 px-8 py-4 text-white transition-all duration-300 ease-out hover:border-white hover:bg-white hover:text-navy-950 active:scale-95 3xl:px-10 3xl:py-5 4xl:px-12 4xl:py-6"
             >
-              <span className="flex flex-col items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.25em]">
-                  Explore
-                </span>
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4 -rotate-45 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M5 12h14M13 6l6 6-6 6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+              <span className="text-xs font-semibold uppercase tracking-[0.25em] 3xl:text-sm 4xl:text-base">
+                Explore
               </span>
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4 -rotate-45 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 3xl:h-5 3xl:w-5"
+                aria-hidden="true"
+              >
+                <path
+                  d="M5 12h14M13 6l6 6-6 6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
           </div>
         </div>

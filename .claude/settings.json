@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(npx --yes chromium-cli --version)",
+      "Bash(node -e \"require.resolve\\('playwright'\\)\")",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npx --yes playwright screenshot --help)",
+      "Bash(mkdir -p /c/Users/roy32/AppData/Local/Temp/claude/f--JPINFRA-brainwing/22be6d9d-62fe-4c18-820c-6cdc95b27a82/scratchpad/pw-test)",
+      "Read(//c/Users/roy32/AppData/Local/Temp/claude/f--JPINFRA-brainwing/22be6d9d-62fe-4c18-820c-6cdc95b27a82/scratchpad/**)",
+      "Read(//c/Users/roy32/AppData/Local/Temp/claude/f--JPINFRA-brainwing/22be6d9d-62fe-4c18-820c-6cdc95b27a82/scratchpad/pw-test/**)",
+      "Bash(npx playwright *)",
+      "Bash(node test.js)",
+      "Bash(node diag.js)",
+      "Bash(node diag2.js)",
+      "Bash(node diag3.js)",
+      "Bash(node diag4.js)",
+      "Bash(curl -sf http://localhost:5190)",
+      "Bash(node gallery_dir.js)",
+      "Bash(node gallery_dir2.js)",
+      "Bash(node gallery_dom.js)"
     ]
   }
 }

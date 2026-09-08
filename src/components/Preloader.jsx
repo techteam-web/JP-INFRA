@@ -73,8 +73,8 @@ export default function Preloader({ onFinish }) {
       </svg>
 
       {/* Top-left */}
-      <div data-anim className="absolute left-6 top-6 sm:left-10 sm:top-8">
-        <div className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/70 sm:text-xs">
+      <div data-anim className="absolute left-6 top-6 sm:left-10 sm:top-8 3xl:left-14 3xl:top-10 4xl:left-16 4xl:top-12">
+        <div className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/70 sm:text-xs 3xl:gap-1.5 3xl:text-sm 4xl:text-base">
           <p>Homes</p>
           <p>Communities</p>
           <p>Places</p>
@@ -85,24 +85,24 @@ export default function Preloader({ onFinish }) {
       {/* Top-right */}
       <div
         data-anim
-        className="absolute right-6 top-6 flex items-start gap-3 sm:right-10 sm:top-8"
+        className="absolute right-6 top-6 flex items-start gap-3 sm:right-10 sm:top-8 3xl:right-14 3xl:top-10 4xl:right-16 4xl:top-12"
       >
-        <div className="flex flex-col gap-1 text-right text-[10px] font-semibold uppercase tracking-[0.25em] text-white/70 sm:text-xs">
+        <div className="flex flex-col gap-1 text-right text-[10px] font-semibold uppercase tracking-[0.25em] text-white/70 sm:text-xs 3xl:gap-1.5 3xl:text-sm 4xl:text-base">
           <p>People</p>
           <p>Places</p>
           <p>Possibilities</p>
         </div>
-        <span className="mt-0.5 h-12 w-px bg-white/25" />
+        <span className="mt-0.5 h-12 w-px bg-white/25 3xl:h-14 4xl:h-16" />
       </div>
 
       {/* Center */}
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
         <div data-anim>
-          <Logo className="h-16 w-auto sm:h-20" />
+          <Logo className="h-16 w-auto sm:h-20 xl:h-24 2xl:h-28 3xl:h-32 4xl:h-40" />
         </div>
         <p
           data-anim
-          className="mt-8 text-sm font-semibold uppercase tracking-[0.35em] text-white sm:text-base"
+          className="mt-8 text-sm font-semibold uppercase tracking-[0.35em] text-white sm:text-base 3xl:mt-10 3xl:text-lg 4xl:text-xl"
         >
           Building A Better Tomorrow
         </p>
@@ -110,12 +110,12 @@ export default function Preloader({ onFinish }) {
           type="button"
           data-anim
           onClick={handleEnter}
-          className="group mt-9 inline-flex items-center gap-3 rounded-full border border-white/35 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.25em] text-white transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-navy-700 active:translate-y-0 active:scale-[0.97]"
+          className="group mt-9 inline-flex items-center gap-3 rounded-full border border-white/35 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.25em] text-white transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-navy-700 active:translate-y-0 active:scale-[0.97] 3xl:mt-11 3xl:px-9 3xl:py-4 3xl:text-sm 4xl:px-10 4xl:py-5 4xl:text-base"
         >
           Enter Full Screen
           <svg
             viewBox="0 0 24 24"
-            className="h-4 w-4 text-red-600 transition-transform duration-300 group-hover:translate-x-1"
+            className="h-4 w-4 text-red-600 transition-transform duration-300 group-hover:translate-x-1 3xl:h-5 3xl:w-5"
             aria-hidden="true"
           >
             <path
@@ -133,10 +133,10 @@ export default function Preloader({ onFinish }) {
       {/* Bottom-left */}
       <div
         data-anim
-        className="absolute bottom-6 left-6 flex flex-col gap-2 sm:left-10 sm:bottom-8"
+        className="absolute bottom-6 left-6 flex flex-col gap-2 sm:left-10 sm:bottom-8 3xl:left-14 3xl:bottom-10 4xl:left-16 4xl:bottom-12"
       >
         <span className="h-px w-8 bg-white/30" />
-        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50 3xl:text-xs 4xl:text-sm">
           www.jpinfra.com
         </span>
       </div>

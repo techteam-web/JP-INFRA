@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* Tailwind CSS v4 theme tokens. The @theme at-rule is intentionally used here. */
-/* stylelint-disable-next-line at-rule-no-unknown */
-@theme {
+/* Theme tokens are declared as standard CSS variables so CSS language services
+  do not report an unknown at-rule. */
+@theme{
   --color-navy-950: #0a1f36;
   --color-navy-900: #0f2d4d;
   --color-navy-800: #153a63;
@@ -27,6 +27,12 @@
 
   --shadow-premium: 0 24px 60px -18px rgba(10, 31, 54, 0.45);
   --shadow-card: 0 12px 32px -14px rgba(10, 31, 54, 0.28);
+
+  /* Large-desktop breakpoints beyond Tailwind's default 2xl (1536px), so
+     layouts can keep scaling up cleanly on 1920/2560-wide displays instead
+     of stretching whatever the 2xl rules left off at. */
+  --breakpoint-3xl: 1920px;
+  --breakpoint-4xl: 2560px;
 }
 
 html {

@@ -1,6 +1,5 @@
 import { Suspense, lazy, useState } from "react";
 import Preloader from "./components/Preloader";
-import ScreenTransition from "./components/ScreenTransition";
 import Home from "./pages/Home";
 import Explore from "./pages/Explore";
 
@@ -38,7 +37,7 @@ function App() {
 
   return (
     <div className="h-[100svh] w-full overflow-hidden bg-navy-950">
-      <ScreenTransition screenKey={screen}>{content}</ScreenTransition>
+      {content}
       <Preloader onFinish={() => setLoaded(true)} />
     </div>
   );

@@ -1,12 +1,22 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { GALLERY_IMAGES } from "../data/gallery";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
 
+const TRANSITION_DURATION = 1.3;
+const TRANSITION_EASE = "power3.inOut";
+// Next: incoming image starts fully off-screen to the right (xPercent 100)
+// and slides to 0; outgoing slides from 0 to fully off-screen left
+// (xPercent -100) at the same time. Previous is the mirror: incoming starts
+// off-screen left (-100) and slides to 0; outgoing slides to the right
+// (100). Both layers move simultaneously — a real horizontal slide, not a
+// mask/reveal.
+const OFFSCREEN = 100;
+
 function IconChevron({ dir = "left" }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-4 w-4 3xl:h-5 3xl:w-5 4xl:h-6 4xl:w-6" aria-hidden="true">
       <path
         d={dir === "left" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"}
         fill="none"
@@ -19,21 +29,36 @@ function IconChevron({ dir = "left" }) {
   );
 }
 
-// Fullscreen, one image at a time — click the photo (or the arrows / ←→
-// keys) to reveal the next one through an expanding clip-path "iris",
-// opening from wherever you clicked (or centered, for arrow/keyboard nav).
-// No grid.
+function preloadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    if (img.complete) {
+      resolve();
+      return;
+    }
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = src;
+  });
+}
+
+// Two permanent fullscreen layers (A/B) that ping-pong roles. On Next, the
+// incoming layer is preloaded and parked off-screen right, then both layers
+// slide left simultaneously (incoming in, outgoing out); Previous mirrors
+// this from/to the left — a true horizontal slide via xPercent, not a
+// mask/reveal. GSAP exclusively owns xPercent/z-index on these two
+// persistent DOM nodes — neither is driven by React props/state — so a
+// React re-render can never interrupt or reset an in-flight transition.
 export default function Gallery({ onBack }) {
   const rootRef = useRef(null);
-  const stageRef = useRef(null);
+  const layerARef = useRef(null);
+  const layerBRef = useRef(null);
+  const activeRef = useRef("A");
+  const isAnimatingRef = useRef(false);
   const [index, setIndex] = useState(0);
-  const layerTopRef = useRef(null);
-  const prevIndexRef = useRef(0);
-  const originRef = useRef({ x: 0.5, y: 0.5 });
-  const tweenRef = useRef(null);
   const total = GALLERY_IMAGES.length;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const els = rootRef.current?.querySelectorAll("[data-anim]");
     if (!els) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -48,71 +73,63 @@ export default function Gallery({ onBack }) {
     );
   }, []);
 
-  // Clip-path iris reveal: the incoming image opens from a point (the
-  // click, or center for arrow/keyboard nav) out to a circle large enough
-  // to cover the whole frame, over the static outgoing image beneath it.
-  // useLayoutEffect (not useEffect) so the reset-to-closed happens before
-  // the browser paints the new image — otherwise there's a frame where the
-  // new src is showing through the *previous* transition's fully-open
-  // clip-path, which reads as "no animation at all".
+  // One-time setup: layer A shows image 0, fully visible; layer B is primed
+  // with the next image, parked off-screen to the right and ready to slide in.
   useLayoutEffect(() => {
-    const top = layerTopRef.current;
-    const stage = stageRef.current;
-    if (!top || !stage) return;
+    const a = layerARef.current;
+    const b = layerBRef.current;
+    if (!a || !b || total === 0) return;
 
-    tweenRef.current?.kill();
+    a.src = GALLERY_IMAGES[0];
+    gsap.set(a, { xPercent: 0, zIndex: 1 });
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const rect = stage.getBoundingClientRect();
-    const { x, y } = originRef.current;
-    const cx = x * 100;
-    const cy = y * 100;
-    const maxRadius = Math.hypot(rect.width, rect.height);
+    b.src = GALLERY_IMAGES[total > 1 ? 1 : 0];
+    gsap.set(b, { xPercent: OFFSCREEN, zIndex: 2 });
 
-    const setClip = (px) => {
-      const value = `circle(${px}px at ${cx}% ${cy}%)`;
-      top.style.clipPath = value;
-      top.style.webkitClipPath = value;
+    activeRef.current = "A";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total]);
+
+  const goRelative = async (delta) => {
+    if (!total || isAnimatingRef.current) return;
+
+    const nextIndex = (index + delta + total) % total;
+    const nextSrc = GALLERY_IMAGES[nextIndex];
+
+    const activeEl = activeRef.current === "A" ? layerARef.current : layerBRef.current;
+    const inactiveEl = activeRef.current === "A" ? layerBRef.current : layerARef.current;
+    if (!activeEl || !inactiveEl) return;
+
+    const enterFrom = delta > 0 ? OFFSCREEN : -OFFSCREEN;
+    const exitTo = delta > 0 ? -OFFSCREEN : OFFSCREEN;
+
+    isAnimatingRef.current = true;
+    await preloadImage(nextSrc);
+
+    inactiveEl.src = nextSrc;
+    gsap.set(inactiveEl, { xPercent: enterFrom, zIndex: 2 });
+    gsap.set(activeEl, { xPercent: 0, zIndex: 1 });
+
+    const finish = () => {
+      activeRef.current = activeRef.current === "A" ? "B" : "A";
+      isAnimatingRef.current = false;
+      setIndex(nextIndex);
     };
 
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) {
-      setClip(maxRadius);
-      gsap.set(top, { scale: 1 });
-      prevIndexRef.current = index;
+      gsap.set(inactiveEl, { xPercent: 0 });
+      gsap.set(activeEl, { xPercent: exitTo });
+      finish();
       return;
     }
 
-    setClip(0);
-    gsap.set(top, { scale: 1.04 });
-
-    const proxy = { r: 0 };
-    tweenRef.current = gsap.to(proxy, {
-      r: maxRadius,
-      duration: 1,
-      ease: "power4.inOut",
-      onUpdate: () => setClip(proxy.r),
-    });
-    gsap.to(top, { scale: 1, duration: 1, ease: "power4.inOut" });
-
-    prevIndexRef.current = index;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index]);
-
-  const goRelative = (delta, origin) => {
-    if (!total) return;
-    originRef.current = origin ?? { x: 0.5, y: 0.5 };
-    setIndex((i) => (i + delta + total) % total);
+    const tl = gsap.timeline({ onComplete: finish });
+    tl.to(inactiveEl, { xPercent: 0, duration: TRANSITION_DURATION, ease: TRANSITION_EASE }, 0);
+    tl.to(activeEl, { xPercent: exitTo, duration: TRANSITION_DURATION, ease: TRANSITION_EASE }, 0);
   };
 
-  const handleStageClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    goRelative(1, {
-      x: (e.clientX - rect.left) / rect.width,
-      y: (e.clientY - rect.top) / rect.height,
-    });
-  };
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onKey = (e) => {
       if (e.key === "ArrowLeft") goRelative(-1);
       if (e.key === "ArrowRight") goRelative(1);
@@ -120,26 +137,24 @@ export default function Gallery({ onBack }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [total]);
-
-  const outgoingIndex = prevIndexRef.current;
+  }, [total, index]);
 
   return (
     <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-navy-950">
       {/* Top bar */}
       <div
         data-anim
-        className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 pt-6 sm:px-10 sm:pt-8"
+        className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 pt-6 sm:px-10 sm:pt-8 3xl:px-14 3xl:pt-10 4xl:px-16 4xl:pt-12"
       >
         <div className="flex items-center gap-3">
           <BackButton onClick={onBack} />
-          <span className="hidden items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60 sm:flex">
+          <span className="hidden items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60 sm:flex 3xl:text-xs 4xl:text-sm">
             <span className="h-px w-6 bg-white/40" />
             Gallery
           </span>
         </div>
-        <div className="rounded-lg bg-navy-700 p-1.5">
-          <Logo className="h-9 w-auto sm:h-10" />
+        <div className="rounded-lg bg-navy-700 p-1.5 3xl:p-2">
+          <Logo className="h-9 w-auto sm:h-10 2xl:h-11 3xl:h-12 4xl:h-14" />
         </div>
       </div>
 
@@ -147,25 +162,15 @@ export default function Gallery({ onBack }) {
         <>
           {/* Image stage — click to advance */}
           <button
-            ref={stageRef}
             type="button"
-            onClick={handleStageClick}
+            onClick={() => goRelative(1)}
             aria-label="Next image"
             className="absolute inset-0 z-0 cursor-pointer overflow-hidden"
           >
-            <img
-              src={GALLERY_IMAGES[outgoingIndex]}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <img
-              ref={layerTopRef}
-              src={GALLERY_IMAGES[index]}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-            />
+            <img ref={layerARef} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img ref={layerBRef} alt="" className="absolute inset-0 h-full w-full object-cover" />
             <div
-              className="pointer-events-none absolute inset-0"
+              className="pointer-events-none absolute inset-0 z-[3]"
               style={{
                 background:
                   "linear-gradient(180deg, rgba(10,31,54,0.5) 0%, transparent 20%, transparent 70%, rgba(10,31,54,0.65) 100%)",
@@ -181,7 +186,7 @@ export default function Gallery({ onBack }) {
               goRelative(-1);
             }}
             aria-label="Previous image"
-            className="absolute left-4 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-90 sm:left-8"
+            className="absolute left-4 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-90 sm:left-8 xl:h-12 xl:w-12 2xl:left-10 3xl:left-12 3xl:h-14 3xl:w-14 4xl:left-16 4xl:h-16 4xl:w-16"
           >
             <IconChevron dir="left" />
           </button>
@@ -192,7 +197,7 @@ export default function Gallery({ onBack }) {
               goRelative(1);
             }}
             aria-label="Next image"
-            className="absolute right-4 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-90 sm:right-8"
+            className="absolute right-4 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-90 sm:right-8 xl:h-12 xl:w-12 2xl:right-10 3xl:right-12 3xl:h-14 3xl:w-14 4xl:right-16 4xl:h-16 4xl:w-16"
           >
             <IconChevron dir="right" />
           </button>
@@ -200,7 +205,7 @@ export default function Gallery({ onBack }) {
           {/* Counter */}
           <div
             data-anim
-            className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/40 px-4 py-1.5 text-xs font-bold tracking-widest text-white backdrop-blur sm:bottom-8"
+            className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/40 px-4 py-1.5 text-xs font-bold tracking-widest text-white backdrop-blur sm:bottom-8 xl:px-5 xl:py-2 xl:text-sm 2xl:bottom-10 3xl:bottom-12 3xl:px-6 3xl:text-base 4xl:bottom-14 4xl:px-7 4xl:text-lg"
           >
             {index + 1} / {total}
           </div>

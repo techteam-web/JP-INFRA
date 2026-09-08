@@ -111,17 +111,17 @@ export default function Panorama({ onBack }) {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_60%,rgba(0,0,0,0.45)_100%)]" />
 
       {/* Top bar */}
-      <div className="relative z-10 flex items-start justify-between px-6 pt-6 sm:px-10 sm:pt-8">
+      <div className="relative z-10 flex items-start justify-between px-6 pt-6 sm:px-10 sm:pt-8 3xl:px-14 3xl:pt-10 4xl:px-16 4xl:pt-12">
         <div data-anim className="flex items-center gap-3">
           <BackButton onClick={onBack} />
-          <div className="flex items-center gap-2.5 rounded-full bg-navy-700/60 px-3 py-2 backdrop-blur">
-            <Logo className="h-8 w-auto sm:h-9" />
+          <div className="flex items-center gap-2.5 rounded-full bg-navy-700/60 px-3 py-2 backdrop-blur 3xl:px-4 3xl:py-2.5">
+            <Logo className="h-8 w-auto sm:h-9 2xl:h-10 3xl:h-11 4xl:h-12" />
           </div>
         </div>
 
         <div
           data-anim
-          className="rounded-full bg-black/40 px-4 py-1.5 text-xs font-bold tracking-widest text-white backdrop-blur"
+          className="rounded-full bg-black/40 px-4 py-1.5 text-xs font-bold tracking-widest text-white backdrop-blur 3xl:px-5 3xl:py-2 3xl:text-sm 4xl:px-6 4xl:text-base"
         >
           {Math.round(((yaw % 360) + 360) % 360)}°
         </div>
@@ -133,20 +133,20 @@ export default function Panorama({ onBack }) {
           interacted ? "opacity-0" : "opacity-100"
         }`}
       >
-        <span className="animate-pulse rounded-full bg-black/50 px-4 py-2 text-xs font-semibold text-white backdrop-blur">
+        <span className="animate-pulse rounded-full bg-black/50 px-4 py-2 text-xs font-semibold text-white backdrop-blur 3xl:px-5 3xl:py-2.5 3xl:text-sm 4xl:text-base">
           Drag to look around
         </span>
       </div>
 
       {/* Scene tabs */}
-      <div data-anim className="absolute inset-x-0 bottom-6 z-10 flex justify-center px-4 sm:bottom-10">
-        <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-2xl border border-white/15 bg-navy-700/50 p-1.5 backdrop-blur-md no-scrollbar">
+      <div className="absolute inset-x-0 bottom-6 z-10 flex justify-center px-4 sm:bottom-10 3xl:bottom-12 4xl:bottom-14" data-anim>
+        <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-2xl border border-white/15 bg-navy-700/50 p-1.5 backdrop-blur-md no-scrollbar 3xl:gap-2 3xl:p-2">
           {APP_DATA.scenes.map((scene) => (
             <button
               key={scene.id}
               type="button"
               onClick={() => setActiveId(scene.id)}
-              className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition-all duration-200 active:scale-95 ${
+              className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition-all duration-200 active:scale-95 3xl:px-5 3xl:py-3 3xl:text-sm 4xl:px-6 4xl:text-base ${
                 scene.id === activeId
                   ? "bg-red-600 text-white"
                   : "text-white/75 hover:bg-white/10"
