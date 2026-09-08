@@ -39,38 +39,9 @@ function IconChevron({ dir = "left" }) {
   );
 }
 
-function IconHamburger() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-      <path
-        d="M4 7h16M4 12h16M4 17h16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function IconClose() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-      <path
-        d="M6 6l12 12M18 6L6 18"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 export default function Explore({ onBack, onOpen360, onOpenGallery }) {
   const rootRef = useRef(null);
   const [active, setActive] = useState("Home");
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const els = rootRef.current?.querySelectorAll("[data-anim]");
@@ -127,17 +98,6 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
           <span className="h-px w-6 bg-white/40" />
           Explore &middot; 360&deg; View
         </span> */}
-        {/* Mobile-only nav trigger — hidden from md upward, where the
-            existing lg:flex left index nav (or, between md and lg, no nav
-            at all) takes over exactly as before. */}
-        <button
-          type="button"
-          onClick={() => setMobileNavOpen(true)}
-          aria-label="Open menu"
-          className="grid h-10 w-10 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-90 md:hidden"
-        >
-          <IconHamburger />
-        </button>
       </div>
 
       {/* Top-right: logo */}
@@ -195,57 +155,48 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
         })}
       </nav>
 
-      {/* Mobile nav overlay — below md only. Does not touch the desktop
-          <nav> above at all; from md upward this never renders. */}
-      {mobileNavOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-7 bg-navy-950/98 backdrop-blur-md md:hidden">
-          <button
-            type="button"
-            onClick={() => setMobileNavOpen(false)}
-            aria-label="Close menu"
-            className="absolute right-6 top-6 grid h-10 w-10 place-items-center rounded-full border border-white/25 text-white transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-90"
-          >
-            <IconClose />
-          </button>
-
-          {NAV_ITEMS.map((item) => {
-            const isActive = item.label === active;
-            return (
-              <button
-                key={item.n}
-                type="button"
-                onClick={() => {
-                  setActive(item.label);
-                  if (item.label === "360°") onOpen360?.();
-                  if (item.label === "Gallery") onOpenGallery?.();
-                  setMobileNavOpen(false);
-                }}
-                className="group flex items-center gap-3"
+      {/* Mobile nav — below md only (md:hidden). A direct, always-visible
+          vertical menu over the fullscreen background, replacing the
+          heading/description/360 control shown from md upward. Does not
+          touch the desktop <nav> above, which is unaffected at any size. */}
+      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 px-6 md:hidden">
+        {NAV_ITEMS.map((item) => {
+          const isActive = item.label === active;
+          return (
+            <button
+              key={item.n}
+              type="button"
+              onClick={() => {
+                setActive(item.label);
+                if (item.label === "360°") onOpen360?.();
+                if (item.label === "Gallery") onOpenGallery?.();
+              }}
+              className="group flex items-center gap-3"
+            >
+              <span
+                className={`text-xs font-bold tracking-widest transition-colors duration-300 ${
+                  isActive ? "text-red-600" : "text-white/40"
+                }`}
               >
-                <span
-                  className={`text-xs font-bold tracking-widest transition-colors duration-300 ${
-                    isActive ? "text-red-600" : "text-white/40"
-                  }`}
-                >
-                  {item.n}
-                </span>
-                <span
-                  className={`font-display text-2xl uppercase tracking-[0.15em] transition-colors ${
-                    isActive ? "text-white" : "text-white/60 group-hover:text-white/90"
-                  }`}
-                >
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+                {item.n}
+              </span>
+              <span
+                className={`font-display text-2xl uppercase tracking-[0.15em] transition-colors ${
+                  isActive ? "text-white" : "text-white/60 group-hover:text-white/90"
+                }`}
+              >
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
-      {/* Center: headline + 360 control */}
+      {/* Center: headline + 360 control — hidden below md (replaced there by
+          the direct nav list above); unchanged from md upward. */}
       <div
         data-anim
-        className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center"
+        className="pointer-events-none absolute inset-0 z-10 hidden flex-col items-center justify-center px-6 text-center md:flex"
       >
         <h2 className="font-display text-4xl uppercase leading-[1.05] text-white sm:text-5xl lg:text-6xl xl:text-7xl 2xl:text-[5.5rem] 3xl:text-[6.5rem] 4xl:text-[8rem]">
           Experience
@@ -297,7 +248,7 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
         type="button"
         data-anim
         onClick={() => setActive("About Us")}
-        className="group absolute bottom-6 left-6 z-10 hidden items-center gap-2 text-white/60 transition-colors duration-200 hover:text-white sm:left-10 sm:flex 3xl:bottom-10 3xl:left-14 4xl:bottom-12 4xl:left-16"
+        className="group absolute bottom-6 left-6 z-10 hidden items-center gap-2 text-white/60 transition-colors duration-200 hover:text-white sm:left-10 md:flex 3xl:bottom-10 3xl:left-14 4xl:bottom-12 4xl:left-16"
       >
         <span className="grid h-8 w-8 place-items-center rounded-full border border-white/25 backdrop-blur transition-all duration-200 group-hover:scale-105 group-hover:bg-white/10 group-active:scale-90 3xl:h-9 3xl:w-9 4xl:h-10 4xl:w-10">
           <IconInfo />
@@ -306,7 +257,7 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
       </button>
       <div
         data-anim
-        className="absolute bottom-6 right-6 z-10 hidden items-center gap-3 sm:right-10 sm:flex 3xl:bottom-10 3xl:right-14 4xl:bottom-12 4xl:right-16"
+        className="absolute bottom-6 right-6 z-10 hidden items-center gap-3 sm:right-10 md:flex 3xl:bottom-10 3xl:right-14 4xl:bottom-12 4xl:right-16"
       >
         <span className="h-px w-6 bg-white/30" />
         <span className="text-[9px] font-semibold uppercase tracking-[0.35em] text-white/40 3xl:text-xs 4xl:text-sm">
