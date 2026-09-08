@@ -39,9 +39,38 @@ function IconChevron({ dir = "left" }) {
   );
 }
 
+function IconHamburger() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+      <path
+        d="M4 7h16M4 12h16M4 17h16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconClose() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+      <path
+        d="M6 6l12 12M18 6L6 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export default function Explore({ onBack, onOpen360, onOpenGallery }) {
   const rootRef = useRef(null);
   const [active, setActive] = useState("Home");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const els = rootRef.current?.querySelectorAll("[data-anim]");
@@ -98,6 +127,17 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
           <span className="h-px w-6 bg-white/40" />
           Explore &middot; 360&deg; View
         </span> */}
+        {/* Mobile-only nav trigger — hidden from md upward, where the
+            existing lg:flex left index nav (or, between md and lg, no nav
+            at all) takes over exactly as before. */}
+        <button
+          type="button"
+          onClick={() => setMobileNavOpen(true)}
+          aria-label="Open menu"
+          className="grid h-10 w-10 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-90 md:hidden"
+        >
+          <IconHamburger />
+        </button>
       </div>
 
       {/* Top-right: logo */}
@@ -154,6 +194,53 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
           );
         })}
       </nav>
+
+      {/* Mobile nav overlay — below md only. Does not touch the desktop
+          <nav> above at all; from md upward this never renders. */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-7 bg-navy-950/98 backdrop-blur-md md:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(false)}
+            aria-label="Close menu"
+            className="absolute right-6 top-6 grid h-10 w-10 place-items-center rounded-full border border-white/25 text-white transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-90"
+          >
+            <IconClose />
+          </button>
+
+          {NAV_ITEMS.map((item) => {
+            const isActive = item.label === active;
+            return (
+              <button
+                key={item.n}
+                type="button"
+                onClick={() => {
+                  setActive(item.label);
+                  if (item.label === "360°") onOpen360?.();
+                  if (item.label === "Gallery") onOpenGallery?.();
+                  setMobileNavOpen(false);
+                }}
+                className="group flex items-center gap-3"
+              >
+                <span
+                  className={`text-xs font-bold tracking-widest transition-colors duration-300 ${
+                    isActive ? "text-red-600" : "text-white/40"
+                  }`}
+                >
+                  {item.n}
+                </span>
+                <span
+                  className={`font-display text-2xl uppercase tracking-[0.15em] transition-colors ${
+                    isActive ? "text-white" : "text-white/60 group-hover:text-white/90"
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Center: headline + 360 control */}
       <div
