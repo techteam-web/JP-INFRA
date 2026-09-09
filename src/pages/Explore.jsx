@@ -39,9 +39,25 @@ function IconChevron({ dir = "left" }) {
   );
 }
 
-export default function Explore({ onBack, onOpen360, onOpenGallery }) {
+export default function Explore({
+  onBack,
+  onOpen360,
+  onOpenGallery,
+  onOpenAbout,
+  onOpenContact,
+  onOpenFloorPlans,
+}) {
   const rootRef = useRef(null);
   const [active, setActive] = useState("Home");
+
+  const handleSelect = (label) => {
+    setActive(label);
+    if (label === "360°") onOpen360?.();
+    if (label === "Gallery") onOpenGallery?.();
+    if (label === "About Us") onOpenAbout?.();
+    if (label === "Contact") onOpenContact?.();
+    if (label === "Floor Plans") onOpenFloorPlans?.();
+  };
 
   useEffect(() => {
     const els = rootRef.current?.querySelectorAll("[data-anim]");
@@ -122,12 +138,9 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
               key={item.n}
               type="button"
               data-anim
-              onClick={() => {
-                setActive(item.label);
-                if (item.label === "360°") onOpen360?.();
-                if (item.label === "Gallery") onOpenGallery?.();
-              }}
-              className={`group flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-all duration-300 active:scale-95 3xl:gap-4 3xl:px-3 3xl:py-2 ${
+              onClick={() => handleSelect(item.label)}
+              style={{ "--btn-fill-color": "rgba(255,255,255,0.08)" }}
+              className={`btn-fill group flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-all duration-300 active:scale-95 3xl:gap-4 3xl:px-3 3xl:py-2 ${
                 isActive ? "bg-navy-700/40" : ""
               }`}
             >
@@ -166,12 +179,9 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
             <button
               key={item.n}
               type="button"
-              onClick={() => {
-                setActive(item.label);
-                if (item.label === "360°") onOpen360?.();
-                if (item.label === "Gallery") onOpenGallery?.();
-              }}
-              className="group flex items-center gap-3"
+              onClick={() => handleSelect(item.label)}
+              style={{ "--btn-fill-color": "rgba(255,255,255,0.08)" }}
+              className="btn-fill group flex items-center gap-3 rounded-lg px-3 py-1.5"
             >
               <span
                 className={`text-xs font-bold tracking-widest transition-colors duration-300 ${
@@ -214,7 +224,8 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
             type="button"
             onClick={() => goRelative(-1)}
             aria-label="Previous section"
-            className="grid h-9 w-9 place-items-center rounded-full border border-white/25 text-white transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-90 xl:h-10 xl:w-10 3xl:h-12 3xl:w-12"
+            style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+            className="btn-fill grid h-9 w-9 place-items-center rounded-full border border-white/25 text-white transition-all duration-200 hover:scale-105 active:scale-90 xl:h-10 xl:w-10 3xl:h-12 3xl:w-12"
           >
             <IconChevron dir="left" />
           </button>
@@ -222,7 +233,8 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
           <button
             type="button"
             onClick={() => onOpen360?.()}
-            className="group grid h-20 w-20 place-items-center rounded-full border border-white/40 text-white backdrop-blur transition-all duration-300 ease-out hover:border-white hover:bg-white hover:text-navy-950 active:scale-95 sm:h-24 sm:w-24 xl:h-28 xl:w-28 2xl:h-32 2xl:w-32 3xl:h-36 3xl:w-36 4xl:h-40 4xl:w-40"
+            style={{ "--btn-fill-color": "#ffffff" }}
+            className="btn-fill group grid h-20 w-20 place-items-center rounded-full border border-white/40 text-white backdrop-blur transition-all duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 sm:h-24 sm:w-24 xl:h-28 xl:w-28 2xl:h-32 2xl:w-32 3xl:h-36 3xl:w-36 4xl:h-40 4xl:w-40"
           >
             <span className="flex flex-col items-center gap-1">
               <span className="text-sm font-bold tracking-widest 3xl:text-base 4xl:text-lg">360&deg;</span>
@@ -236,7 +248,8 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
             type="button"
             onClick={() => goRelative(1)}
             aria-label="Next section"
-            className="grid h-9 w-9 place-items-center rounded-full border border-white/25 text-white transition-all duration-200 hover:scale-105 hover:bg-white/10 active:scale-90 xl:h-10 xl:w-10 3xl:h-12 3xl:w-12"
+            style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+            className="btn-fill grid h-9 w-9 place-items-center rounded-full border border-white/25 text-white transition-all duration-200 hover:scale-105 active:scale-90 xl:h-10 xl:w-10 3xl:h-12 3xl:w-12"
           >
             <IconChevron dir="right" />
           </button>
@@ -247,8 +260,9 @@ export default function Explore({ onBack, onOpen360, onOpenGallery }) {
       <button
         type="button"
         data-anim
-        onClick={() => setActive("About Us")}
-        className="group absolute bottom-6 left-6 z-10 hidden items-center gap-2 text-white/60 transition-colors duration-200 hover:text-white sm:left-10 md:flex 3xl:bottom-10 3xl:left-14 4xl:bottom-12 4xl:left-16"
+        onClick={() => handleSelect("About Us")}
+        style={{ "--btn-fill-color": "rgba(255,255,255,0.1)" }}
+        className="btn-fill group absolute bottom-6 left-6 z-10 hidden items-center gap-2 text-white/60 transition-colors duration-200 hover:text-white sm:left-10 md:flex 3xl:bottom-10 3xl:left-14 4xl:bottom-12 4xl:left-16"
       >
         <span className="grid h-8 w-8 place-items-center rounded-full border border-white/25 backdrop-blur transition-all duration-200 group-hover:scale-105 group-hover:bg-white/10 group-active:scale-90 3xl:h-9 3xl:w-9 4xl:h-10 4xl:w-10">
           <IconInfo />

@@ -106,14 +106,15 @@ export default function Home({ animate = false, onExplore }) {
               type="button"
               data-anim
               onClick={onExplore}
-              className="group relative mt-10 flex w-85 items-center justify-between rounded-2xl border border-white/40 px-8 py-4 text-white transition-all duration-300 ease-out hover:border-white hover:bg-white hover:text-navy-950 active:scale-95 3xl:px-10 3xl:py-5 4xl:px-12 4xl:py-6"
+              style={{ "--btn-fill-color": "#ffffff" }}
+              className="btn-fill group relative mt-10 flex w-85 items-center justify-between rounded-2xl border border-white/40 px-8 py-4 text-white transition-all duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 3xl:px-10 3xl:py-5 4xl:px-12 4xl:py-6"
             >
               <span className="text-xs font-semibold uppercase tracking-[0.25em] 3xl:text-sm 4xl:text-base">
-                Explore
+                Explore The Experience
               </span>
               <svg
                 viewBox="0 0 24 24"
-                className="h-4 w-4 -rotate-45 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 3xl:h-5 3xl:w-5"
+                className=" h-4 w-4 -rotate-45 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 3xl:h-5 3xl:w-5"
                 aria-hidden="true"
               >
                 <path

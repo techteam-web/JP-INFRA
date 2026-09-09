@@ -146,10 +146,11 @@ export default function Panorama({ onBack }) {
               key={scene.id}
               type="button"
               onClick={() => setActiveId(scene.id)}
+              style={scene.id === activeId ? undefined : { "--btn-fill-color": "rgba(255,255,255,0.12)" }}
               className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition-all duration-200 active:scale-95 3xl:px-5 3xl:py-3 3xl:text-sm 4xl:px-6 4xl:text-base ${
                 scene.id === activeId
                   ? "bg-red-600 text-white"
-                  : "text-white/75 hover:bg-white/10"
+                  : "btn-fill text-white/75"
               }`}
             >
               {sceneLabel(scene)}

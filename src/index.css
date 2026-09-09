@@ -50,7 +50,7 @@ body {
 
 ::selection {
   background: var(--color-red-600);
-  color: #fff;
+  color: #f4eded;
 }
 
 ::-webkit-scrollbar {
@@ -68,6 +68,40 @@ body {
 .font-display {
   font-family: var(--font-display);
   letter-spacing: 0.02em;
+}
+
+/* Shared hover treatment for every button on the site: a solid color layer
+   rises from the bottom edge to cover the button, then recedes the same way
+   on mouse-out. Sits behind the button's own content via a negative z-index
+   inside an isolated stacking context, so text/icons never need to be
+   rewrapped — they simply stay in normal flow above the fill. Color defaults
+   to brand red but can be overridden per-button with the --btn-fill-color
+   custom property. Declared in the base layer (not the plain cascade) so
+   Tailwind's own position utilities (absolute/fixed/etc., which live in the
+   utilities layer) always win over the fallback `position: relative` here —
+   otherwise same-specificity source order would let this rule silently
+   strip `position: absolute` off any button that already had it. */
+@layer base {
+  .btn-fill {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .btn-fill::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--btn-fill-color, var(--color-red-600));
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.45s cubic-bezier(0.65, 0.05, 0.36, 1);
+  }
+  .btn-fill:hover::before,
+  .btn-fill:focus-visible::before {
+    transform: scaleY(1);
+  }
 }
 
 .no-scrollbar::-webkit-scrollbar {

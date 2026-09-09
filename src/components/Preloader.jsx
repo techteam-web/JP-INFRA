@@ -110,7 +110,8 @@ export default function Preloader({ onFinish }) {
           type="button"
           data-anim
           onClick={handleEnter}
-          className="group mt-9 inline-flex items-center gap-3 rounded-full border border-white/35 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.25em] text-white transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-navy-700 active:translate-y-0 active:scale-[0.97] 3xl:mt-11 3xl:px-9 3xl:py-4 3xl:text-sm 4xl:px-10 4xl:py-5 4xl:text-base"
+          style={{ "--btn-fill-color": "#ffffff" }}
+          className="btn-fill group mt-9 inline-flex items-center gap-3 rounded-full border border-white/35 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.25em] text-white transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-white hover:text-navy-700 active:translate-y-0 active:scale-[0.97] 3xl:mt-11 3xl:px-9 3xl:py-4 3xl:text-sm 4xl:px-10 4xl:py-5 4xl:text-base"
         >
           Enter Full Screen
           <svg
