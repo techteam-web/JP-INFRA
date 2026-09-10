@@ -88,7 +88,13 @@ export default function Explore({
     <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-navy-950">
       {/* Background photo */}
       <div className="absolute inset-0">
-        <img src={menuImg} alt="" className="h-full w-full object-cover" />
+        <img
+          src={menuImg}
+          alt=""
+          decoding="async"
+          fetchPriority="high"
+          className="h-full w-full object-cover"
+        />
         <div
           className="absolute inset-0"
           style={{
@@ -140,25 +146,25 @@ export default function Explore({
               data-anim
               onClick={() => handleSelect(item.label)}
               style={{ "--btn-fill-color": "rgba(255,255,255,0.08)" }}
-              className={`btn-fill group flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-all duration-300 active:scale-95 3xl:gap-4 3xl:px-3 3xl:py-2 ${
+              className={`btn-fill group flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-[background-color,transform] duration-300 hover:bg-navy-700/40 active:scale-95 3xl:gap-4 3xl:px-3 3xl:py-2 ${
                 isActive ? "bg-navy-700/40" : ""
               }`}
             >
               <span
-                className={`h-px transition-all duration-300 ${
-                  isActive ? "w-8 bg-red-600" : "w-4 bg-navy-700/70 group-hover:w-6 group-hover:bg-white/60"
+                className={`h-px transition-[width,background-color] duration-300 ${
+                  isActive ? "w-8 bg-red-600" : "w-4 bg-navy-700/70 group-hover:w-8 group-hover:bg-red-600"
                 }`}
               />
               <span
                 className={`text-sm font-bold tracking-widest transition-colors duration-300 3xl:text-base 4xl:text-lg ${
-                  isActive ? "text-red-600" : "text-white/40"
+                  isActive ? "text-red-600" : "text-white/40 group-hover:text-red-600"
                 }`}
               >
                 {item.n}
               </span>
               <span
                 className={`font-display text-lg uppercase tracking-[0.15em] transition-colors sm:text-xl 2xl:text-2xl 3xl:text-3xl 4xl:text-4xl ${
-                  isActive ? "text-white" : "text-white/50 group-hover:text-white/80"
+                  isActive ? "text-white" : "text-white/50 group-hover:text-white"
                 }`}
               >
                 {item.label}
@@ -225,7 +231,7 @@ export default function Explore({
             onClick={() => goRelative(-1)}
             aria-label="Previous section"
             style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-            className="btn-fill grid h-9 w-9 place-items-center rounded-full border border-white/25 text-white transition-all duration-200 hover:scale-105 active:scale-90 xl:h-10 xl:w-10 3xl:h-12 3xl:w-12"
+            className="btn-fill grid h-9 w-9 place-items-center rounded-full border border-white/25 text-white transition-transform duration-200 hover:scale-105 active:scale-90 xl:h-10 xl:w-10 3xl:h-12 3xl:w-12"
           >
             <IconChevron dir="left" />
           </button>
@@ -234,7 +240,7 @@ export default function Explore({
             type="button"
             onClick={() => onOpen360?.()}
             style={{ "--btn-fill-color": "#ffffff" }}
-            className="btn-fill group grid h-20 w-20 place-items-center rounded-full border border-white/40 text-white backdrop-blur transition-all duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 sm:h-24 sm:w-24 xl:h-28 xl:w-28 2xl:h-32 2xl:w-32 3xl:h-36 3xl:w-36 4xl:h-40 4xl:w-40"
+            className="btn-fill group grid h-20 w-20 place-items-center rounded-full border border-white/40 text-white backdrop-blur transition-[color,border-color,transform] duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 sm:h-24 sm:w-24 xl:h-28 xl:w-28 2xl:h-32 2xl:w-32 3xl:h-36 3xl:w-36 4xl:h-40 4xl:w-40"
           >
             <span className="flex flex-col items-center gap-1">
               <span className="text-sm font-bold tracking-widest 3xl:text-base 4xl:text-lg">360&deg;</span>
@@ -249,7 +255,7 @@ export default function Explore({
             onClick={() => goRelative(1)}
             aria-label="Next section"
             style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-            className="btn-fill grid h-9 w-9 place-items-center rounded-full border border-white/25 text-white transition-all duration-200 hover:scale-105 active:scale-90 xl:h-10 xl:w-10 3xl:h-12 3xl:w-12"
+            className="btn-fill grid h-9 w-9 place-items-center rounded-full border border-white/25 text-white transition-transform duration-200 hover:scale-105 active:scale-90 xl:h-10 xl:w-10 3xl:h-12 3xl:w-12"
           >
             <IconChevron dir="right" />
           </button>
@@ -264,7 +270,7 @@ export default function Explore({
         style={{ "--btn-fill-color": "rgba(255,255,255,0.1)" }}
         className="btn-fill group absolute bottom-6 left-6 z-10 hidden items-center gap-2 text-white/60 transition-colors duration-200 hover:text-white sm:left-10 md:flex 3xl:bottom-10 3xl:left-14 4xl:bottom-12 4xl:left-16"
       >
-        <span className="grid h-8 w-8 place-items-center rounded-full border border-white/25 backdrop-blur transition-all duration-200 group-hover:scale-105 group-hover:bg-white/10 group-active:scale-90 3xl:h-9 3xl:w-9 4xl:h-10 4xl:w-10">
+        <span className="grid h-8 w-8 place-items-center rounded-full border border-white/25 backdrop-blur transition-[background-color,transform] duration-200 group-hover:scale-105 group-hover:bg-white/10 group-active:scale-90 3xl:h-9 3xl:w-9 4xl:h-10 4xl:w-10">
           <IconInfo />
         </span>
         <span className="text-[9px] font-semibold uppercase tracking-[0.35em] 3xl:text-xs 4xl:text-sm">Info</span>

@@ -90,6 +90,21 @@ export default function Gallery({ onBack }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total]);
 
+  // Warm the browser's cache for both neighbors of the current image in the
+  // background (fire-and-forget) so Next/Previous almost never has to wait
+  // on a network fetch before the slide can start — the on-click preload in
+  // goRelative below still covers the rare case a neighbor hasn't finished
+  // loading yet (e.g. rapid repeated clicks).
+  useLayoutEffect(() => {
+    if (!total) return;
+    const nextSrc = GALLERY_IMAGES[(index + 1) % total];
+    const prevSrc = GALLERY_IMAGES[(index - 1 + total) % total];
+    for (const src of [nextSrc, prevSrc]) {
+      const img = new Image();
+      img.src = src;
+    }
+  }, [index, total]);
+
   const goRelative = async (delta) => {
     if (!total || isAnimatingRef.current) return;
 
@@ -167,8 +182,18 @@ export default function Gallery({ onBack }) {
             aria-label="Next image"
             className="absolute inset-0 z-0 cursor-pointer overflow-hidden"
           >
-            <img ref={layerARef} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            <img ref={layerBRef} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img
+              ref={layerARef}
+              alt=""
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <img
+              ref={layerBRef}
+              alt=""
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
             <div
               className="pointer-events-none absolute inset-0 z-[3]"
               style={{
@@ -187,7 +212,7 @@ export default function Gallery({ onBack }) {
             }}
             aria-label="Previous image"
             style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-            className="btn-fill absolute left-4 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-all duration-200 hover:scale-105 active:scale-90 sm:left-8 xl:h-12 xl:w-12 2xl:left-10 3xl:left-12 3xl:h-14 3xl:w-14 4xl:left-16 4xl:h-16 4xl:w-16"
+            className="btn-fill absolute left-4 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-transform duration-200 hover:scale-105 active:scale-90 sm:left-8 xl:h-12 xl:w-12 2xl:left-10 3xl:left-12 3xl:h-14 3xl:w-14 4xl:left-16 4xl:h-16 4xl:w-16"
           >
             <IconChevron dir="left" />
           </button>
@@ -199,7 +224,7 @@ export default function Gallery({ onBack }) {
             }}
             aria-label="Next image"
             style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-            className="btn-fill absolute right-4 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-all duration-200 hover:scale-105 active:scale-90 sm:right-8 xl:h-12 xl:w-12 2xl:right-10 3xl:right-12 3xl:h-14 3xl:w-14 4xl:right-16 4xl:h-16 4xl:w-16"
+            className="btn-fill absolute right-4 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-transform duration-200 hover:scale-105 active:scale-90 sm:right-8 xl:h-12 xl:w-12 2xl:right-10 3xl:right-12 3xl:h-14 3xl:w-14 4xl:right-16 4xl:h-16 4xl:w-16"
           >
             <IconChevron dir="right" />
           </button>

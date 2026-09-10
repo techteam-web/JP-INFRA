@@ -38,6 +38,8 @@ export default function Home({ animate = false, onExplore }) {
         <img
           src={heroImg}
           alt=""
+          decoding="async"
+          fetchPriority="high"
           className="animate-kenburns h-full w-full object-cover"
         />
         {/* left-to-right scrim so the hero copy stays legible over the sky */}
@@ -107,7 +109,7 @@ export default function Home({ animate = false, onExplore }) {
               data-anim
               onClick={onExplore}
               style={{ "--btn-fill-color": "#ffffff" }}
-              className="btn-fill group relative mt-10 flex w-85 items-center justify-between rounded-2xl border border-white/40 px-8 py-4 text-white transition-all duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 3xl:px-10 3xl:py-5 4xl:px-12 4xl:py-6"
+              className="btn-fill group relative mt-10 flex w-85 items-center justify-between rounded-2xl border border-white/40 px-8 py-4 text-white transition-[color,border-color,transform] duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 3xl:px-10 3xl:py-5 4xl:px-12 4xl:py-6"
             >
               <span className="text-xs font-semibold uppercase tracking-[0.25em] 3xl:text-sm 4xl:text-base">
                 Explore The Experience

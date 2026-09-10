@@ -31,9 +31,9 @@ function App() {
     );
   } else if (screen === "panorama") {
     content = (
-      <Suspense fallback={null}>
-  <AboutUs onBack={backToExplore} />
-</Suspense>
+      <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
+        <Panorama onBack={backToExplore} />
+      </Suspense>
     );
   } else if (screen === "about") {
     content = (

@@ -5,7 +5,7 @@ export default function BackButton({ onClick, className = "" }) {
       onClick={onClick}
       aria-label="Back"
       style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-      className={`btn-fill group grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-all duration-200 hover:scale-105 active:scale-90 2xl:h-11 2xl:w-11 3xl:h-12 3xl:w-12 4xl:h-14 4xl:w-14 ${className}`}
+      className={`btn-fill group grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-transform duration-200 hover:scale-105 active:scale-90 2xl:h-11 2xl:w-11 3xl:h-12 3xl:w-12 4xl:h-14 4xl:w-14 ${className}`}
     >
       <svg
         viewBox="0 0 24 24"

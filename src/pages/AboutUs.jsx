@@ -89,7 +89,13 @@ export default function AboutUs({ onBack }) {
     <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-navy-950">
       {/* Background photo */}
       <div className="absolute inset-0 overflow-hidden">
-        <img src={aboutImg} alt="" className="animate-kenburns h-full w-full object-cover" />
+        <img
+          src={aboutImg}
+          alt=""
+          decoding="async"
+          fetchPriority="high"
+          className="animate-kenburns h-full w-full object-cover"
+        />
         <div
           className="absolute inset-0"
           style={{

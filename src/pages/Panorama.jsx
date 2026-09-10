@@ -8,7 +8,6 @@ import BackButton from "../components/BackButton";
 const DEG = Math.PI / 180;
 const IDLE_MS = 1200;
 const AUTOROTATE_YAW_SPEED = 0.05;
-const CROSSFADE_MS = 900;
 const TILE_URL = (sceneId) => `/assets/panoroma/tiles/${sceneId}/{z}/{f}/{y}/{x}.jpg`;
 
 function sceneLabel(scene) {
@@ -20,9 +19,9 @@ export default function Panorama({ onBack }) {
   const containerRef = useRef(null);
   const scenesRef = useRef(new Map());
   const activeIdRef = useRef(APP_DATA.scenes[0]?.id);
+  const yawElRef = useRef(null);
   const [activeId, setActiveId] = useState(APP_DATA.scenes[0]?.id);
   const [ready, setReady] = useState(false);
-  const [yaw, setYaw] = useState(0);
   const [interacted, setInteracted] = useState(false);
 
   useEffect(() => {
@@ -80,7 +79,10 @@ export default function Panorama({ onBack }) {
       pendingFrame = requestAnimationFrame(() => {
         pendingFrame = null;
         const entry = map.get(activeIdRef.current);
-        if (entry) setYaw((entry.view.yaw() * 180) / Math.PI);
+        if (entry && yawElRef.current) {
+          const deg = (entry.view.yaw() * 180) / Math.PI;
+          yawElRef.current.textContent = `${Math.round(((deg % 360) + 360) % 360)}°`;
+        }
       });
     };
     map.forEach(({ view }) => view.addEventListener("change", reportView));
@@ -101,7 +103,7 @@ export default function Panorama({ onBack }) {
 
   useEffect(() => {
     if (!ready) return;
-    scenesRef.current.get(activeId)?.scene.switchTo({ transitionDuration: CROSSFADE_MS });
+    scenesRef.current.get(activeId)?.scene.switchTo({ transitionDuration: 0 });
   }, [activeId, ready]);
 
   return (
@@ -120,10 +122,11 @@ export default function Panorama({ onBack }) {
         </div>
 
         <div
+          ref={yawElRef}
           data-anim
           className="rounded-full bg-black/40 px-4 py-1.5 text-xs font-bold tracking-widest text-white backdrop-blur 3xl:px-5 3xl:py-2 3xl:text-sm 4xl:px-6 4xl:text-base"
         >
-          {Math.round(((yaw % 360) + 360) % 360)}°
+          0°
         </div>
       </div>
 
@@ -147,7 +150,7 @@ export default function Panorama({ onBack }) {
               type="button"
               onClick={() => setActiveId(scene.id)}
               style={scene.id === activeId ? undefined : { "--btn-fill-color": "rgba(255,255,255,0.12)" }}
-              className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition-all duration-200 active:scale-95 3xl:px-5 3xl:py-3 3xl:text-sm 4xl:px-6 4xl:text-base ${
+              className={`shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition-[color,background-color,transform] duration-200 active:scale-95 3xl:px-5 3xl:py-3 3xl:text-sm 4xl:px-6 4xl:text-base ${
                 scene.id === activeId
                   ? "bg-red-600 text-white"
                   : "btn-fill text-white/75"

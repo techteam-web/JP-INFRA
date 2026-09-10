@@ -82,7 +82,13 @@ export default function Contact({ onBack }) {
     <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-navy-950">
       {/* Background photo */}
       <div className="absolute inset-0">
-        <img src={contactImg} alt="" className="h-full w-full object-cover" />
+        <img
+          src={contactImg}
+          alt=""
+          decoding="async"
+          fetchPriority="high"
+          className="h-full w-full object-cover"
+        />
         <div
           className="absolute inset-0"
           style={{
@@ -173,7 +179,7 @@ export default function Contact({ onBack }) {
               <button
                 type="submit"
                 style={{ "--btn-fill-color": "#ffffff" }}
-                className="btn-fill group flex w-full items-center justify-between rounded-xl border border-white/40 px-6 py-3 text-white transition-all duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 sm:w-auto 3xl:px-8 3xl:py-3.5"
+                className="btn-fill group flex w-full items-center justify-between rounded-xl border border-white/40 px-6 py-3 text-white transition-[color,border-color,transform] duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 sm:w-auto 3xl:px-8 3xl:py-3.5"
               >
                 <span className="text-[10px] font-semibold uppercase tracking-[0.25em] sm:text-xs 3xl:text-sm">
                   {sent ? "Message Sent" : "Send Message"}
