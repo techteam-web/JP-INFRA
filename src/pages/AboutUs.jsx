@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
-import aboutImg from "../assets/menu.png";
+import aboutImg from "../assets/aboutUs.png";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
 

@@ -46,6 +46,7 @@ export default function Explore({
   onOpenAbout,
   onOpenContact,
   onOpenFloorPlans,
+  onOpenAmenities,
 }) {
   const rootRef = useRef(null);
   const [active, setActive] = useState("Home");
@@ -57,6 +58,7 @@ export default function Explore({
     if (label === "About Us") onOpenAbout?.();
     if (label === "Contact") onOpenContact?.();
     if (label === "Floor Plans") onOpenFloorPlans?.();
+    if (label === "Amenities") onOpenAmenities?.();
   };
 
   useEffect(() => {
@@ -72,6 +74,33 @@ export default function Explore({
       { opacity: 0, y: 18 },
       { opacity: 1, y: 0, duration: 0.9, stagger: 0.06, ease: "power3.out" }
     );
+  }, []);
+
+  // Every destination reachable from here is React.lazy()-loaded in App.jsx,
+  // which only starts fetching a chunk the instant it's first rendered —
+  // that fetch+eval was happening synchronously behind the Suspense
+  // fallback at click time, showing as a blank navy screen. Prefetching the
+  // same modules during idle time means the chunk is already in the
+  // browser's module cache by the time App.jsx's lazy() resolves it, so
+  // navigation is instant. These import() calls resolve to the exact same
+  // files App.jsx's lazy() calls do, so Vite maps them to the same chunk —
+  // nothing is fetched twice.
+  useEffect(() => {
+    const prefetch = () => {
+      import("./Panorama");
+      import("./Gallery");
+      import("./AboutUs");
+      import("./Contact");
+      import("./FloorPlans");
+      import("./Amenities");
+    };
+
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(prefetch, { timeout: 2000 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(prefetch, 200);
+    return () => window.clearTimeout(id);
   }, []);
 
   const activeIndex = Math.max(

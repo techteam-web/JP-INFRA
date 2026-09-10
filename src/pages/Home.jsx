@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
-import heroImg from "../assets/hero.png";
+import heroImg from "../assets/jpinfra hero.png";
 import Logo from "../components/Logo";
 
 export default function Home({ animate = false, onExplore }) {

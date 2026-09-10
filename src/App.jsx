@@ -8,6 +8,7 @@ const Gallery = lazy(() => import("./pages/Gallery"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
 const Contact = lazy(() => import("./pages/Contact"));
 const FloorPlans = lazy(() => import("./pages/FloorPlans"));
+const Amenities = lazy(() => import("./pages/Amenities"));
 
 function App() {
   const [loaded, setLoaded] = useState(false);
@@ -27,6 +28,7 @@ function App() {
         onOpenAbout={() => setScreen("about")}
         onOpenContact={() => setScreen("contact")}
         onOpenFloorPlans={() => setScreen("floorplans")}
+        onOpenAmenities={() => setScreen("amenities")}
       />
     );
   } else if (screen === "panorama") {
@@ -43,7 +45,7 @@ function App() {
     );
   } else if (screen === "contact") {
     content = (
-      <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
+      <Suspense fallback={null}>
         <Contact onBack={backToExplore} />
       </Suspense>
     );
@@ -51,6 +53,12 @@ function App() {
     content = (
       <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
         <FloorPlans onBack={backToExplore} />
+      </Suspense>
+    );
+  } else if (screen === "amenities") {
+    content = (
+      <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
+        <Amenities onBack={backToExplore} />
       </Suspense>
     );
   } else {
