@@ -3,6 +3,7 @@ import gsap from "gsap";
 import menuImg from "../assets/menus.png";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
+import { trackButtonClick } from "../lib/analytics";
 
 const NAV_ITEMS = [
   { n: "01", label: "360°" },
@@ -52,6 +53,7 @@ export default function Explore({
   const [active, setActive] = useState("Home");
 
   const handleSelect = (label) => {
+    trackButtonClick(label);
     setActive(label);
     if (label === "360°") onOpen360?.();
     if (label === "Gallery") onOpenGallery?.();
@@ -267,7 +269,10 @@ export default function Explore({
 
           <button
             type="button"
-            onClick={() => onOpen360?.()}
+            onClick={() => {
+              trackButtonClick("360°");
+              onOpen360?.();
+            }}
             style={{ "--btn-fill-color": "#ffffff" }}
             className="btn-fill group grid h-20 w-20 place-items-center rounded-full border border-white/40 text-white backdrop-blur transition-[color,border-color,transform] duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 sm:h-24 sm:w-24 xl:h-28 xl:w-28 2xl:h-32 2xl:w-32 3xl:h-36 3xl:w-36 4xl:h-40 4xl:w-40"
           >

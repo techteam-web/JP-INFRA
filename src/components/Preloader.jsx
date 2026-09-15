@@ -1,27 +1,139 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import Logo from "./Logo";
 
+// The logo lives in /public as a real vector (two <path> outlines) — fetched
+// by URL and injected inline so GSAP can stroke-trace the actual paths,
+// rather than importing it as an opaque <img>.
+const LOGO_SRC = "/Jp%20Infra.svg";
+const BRAND_WHITE = "#ffffff";
+
+// Cinematic ink-trace preloader: the logo mark's own paths draw themselves
+// in like a pen tracing the artwork, a red divider line grows in between it
+// and the wordmark, the "JP INFRA" name draws in the same way, then an
+// "Enter Full Screen" button fades in beneath the mark. Fullscreen requires
+// a real user gesture, so the site only reveals itself once that button is
+// clicked — same requestFullscreen()-then-fade pattern as before.
 export default function Preloader({ onFinish }) {
   const rootRef = useRef(null);
+  const logoWrapRef = useRef(null);
+  const lineRef = useRef(null);
+  const textSvgRef = useRef(null);
+  const textRef = useRef(null);
+  const enterRef = useRef(null);
+  const [logoReady, setLogoReady] = useState(false);
+  const [ready, setReady] = useState(false);
   const [done, setDone] = useState(false);
 
-  useEffect(() => {
-    const els = rootRef.current?.querySelectorAll("[data-anim]");
-    if (!els) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      gsap.set(els, { opacity: 1, y: 0 });
-      return;
-    }
-    gsap.fromTo(
-      els,
-      { opacity: 0, y: 16 },
-      { opacity: 1, y: 0, duration: 0.9, stagger: 0.08, delay: 0.2, ease: "power3.out" }
-    );
+  useLayoutEffect(() => {
+    let cancelled = false;
+
+    fetch(LOGO_SRC)
+      .then((res) => res.text())
+      .then((markup) => {
+        if (cancelled || !logoWrapRef.current) return;
+        logoWrapRef.current.innerHTML = markup;
+
+        const svg = logoWrapRef.current.querySelector("svg");
+        svg?.setAttribute(
+          "class",
+          "h-20 w-auto sm:h-24 md:h-28 xl:h-32 2xl:h-36 3xl:h-40 4xl:h-44 overflow-visible"
+        );
+
+        setLogoReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLogoReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  useLayoutEffect(() => {
+    if (!logoReady) return;
+
+    const paths = logoWrapRef.current?.querySelectorAll("svg path") ?? [];
+    const text = textRef.current;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    gsap.set(logoWrapRef.current, { opacity: 1 });
+    gsap.set(enterRef.current, { opacity: 0, y: 10 });
+
+    if (lineRef.current) {
+      const lineLength = lineRef.current.getTotalLength();
+      lineRef.current.style.strokeDasharray = lineLength;
+      lineRef.current.style.strokeDashoffset = lineLength;
+    }
+
+    // The text SVG's viewBox was a guessed fixed size, which almost never
+    // matches "JP INFRA"'s actual rendered width exactly — any leftover gap
+    // between the real glyphs and the guessed box edge is invisible but
+    // still takes up flex layout space, throwing off the whole row's visual
+    // center. Measuring the real bounding box and fitting the viewBox to it
+    // exactly removes that invisible slack.
+    if (text && textSvgRef.current) {
+      const pad = 4;
+      const bbox = text.getBBox();
+      textSvgRef.current.setAttribute(
+        "viewBox",
+        `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad * 2} ${bbox.height + pad * 2}`
+      );
+    }
+
+    const drawables = [...paths, text].filter(Boolean);
+    drawables.forEach((el) => {
+      const length = el === text ? el.getComputedTextLength() * 2.2 || 400 : el.getTotalLength();
+      el.style.fill = BRAND_WHITE;
+      el.style.fillOpacity = 0;
+      el.style.stroke = BRAND_WHITE;
+      el.style.strokeWidth = el === text ? 1.4 : 2;
+      el.style.strokeLinecap = "round";
+      el.style.strokeLinejoin = "round";
+      el.style.strokeDasharray = length;
+      el.style.strokeDashoffset = length;
+    });
+
+    if (reduce) {
+      gsap.set(drawables, { strokeDashoffset: 0, fillOpacity: 1, strokeOpacity: 0 });
+      gsap.set(lineRef.current, { strokeDashoffset: 0 });
+      gsap.set(enterRef.current, { opacity: 1, y: 0 });
+      setReady(true);
+      return;
+    }
+
+    const tl = gsap.timeline({ onComplete: () => setReady(true) });
+
+    // 1. Draw the logo's own paths, like ink tracing the mark.
+    if (paths.length) {
+      tl.to(paths, {
+        strokeDashoffset: 0,
+        duration: 1.6,
+        ease: "power2.inOut",
+        stagger: 0.25,
+      }).to(paths, { fillOpacity: 1, strokeOpacity: 0, duration: 0.6, stagger: 0.1 }, "-=0.3");
+    }
+
+    // 2. A slow, cinematic line draws itself in between logo and name.
+    tl.to(lineRef.current, { strokeDashoffset: 0, duration: 1.3, ease: "power4.inOut" }, "+=0.1");
+
+    // 3. The "JP INFRA" name draws in the same way as the logo.
+    if (text) {
+      tl.to(text, { strokeDashoffset: 0, duration: 1.1, ease: "power2.inOut" }, "-=0.5").to(
+        text,
+        { fillOpacity: 1, strokeOpacity: 0, duration: 0.5 },
+        "-=0.2"
+      );
+    }
+
+    // 4. Reveal the Enter Full Screen button underneath the mark.
+    tl.to(enterRef.current, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, "+=0.1");
+
+    return () => tl.kill();
+  }, [logoReady]);
+
   const handleEnter = () => {
+    if (!ready) return;
     document.documentElement.requestFullscreen?.().catch(() => {});
 
     const root = rootRef.current;
@@ -35,7 +147,7 @@ export default function Preloader({ onFinish }) {
       finish();
       return;
     }
-    gsap.to(root, { opacity: 0, duration: 0.6, ease: "power2.inOut", onComplete: finish });
+    gsap.to(root, { opacity: 0, duration: 0.8, ease: "power2.inOut", onComplete: finish });
   };
 
   if (done) return null;
@@ -43,75 +155,63 @@ export default function Preloader({ onFinish }) {
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-[999] flex flex-col items-center justify-center overflow-hidden bg-navy-700"
-      role="dialog"
-      aria-label="Enter site"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading JP Infra"
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-navy-700"
     >
-      {/* Architectural line-art accents */}
-      <svg
-        className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 text-white/10 sm:h-96 sm:w-96"
-        viewBox="0 0 200 200"
-        aria-hidden="true"
-      >
-        <circle cx="100" cy="100" r="90" fill="none" stroke="currentColor" strokeWidth="1" />
-        <line x1="100" y1="0" x2="100" y2="200" stroke="currentColor" strokeWidth="1" />
-        <line x1="0" y1="100" x2="200" y2="100" stroke="currentColor" strokeWidth="1" />
-      </svg>
-      <svg
-        className="pointer-events-none absolute -bottom-10 -right-10 h-72 w-96 text-white/10 sm:h-80 sm:w-[28rem]"
-        viewBox="0 0 320 220"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path d="M40 220V90l90-40 150 40v130" stroke="currentColor" strokeWidth="1" />
-        <path d="M40 90l90-40 150 40" stroke="currentColor" strokeWidth="1" />
-        <line x1="90" y1="60" x2="90" y2="220" stroke="currentColor" strokeWidth="1" />
-        <line x1="180" y1="70" x2="180" y2="220" stroke="currentColor" strokeWidth="1" />
-        <line x1="270" y1="90" x2="270" y2="220" stroke="currentColor" strokeWidth="1" />
-        <line x1="40" y1="140" x2="280" y2="140" stroke="currentColor" strokeWidth="1" />
-        <line x1="40" y1="180" x2="280" y2="180" stroke="currentColor" strokeWidth="1" />
-      </svg>
+      <div className="flex flex-col items-center px-6">
+        <div className="flex flex-row items-center gap-7 sm:gap-9">
+          <div
+            ref={logoWrapRef}
+            className="opacity-0 drop-shadow-[0_0_24px_rgba(255,255,255,0.2)]"
+            aria-hidden="true"
+          />
 
-      {/* Top-left */}
-      <div data-anim className="absolute left-6 top-6 sm:left-10 sm:top-8 3xl:left-14 3xl:top-10 4xl:left-16 4xl:top-12">
-        <div className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/70 sm:text-xs 3xl:gap-1.5 3xl:text-sm 4xl:text-base">
-          <p>Homes</p>
-          <p>Communities</p>
-          <p>Places</p>
-          <p className="text-white">A Brighter Tomorrow</p>
-        </div>
-      </div>
+          <svg
+            className="h-14 w-2 overflow-visible sm:h-16 md:h-20 3xl:h-24"
+            viewBox="0 0 10 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <line
+              ref={lineRef}
+              x1="5"
+              y1="2"
+              x2="5"
+              y2="98"
+              stroke="#ee3134"
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+          </svg>
 
-      {/* Top-right */}
-      <div
-        data-anim
-        className="absolute right-6 top-6 flex items-start gap-3 sm:right-10 sm:top-8 3xl:right-14 3xl:top-10 4xl:right-16 4xl:top-12"
-      >
-        <div className="flex flex-col gap-1 text-right text-[10px] font-semibold uppercase tracking-[0.25em] text-white/70 sm:text-xs 3xl:gap-1.5 3xl:text-sm 4xl:text-base">
-          <p>People</p>
-          <p>Places</p>
-          <p>Possibilities</p>
+          <svg
+            ref={textSvgRef}
+            className="h-16 w-auto overflow-visible sm:h-20 md:h-24 xl:h-28 2xl:h-32 3xl:h-36 4xl:h-40"
+            viewBox="0 0 380 80"
+            aria-hidden="true"
+          >
+            <text
+              ref={textRef}
+              x="0"
+              y="56"
+              fontSize="50"
+              fontWeight="600"
+              style={{ fontFamily: "var(--font-display)", letterSpacing: "0.06em" }}
+            >
+              JP INFRA
+            </text>
+          </svg>
         </div>
-        <span className="mt-0.5 h-12 w-px bg-white/25 3xl:h-14 4xl:h-16" />
-      </div>
 
-      {/* Center */}
-      <div className="relative z-10 flex flex-col items-center px-6 text-center">
-        <div data-anim>
-          <Logo className="h-16 w-auto sm:h-20 xl:h-24 2xl:h-28 3xl:h-32 4xl:h-40" />
-        </div>
-        <p
-          data-anim
-          className="mt-8 text-sm font-semibold uppercase tracking-[0.35em] text-white sm:text-base 3xl:mt-10 3xl:text-lg 4xl:text-xl"
-        >
-          Building A Better Tomorrow
-        </p>
         <button
+          ref={enterRef}
           type="button"
-          data-anim
           onClick={handleEnter}
+          disabled={!ready}
           style={{ "--btn-fill-color": "#ffffff" }}
-          className="btn-fill group mt-9 inline-flex items-center gap-3 rounded-full border border-white/35 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.25em] text-white transition-[color,border-color,transform] duration-300 ease-out hover:-translate-y-0.5 hover:border-white hover:text-navy-700 active:translate-y-0 active:scale-[0.97] 3xl:mt-11 3xl:px-9 3xl:py-4 3xl:text-sm 4xl:px-10 4xl:py-5 4xl:text-base"
+          className="btn-fill group mt-12 inline-flex items-center gap-3 rounded-full border border-white/35 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.25em] text-white transition-[color,border-color,transform] duration-300 ease-out hover:-translate-y-0.5 hover:border-white hover:text-navy-700 active:translate-y-0 active:scale-[0.97] disabled:pointer-events-none sm:mt-14 3xl:mt-16 3xl:px-9 3xl:py-4 3xl:text-sm 4xl:px-10 4xl:py-5 4xl:text-base"
         >
           Enter Full Screen
           <svg
@@ -131,16 +231,7 @@ export default function Preloader({ onFinish }) {
         </button>
       </div>
 
-      {/* Bottom-left */}
-      <div
-        data-anim
-        className="absolute bottom-6 left-6 flex flex-col gap-2 sm:left-10 sm:bottom-8 3xl:left-14 3xl:bottom-10 4xl:left-16 4xl:bottom-12"
-      >
-        <span className="h-px w-8 bg-white/30" />
-        <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/50 3xl:text-xs 4xl:text-sm">
-          www.jpinfra.com
-        </span>
-      </div>
+      <span className="sr-only">Loading JP Infra, please wait.</span>
     </div>
   );
 }
