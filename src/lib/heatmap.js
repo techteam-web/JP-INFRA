@@ -148,6 +148,16 @@ function handleClick(event) {
   const xPct = Math.min(100, Math.max(0, (event.pageX / docWidth) * 100));
   const yPct = Math.min(100, Math.max(0, (event.pageY / docHeight) * 100));
 
+  // Button Analytics rides on the same click stream instead of a
+  // separate explicit call — any element (or ancestor, so an icon/text
+  // node inside a button still counts) marked data-button-name gets its
+  // name attached to this same row. One reliable path instead of two
+  // parallel ones that can drift out of sync.
+  const buttonEl =
+    event.target instanceof Element
+      ? event.target.closest("[data-button-name]")
+      : null;
+
   enqueue({
     session_id: getSessionId(),
     page: currentPage,
@@ -157,6 +167,9 @@ function handleClick(event) {
     y_pct: Number(yPct.toFixed(2)),
     viewport_width: window.innerWidth,
     viewport_height: window.innerHeight,
+    button_name: buttonEl
+      ? buttonEl.getAttribute("data-button-name")
+      : null,
   });
 }
 
@@ -195,24 +208,6 @@ function trackPageview() {
     page: currentPage,
     device_type: getDeviceType(),
     event_type: "pageview",
-    viewport_width: window.innerWidth,
-    viewport_height: window.innerHeight,
-  });
-}
-
-// Real-time button click record for the admin dashboard's Button
-// Analytics panel — separate from the GA4 button_click event already
-// sent via trackButtonClick() in lib/analytics.js (that stays as-is;
-// this is an additional, faster-to-query record of the same click,
-// since GA4's custom-dimension reports can take a while to reflect new
-// data after being registered).
-export function trackButtonEvent(buttonName) {
-  enqueue({
-    session_id: getSessionId(),
-    page: currentPage,
-    device_type: getDeviceType(),
-    event_type: "button_click",
-    button_name: buttonName,
     viewport_width: window.innerWidth,
     viewport_height: window.innerHeight,
   });

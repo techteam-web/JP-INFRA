@@ -3,7 +3,6 @@ import gsap from "gsap";
 import heroImg from "../assets/jpinfra hero.png";
 import Logo from "../components/Logo";
 import { trackButtonClick } from "../lib/analytics";
-import { trackButtonEvent } from "../lib/heatmap";
 
 export default function Home({ animate = false, onExplore }) {
   const contentRef = useRef(null);
@@ -109,9 +108,9 @@ export default function Home({ animate = false, onExplore }) {
             <button
               type="button"
               data-anim
+              data-button-name="Explore"
               onClick={() => {
                 trackButtonClick("Explore");
-                trackButtonEvent("Explore");
                 onExplore?.();
               }}
               style={{ "--btn-fill-color": "#ffffff" }}

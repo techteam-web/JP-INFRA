@@ -4,16 +4,19 @@ import menuImg from "../assets/menus.png";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
 import { trackButtonClick } from "../lib/analytics";
-import { trackButtonEvent } from "../lib/heatmap";
 
+// trackingName is the value stored for real-time Button Analytics
+// (heatmap_events.button_name, via data-button-name below) — kept
+// separate from label (the visible nav text) so "360 View" can be the
+// analytics name without changing the on-screen "360°" caption.
 const NAV_ITEMS = [
-  { n: "01", label: "360°" },
-  { n: "02", label: "About Us" },
-  { n: "03", label: "Gallery" },
-  { n: "04", label: "Amenities" },
-  { n: "05", label: "Floor Plans" },
-  { n: "07", label: "Location" },
-  { n: "08", label: "Contact" },
+  { n: "01", label: "360°", trackingName: "360 View" },
+  { n: "02", label: "About Us", trackingName: "About Us" },
+  { n: "03", label: "Gallery", trackingName: "Gallery" },
+  { n: "04", label: "Amenities", trackingName: "Amenities" },
+  { n: "05", label: "Floor Plans", trackingName: "Floor Plans" },
+  { n: "07", label: "Location", trackingName: "Location" },
+  { n: "08", label: "Contact", trackingName: "Contact" },
 ];
 
 function IconInfo() {
@@ -55,7 +58,6 @@ export default function Explore({
 
   const handleSelect = (label) => {
     trackButtonClick(label);
-    trackButtonEvent(label);
     setActive(label);
     if (label === "360°") onOpen360?.();
     if (label === "Gallery") onOpenGallery?.();
@@ -177,6 +179,7 @@ export default function Explore({
               key={item.n}
               type="button"
               data-anim
+              data-button-name={item.trackingName}
               onClick={() => handleSelect(item.label)}
               style={{ "--btn-fill-color": "rgba(255,255,255,0.08)" }}
               className={`btn-fill group flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-[background-color,transform] duration-300 hover:bg-navy-700/40 active:scale-95 3xl:gap-4 3xl:px-3 3xl:py-2 ${
@@ -218,6 +221,7 @@ export default function Explore({
             <button
               key={item.n}
               type="button"
+              data-button-name={item.trackingName}
               onClick={() => handleSelect(item.label)}
               style={{ "--btn-fill-color": "rgba(255,255,255,0.08)" }}
               className="btn-fill group flex items-center gap-3 rounded-lg px-3 py-1.5"
@@ -271,9 +275,9 @@ export default function Explore({
 
           <button
             type="button"
+            data-button-name="360 View"
             onClick={() => {
               trackButtonClick("360°");
-              trackButtonEvent("360°");
               onOpen360?.();
             }}
             style={{ "--btn-fill-color": "#ffffff" }}
@@ -303,6 +307,7 @@ export default function Explore({
       <button
         type="button"
         data-anim
+        data-button-name="About Us"
         onClick={() => handleSelect("About Us")}
         style={{ "--btn-fill-color": "rgba(255,255,255,0.1)" }}
         className="btn-fill group absolute bottom-6 left-6 z-10 hidden items-center gap-2 text-white/60 transition-colors duration-200 hover:text-white sm:left-10 md:flex 3xl:bottom-10 3xl:left-14 4xl:bottom-12 4xl:left-16"
