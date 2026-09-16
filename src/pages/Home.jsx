@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import heroImg from "../assets/jpinfra hero.png";
 import Logo from "../components/Logo";
+import { trackButtonClick } from "../lib/analytics";
+import { trackButtonEvent } from "../lib/heatmap";
 
 export default function Home({ animate = false, onExplore }) {
   const contentRef = useRef(null);
@@ -107,7 +109,11 @@ export default function Home({ animate = false, onExplore }) {
             <button
               type="button"
               data-anim
-              onClick={onExplore}
+              onClick={() => {
+                trackButtonClick("Explore");
+                trackButtonEvent("Explore");
+                onExplore?.();
+              }}
               style={{ "--btn-fill-color": "#ffffff" }}
               className="btn-fill group relative mt-10 flex w-85 items-center justify-between rounded-2xl border border-white/40 px-8 py-4 text-white transition-[color,border-color,transform] duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 3xl:px-10 3xl:py-5 4xl:px-12 4xl:py-6"
             >

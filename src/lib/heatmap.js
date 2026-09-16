@@ -200,6 +200,24 @@ function trackPageview() {
   });
 }
 
+// Real-time button click record for the admin dashboard's Button
+// Analytics panel — separate from the GA4 button_click event already
+// sent via trackButtonClick() in lib/analytics.js (that stays as-is;
+// this is an additional, faster-to-query record of the same click,
+// since GA4's custom-dimension reports can take a while to reflect new
+// data after being registered).
+export function trackButtonEvent(buttonName) {
+  enqueue({
+    session_id: getSessionId(),
+    page: currentPage,
+    device_type: getDeviceType(),
+    event_type: "button_click",
+    button_name: buttonName,
+    viewport_width: window.innerWidth,
+    viewport_height: window.innerHeight,
+  });
+}
+
 // Call once when the current screen changes, so clicks/scroll depth are
 // attributed to the right page — this app has no URL routing, screens are
 // swapped via React state (see App.jsx), so there's no navigation event to

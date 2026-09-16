@@ -4,6 +4,7 @@ import menuImg from "../assets/menus.png";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
 import { trackButtonClick } from "../lib/analytics";
+import { trackButtonEvent } from "../lib/heatmap";
 
 const NAV_ITEMS = [
   { n: "01", label: "360°" },
@@ -54,6 +55,7 @@ export default function Explore({
 
   const handleSelect = (label) => {
     trackButtonClick(label);
+    trackButtonEvent(label);
     setActive(label);
     if (label === "360°") onOpen360?.();
     if (label === "Gallery") onOpenGallery?.();
@@ -271,6 +273,7 @@ export default function Explore({
             type="button"
             onClick={() => {
               trackButtonClick("360°");
+              trackButtonEvent("360°");
               onOpen360?.();
             }}
             style={{ "--btn-fill-color": "#ffffff" }}
