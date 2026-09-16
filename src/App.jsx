@@ -3,6 +3,7 @@ import Preloader from "./components/Preloader";
 import Home from "./pages/Home";
 import Explore from "./pages/Explore";
 import { trackPageView } from "./lib/analytics";
+import { initHeatmapTracking, setHeatmapPage } from "./lib/heatmap";
 
 const Panorama = lazy(() => import("./pages/Panorama"));
 const Gallery = lazy(() => import("./pages/Gallery"));
@@ -36,11 +37,15 @@ function App() {
     // real virtual pageview.
     if (isFirstRender.current) {
       isFirstRender.current = false;
+      // Heatmap tracking has no such double-count concern (it isn't tied
+      // to gtag's own pageview), so it starts from Home immediately.
+      initHeatmapTracking(screen);
       return;
     }
 
     const meta = SCREEN_META[screen] ?? { title: screen, path: `/${screen}` };
     trackPageView(meta.title, meta.path);
+    setHeatmapPage(screen);
   }, [screen]);
 
   const backToExplore = () => setScreen("explore");
