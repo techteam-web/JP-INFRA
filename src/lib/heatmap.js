@@ -185,6 +185,21 @@ function onScroll() {
   });
 }
 
+// One row per screen actually visited — the real, ordered per-session log
+// the admin dashboard's User Journey panel reconstructs navigation paths
+// from. No coordinates/scroll data, just "this session was on this page
+// at this time."
+function trackPageview() {
+  enqueue({
+    session_id: getSessionId(),
+    page: currentPage,
+    device_type: getDeviceType(),
+    event_type: "pageview",
+    viewport_width: window.innerWidth,
+    viewport_height: window.innerHeight,
+  });
+}
+
 // Call once when the current screen changes, so clicks/scroll depth are
 // attributed to the right page — this app has no URL routing, screens are
 // swapped via React state (see App.jsx), so there's no navigation event to
@@ -193,6 +208,7 @@ export function setHeatmapPage(pageKey) {
   flushScrollDepth();
   currentPage = pageKey;
   maxScrollDepth = 0;
+  trackPageview();
 }
 
 // Call once, on mount, with the initial screen key.
@@ -201,6 +217,7 @@ export function initHeatmapTracking(initialPage) {
   listenersAttached = true;
 
   currentPage = initialPage;
+  trackPageview();
 
   window.addEventListener("click", handleClick, {
     capture: true,
