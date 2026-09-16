@@ -124,18 +124,36 @@ function enqueue(row) {
   }
 }
 
-function flushScrollDepth() {
-  if (maxScrollDepth <= 0) return;
-
-  enqueue({
+// PostgREST rejects a bulk insert outright (PGRST102 "All object keys
+// must match") unless every row in the array has the exact same set of
+// keys — click/scroll/pageview rows naturally have different relevant
+// fields, and a single flush batches whatever's queued across all of
+// them within the interval. Building every row through this one helper,
+// always with the full column set (unused fields explicitly null),
+// guarantees that invariant instead of relying on every call site to
+// remember it.
+function buildRow(eventType, fields = {}) {
+  return {
     session_id: getSessionId(),
     page: currentPage,
     device_type: getDeviceType(),
-    event_type: "scroll",
+    event_type: eventType,
+    x_pct: null,
+    y_pct: null,
     viewport_width: window.innerWidth,
     viewport_height: window.innerHeight,
-    scroll_depth: maxScrollDepth,
-  });
+    scroll_depth: null,
+    button_name: null,
+    ...fields,
+  };
+}
+
+function flushScrollDepth() {
+  if (maxScrollDepth <= 0) return;
+
+  enqueue(
+    buildRow("scroll", { scroll_depth: maxScrollDepth })
+  );
 
   maxScrollDepth = 0;
 }
@@ -158,19 +176,15 @@ function handleClick(event) {
       ? event.target.closest("[data-button-name]")
       : null;
 
-  enqueue({
-    session_id: getSessionId(),
-    page: currentPage,
-    device_type: getDeviceType(),
-    event_type: "click",
-    x_pct: Number(xPct.toFixed(2)),
-    y_pct: Number(yPct.toFixed(2)),
-    viewport_width: window.innerWidth,
-    viewport_height: window.innerHeight,
-    button_name: buttonEl
-      ? buttonEl.getAttribute("data-button-name")
-      : null,
-  });
+  enqueue(
+    buildRow("click", {
+      x_pct: Number(xPct.toFixed(2)),
+      y_pct: Number(yPct.toFixed(2)),
+      button_name: buttonEl
+        ? buttonEl.getAttribute("data-button-name")
+        : null,
+    })
+  );
 }
 
 function handleScroll() {
@@ -203,14 +217,7 @@ function onScroll() {
 // from. No coordinates/scroll data, just "this session was on this page
 // at this time."
 function trackPageview() {
-  enqueue({
-    session_id: getSessionId(),
-    page: currentPage,
-    device_type: getDeviceType(),
-    event_type: "pageview",
-    viewport_width: window.innerWidth,
-    viewport_height: window.innerHeight,
-  });
+  enqueue(buildRow("pageview"));
 }
 
 // Call once when the current screen changes, so clicks/scroll depth are
