@@ -30,6 +30,27 @@ let queue = [];
 let maxScrollDepth = 0;
 let listenersAttached = false;
 let scrollTicking = false;
+let sessionCountry = null;
+let sessionCity = null;
+
+// Fetched once per page load from our own /api/geo edge function (see
+// that file for what it does and doesn't do). Resolves to null/null on
+// any failure, and always null when not actually running on Vercel
+// (e.g. local dev) — buildRow() below already treats these as ordinary
+// nullable fields, so there's nothing else to special-case.
+function loadGeoOnce() {
+  fetch("/api/geo")
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => {
+      if (!data) return;
+      sessionCountry = data.country || null;
+      sessionCity = data.city || null;
+    })
+    .catch(() => {
+      // No geo this session — fields stay null, same as any other
+      // session where this signal simply isn't available.
+    });
+}
 
 function getSessionId() {
   if (sessionId) return sessionId;
@@ -144,6 +165,8 @@ function buildRow(eventType, fields = {}) {
     viewport_height: window.innerHeight,
     scroll_depth: null,
     button_name: null,
+    country: sessionCountry,
+    city: sessionCity,
     ...fields,
   };
 }
@@ -237,6 +260,7 @@ export function initHeatmapTracking(initialPage) {
   listenersAttached = true;
 
   currentPage = initialPage;
+  loadGeoOnce();
   trackPageview();
 
   window.addEventListener("click", handleClick, {
