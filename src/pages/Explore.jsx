@@ -2,22 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import menuImg from "../assets/menus.png";
 import Logo from "../components/Logo";
+import EndgameLogo from "../components/EndgameLogo";
 import BackButton from "../components/BackButton";
+import { NAV_ITEMS } from "../data/navItems";
 import { trackButtonClick } from "../lib/analytics";
-
-// trackingName is the value stored for real-time Button Analytics
-// (heatmap_events.button_name, via data-button-name below) — kept
-// separate from label (the visible nav text) so "360 View" can be the
-// analytics name without changing the on-screen "360°" caption.
-const NAV_ITEMS = [
-  { n: "01", label: "360°", trackingName: "360 View" },
-  { n: "02", label: "About Us", trackingName: "About Us" },
-  { n: "03", label: "Gallery", trackingName: "Gallery" },
-  { n: "04", label: "Amenities", trackingName: "Amenities" },
-  { n: "05", label: "Floor Plans", trackingName: "Floor Plans" },
-  { n: "07", label: "Location", trackingName: "Location" },
-  { n: "08", label: "Contact", trackingName: "Contact" },
-];
 
 function IconInfo() {
   return (
@@ -52,6 +40,7 @@ export default function Explore({
   onOpenContact,
   onOpenFloorPlans,
   onOpenAmenities,
+  onOpenLocation,
 }) {
   const rootRef = useRef(null);
   const [active, setActive] = useState("Home");
@@ -65,6 +54,7 @@ export default function Explore({
     if (label === "Contact") onOpenContact?.();
     if (label === "Floor Plans") onOpenFloorPlans?.();
     if (label === "Amenities") onOpenAmenities?.();
+    if (label === "Location") onOpenLocation?.();
   };
 
   useEffect(() => {
@@ -99,6 +89,7 @@ export default function Explore({
       import("./Contact");
       import("./FloorPlans");
       import("./Amenities");
+      import("../components/Location");
     };
 
     if (typeof window.requestIdleCallback === "function") {
@@ -137,20 +128,17 @@ export default function Explore({
               "linear-gradient(180deg, rgba(10,31,54,0.55) 0%, rgba(10,31,54,0.05) 30%, rgba(10,31,54,0.1) 60%, rgba(10,31,54,0.75) 100%)",
           }}
         />
-        <div
-          className="absolute inset-y-0 left-0 w-72"
-          style={{
-            background: "linear-gradient(90deg, rgba(10,31,54,0.6) 0%, transparent 100%)",
-          }}
-        />
       </div>
 
-      {/* Top-left: back + breadcrumb */}
+      {/* Top-left: back + project logo */}
       <div
         data-anim
-        className="absolute left-6 top-6 z-10 flex items-center gap-3 sm:left-10 sm:top-8 3xl:left-14 3xl:top-10 4xl:left-16 4xl:top-12"
+        className="absolute left-6 top-6 z-10 flex items-center gap-4 sm:left-10 sm:top-8 sm:gap-5 3xl:left-14 3xl:top-10 3xl:gap-6 4xl:left-16 4xl:top-12"
       >
         <BackButton onClick={onBack} />
+        <span className="jp-logo-shadow">
+          <EndgameLogo className="w-24 sm:w-28 2xl:w-32 3xl:w-36 4xl:w-44" />
+        </span>
         {/* <span className="hidden items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60 sm:flex 3xl:text-xs 4xl:text-sm">
           <span className="h-px w-6 bg-white/40" />
           Explore &middot; 360&deg; View
@@ -169,46 +157,6 @@ export default function Explore({
           Shaping Better Tomorrow
         </p> */}
       </div>
-
-      {/* Left index nav */}
-      <nav className="absolute left-6 top-1/2 z-10 hidden -translate-y-1/2 flex-col gap-4 sm:left-10 lg:flex 2xl:gap-5 3xl:left-14 3xl:gap-6 4xl:left-16">
-        {NAV_ITEMS.map((item) => {
-          const isActive = item.label === active;
-          return (
-            <button
-              key={item.n}
-              type="button"
-              data-anim
-              data-button-name={item.trackingName}
-              onClick={() => handleSelect(item.label)}
-              style={{ "--btn-fill-color": "rgba(255,255,255,0.08)" }}
-              className={`btn-fill group flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-[background-color,transform] duration-300 hover:bg-navy-700/40 active:scale-95 3xl:gap-4 3xl:px-3 3xl:py-2 ${
-                isActive ? "bg-navy-700/40" : ""
-              }`}
-            >
-              <span
-                className={`h-px transition-[width,background-color] duration-300 ${
-                  isActive ? "w-8 bg-red-600" : "w-4 bg-navy-700/70 group-hover:w-8 group-hover:bg-red-600"
-                }`}
-              />
-              <span
-                className={`text-sm font-bold tracking-widest transition-colors duration-300 3xl:text-base 4xl:text-lg ${
-                  isActive ? "text-red-600" : "text-white/40 group-hover:text-red-600"
-                }`}
-              >
-                {item.n}
-              </span>
-              <span
-                className={`font-display text-lg uppercase tracking-[0.15em] transition-colors sm:text-xl 2xl:text-2xl 3xl:text-3xl 4xl:text-4xl ${
-                  isActive ? "text-white" : "text-white/50 group-hover:text-white"
-                }`}
-              >
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
 
       {/* Mobile nav — below md only (md:hidden). A direct, always-visible
           vertical menu over the fullscreen background, replacing the
@@ -317,15 +265,6 @@ export default function Explore({
         </span>
         <span className="text-[9px] font-semibold uppercase tracking-[0.35em] 3xl:text-xs 4xl:text-sm">Info</span>
       </button>
-      <div
-        data-anim
-        className="absolute bottom-6 right-6 z-10 hidden items-center gap-3 sm:right-10 md:flex 3xl:bottom-10 3xl:right-14 4xl:bottom-12 4xl:right-16"
-      >
-        <span className="h-px w-6 bg-white/30" />
-        <span className="text-[9px] font-semibold uppercase tracking-[0.35em] text-white/40 3xl:text-xs 4xl:text-sm">
-          Building Landmarks. Creating Lifetimes.
-        </span>
-      </div>
     </div>
   );
 }

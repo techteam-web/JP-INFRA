@@ -126,9 +126,6 @@ export default function AboutUs({ onBack }) {
         <div className="rounded-lg bg-navy-700 p-1.5 3xl:p-2">
           <Logo className="h-9 w-auto sm:h-10 2xl:h-11 3xl:h-12 4xl:h-14" />
         </div>
-        <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/50 sm:text-[10px] 3xl:text-xs 4xl:text-sm">
-          A Brighter Tomorrow
-        </p>
       </div>
 
       {/* Center: story headline */}

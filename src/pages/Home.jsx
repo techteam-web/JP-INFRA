@@ -2,9 +2,10 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import heroImg from "../assets/jpinfra hero.png";
 import Logo from "../components/Logo";
-import { trackButtonClick } from "../lib/analytics";
+import EndgameLogo from "../components/EndgameLogo";
+import BottomNav from "../components/BottomNav";
 
-export default function Home({ animate = false, onExplore }) {
+export default function Home({ animate = false, onNavigate }) {
   const contentRef = useRef(null);
 
   useEffect(() => {
@@ -43,14 +44,6 @@ export default function Home({ animate = false, onExplore }) {
           fetchPriority="high"
           className="animate-kenburns h-full w-full object-cover"
         />
-        {/* left-to-right scrim so the hero copy stays legible over the sky */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(10,31,54,0.75) 0%, rgba(10,31,54,0.35) 40%, rgba(10,31,54,0.05) 65%, transparent 80%)",
-          }}
-        />
         {/* subtle top scrim so the logo stays legible over bright sky */}
         <div
           className="absolute inset-x-0 top-0 h-40"
@@ -61,6 +54,14 @@ export default function Home({ animate = false, onExplore }) {
       </div>
 
       <div ref={contentRef} className="relative z-10 flex h-full flex-col">
+        {/* Project logo */}
+        <div
+          data-anim
+          className="jp-logo-shadow absolute left-6 top-6 sm:left-12 sm:top-8 lg:left-20 xl:left-24 2xl:left-28 3xl:left-32 3xl:top-10 4xl:left-40 4xl:top-12"
+        >
+          <EndgameLogo className="w-28 sm:w-32 2xl:w-36 3xl:w-40 4xl:w-48" />
+        </div>
+
         {/* Logo */}
         <div
           data-anim
@@ -69,73 +70,9 @@ export default function Home({ animate = false, onExplore }) {
           <div className="rounded-lg bg-navy-700 p-1.5 3xl:p-2">
             <Logo className="h-9 w-auto sm:h-10 2xl:h-11 3xl:h-12 4xl:h-14" />
           </div>
-          <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/50 sm:text-[10px] 3xl:text-xs 4xl:text-sm">
-            Building Landmarks. Creating Lifetimes.
-          </p>
         </div>
 
-        {/* Hero copy */}
-        <div className="flex h-full items-center px-6 sm:px-12 lg:px-20 xl:px-24 2xl:px-28 3xl:px-32 4xl:px-40">
-          <div className="max-w-xl xl:max-w-2xl 3xl:max-w-3xl 4xl:max-w-4xl">
-            <div
-              data-anim
-              className="text-xs font-semibold uppercase leading-relaxed tracking-[0.3em] text-white/85 3xl:text-sm 4xl:text-base"
-            >
-              <p>Homes For</p>
-              <p>A Brighter Tomorrow</p>
-            </div>
-
-            <span data-anim className="mt-4 block h-px w-16 bg-white/30 3xl:w-20 4xl:w-24" />
-
-            <h1
-              data-anim
-              className="mt-5 font-display uppercase text-5xl leading-[1.05] text-white sm:text-6xl lg:text-[4.5rem] xl:text-[5rem] 2xl:text-[5.75rem] 3xl:text-[6.75rem] 4xl:text-[8.25rem]"
-            >
-              A Life Beyond
-              <br />
-              <span className="text-red-600">The Ordinary</span>
-            </h1>
-
-            <p
-              data-anim
-              className="mt-6 max-w-md text-xs font-medium uppercase leading-relaxed tracking-[0.12em] text-white/70 sm:text-sm xl:max-w-lg xl:text-base 3xl:max-w-xl 3xl:text-lg"
-            >
-              Thoughtfully designed residences for a more
-              <br />
-              connected, fulfilling life.
-            </p>
-
-            <button
-              type="button"
-              data-anim
-              data-button-name="Explore"
-              onClick={() => {
-                trackButtonClick("Explore");
-                onExplore?.();
-              }}
-              style={{ "--btn-fill-color": "#ffffff" }}
-              className="btn-fill group relative mt-10 flex w-85 items-center justify-between rounded-2xl border border-white/40 px-8 py-4 text-white transition-[color,border-color,transform] duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 3xl:px-10 3xl:py-5 4xl:px-12 4xl:py-6"
-            >
-              <span className="text-xs font-semibold uppercase tracking-[0.25em] 3xl:text-sm 4xl:text-base">
-                Explore The Experience
-              </span>
-              <svg
-                viewBox="0 0 24 24"
-                className=" h-4 w-4 -rotate-45 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 3xl:h-5 3xl:w-5"
-                aria-hidden="true"
-              >
-                <path
-                  d="M5 12h14M13 6l6 6-6 6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
+        <BottomNav onSelect={onNavigate} />
       </div>
     </div>
   );

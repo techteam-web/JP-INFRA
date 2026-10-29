@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { GALLERY_IMAGES } from "../data/gallery";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
+import ImageCaption from "../components/ImageCaption";
 
 const TRANSITION_DURATION = 1.3;
 const TRANSITION_EASE = "power3.inOut";
@@ -67,10 +68,10 @@ export default function Gallery({ onBack }) {
     const b = layerBRef.current;
     if (!a || !b || total === 0) return;
 
-    a.src = GALLERY_IMAGES[0];
+    a.src = GALLERY_IMAGES[0].image;
     gsap.set(a, { xPercent: 0, zIndex: 1 });
 
-    b.src = GALLERY_IMAGES[total > 1 ? 1 : 0];
+    b.src = GALLERY_IMAGES[total > 1 ? 1 : 0].image;
     gsap.set(b, { xPercent: OFFSCREEN, zIndex: 2 });
 
     activeRef.current = "A";
@@ -84,8 +85,8 @@ export default function Gallery({ onBack }) {
   // loading yet (e.g. rapid repeated clicks).
   useLayoutEffect(() => {
     if (!total) return;
-    const nextSrc = GALLERY_IMAGES[(index + 1) % total];
-    const prevSrc = GALLERY_IMAGES[(index - 1 + total) % total];
+    const nextSrc = GALLERY_IMAGES[(index + 1) % total].image;
+    const prevSrc = GALLERY_IMAGES[(index - 1 + total) % total].image;
     for (const src of [nextSrc, prevSrc]) {
       const img = new Image();
       img.src = src;
@@ -96,7 +97,7 @@ export default function Gallery({ onBack }) {
     if (!total || isAnimatingRef.current) return;
 
     const nextIndex = (index + delta + total) % total;
-    const nextSrc = GALLERY_IMAGES[nextIndex];
+    const nextSrc = GALLERY_IMAGES[nextIndex].image;
 
     const activeEl = activeRef.current === "A" ? layerARef.current : layerBRef.current;
     const inactiveEl = activeRef.current === "A" ? layerBRef.current : layerARef.current;
@@ -114,10 +115,12 @@ export default function Gallery({ onBack }) {
     gsap.set(inactiveEl, { xPercent: enterFrom, zIndex: 2 });
     gsap.set(activeEl, { xPercent: 0, zIndex: 1 });
 
+    // The name and counter change as the transition starts, not after it.
+    setIndex(nextIndex);
+
     const finish = () => {
       activeRef.current = activeRef.current === "A" ? "B" : "A";
       isAnimatingRef.current = false;
-      setIndex(nextIndex);
     };
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -218,12 +221,20 @@ export default function Gallery({ onBack }) {
             <IconChevron dir="right" />
           </button>
 
+          <ImageCaption id={GALLERY_IMAGES[index].id} label="Gallery" name={GALLERY_IMAGES[index].name} />
+
           {/* Counter */}
           <div
             data-anim
-            className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/40 px-4 py-1.5 text-xs font-bold tracking-widest text-white backdrop-blur sm:bottom-8 xl:px-5 xl:py-2 xl:text-sm 2xl:bottom-10 3xl:bottom-12 3xl:px-6 3xl:text-base 4xl:bottom-14 4xl:px-7 4xl:text-lg"
+            className="absolute inset-x-0 bottom-6 z-10 mx-auto flex w-fit items-center gap-2.5 rounded-xl border border-white/25 bg-navy-950/55 px-5 py-2.5 text-white shadow-premium backdrop-blur-xl sm:bottom-8 xl:px-6 xl:py-3 2xl:bottom-10 3xl:bottom-12 3xl:px-7 4xl:bottom-14 4xl:px-8"
           >
-            {index + 1} / {total}
+            <span className="text-xs font-bold tracking-widest text-red-600 xl:text-sm 3xl:text-base 4xl:text-lg">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <span className="h-3 w-px bg-white/30 3xl:h-4" aria-hidden="true" />
+            <span className="text-xs font-semibold tracking-widest text-white/70 xl:text-sm 3xl:text-base 4xl:text-lg">
+              {String(total).padStart(2, "0")}
+            </span>
           </div>
         </>
       ) : (

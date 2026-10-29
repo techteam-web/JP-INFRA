@@ -4,12 +4,18 @@ import { AMENITIES } from "../data/amenities";
 import { INFLUENCER_AMENITIES } from "../data/influencerAmenities";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
+import ImageCaption from "../components/ImageCaption";
 
 // Two separate slideshows sharing the same fullscreen viewer: the general
 // amenities, and — only when the "Influencer Amenities" toggle is on — the
 // influencer shots exclusively, with nothing else mixed in.
-const GENERAL_ITEMS = AMENITIES.map((a) => ({ id: a.id, image: a.image }));
-const INFLUENCER_ITEMS = INFLUENCER_AMENITIES.map((i) => ({ id: i.id, image: i.image }));
+const GENERAL_ITEMS = AMENITIES.map((a) => ({ id: a.id, image: a.image, name: a.name }));
+const INFLUENCER_ITEMS = INFLUENCER_AMENITIES.map((i) => ({
+  id: i.id,
+  image: i.image,
+  name: i.name,
+  detail: i.activity,
+}));
 
 const TRANSITION_DURATION = 1.7;
 const TRANSITION_EASE = "power4.inOut";
@@ -137,10 +143,12 @@ export default function Amenities({ onBack }) {
     });
     gsap.set(activeEl, { clipPath: CLIP_OPEN, zIndex: 1, scale: 1, transformOrigin: exitOrigin });
 
+    // The name and counter change as the transition starts, not after it.
+    setIndex(nextIndex);
+
     const finish = () => {
       activeRef.current = activeRef.current === "A" ? "B" : "A";
       isAnimatingRef.current = false;
-      setIndex(nextIndex);
     };
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -255,12 +263,25 @@ export default function Amenities({ onBack }) {
             <IconChevron dir="right" />
           </button>
 
-          {/* Counter */}
+          <ImageCaption
+            id={items[index].id}
+            label={showInfluencers ? "Influencer Amenities" : "Amenities"}
+            name={items[index].name}
+            detail={items[index].detail}
+          />
+
+          {/* Counter — the same navy glass counter as the Gallery */}
           <div
             data-anim
-            className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/40 px-4 py-1.5 text-xs font-bold tracking-widest text-white backdrop-blur sm:bottom-8 xl:px-5 xl:py-2 xl:text-sm 2xl:bottom-10 3xl:bottom-12 3xl:px-6 3xl:text-base 4xl:bottom-14 4xl:px-7 4xl:text-lg"
+            className="absolute inset-x-0 bottom-6 z-10 mx-auto flex w-fit items-center gap-2.5 rounded-xl border border-white/25 bg-navy-950/55 px-5 py-2.5 text-white shadow-premium backdrop-blur-xl sm:bottom-8 xl:px-6 xl:py-3 2xl:bottom-10 3xl:bottom-12 3xl:px-7 4xl:bottom-14 4xl:px-8"
           >
-            {index + 1} / {total}
+            <span className="text-xs font-bold tracking-widest text-red-600 xl:text-sm 3xl:text-base 4xl:text-lg">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <span className="h-3 w-px bg-white/30 3xl:h-4" aria-hidden="true" />
+            <span className="text-xs font-semibold tracking-widest text-white/70 xl:text-sm 3xl:text-base 4xl:text-lg">
+              {String(total).padStart(2, "0")}
+            </span>
           </div>
         </>
       ) : (

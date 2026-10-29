@@ -35,9 +35,9 @@
   --breakpoint-4xl: 2560px;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+/* No `scroll-behavior: smooth` on html: the cinematic intro is scrubbed by
+   window scroll and ScrollTrigger jumps the scroll position itself (pinning,
+   holding the end frame), which smooth scrolling would animate instead. */
 
 body {
   margin: 0;
@@ -104,6 +104,17 @@ body {
   }
 }
 
+/* Photo name caption (ImageCaption): eases up into place on every slide change */
+@keyframes jp-caption-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.jp-caption-in {
+  animation: jp-caption-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -140,5 +151,512 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Cinematic intro (CinematicIntro / LogoDraw / EndgameLogo)
+   --------------------------------------------------------------------------- */
+html, body { margin: 0; background: #0a0908; overflow-x: hidden; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+html, .jp-no-scrollbar { scrollbar-width: none; }
+html::-webkit-scrollbar, .jp-no-scrollbar::-webkit-scrollbar { display: none; }
+html.jp-lock, html.jp-lock body, html.jp-end-lock, html.jp-end-lock body { overflow: hidden; }
+
+.jp-logo { display: block; color: #f4ede1; background-color: currentColor; -webkit-mask: var(--jp-logo) center / contain no-repeat; mask: var(--jp-logo) center / contain no-repeat; }
+.jp-logo-shadow { filter: drop-shadow(0 2px 18px rgba(20, 12, 4, 0.45)) drop-shadow(0 1px 2px rgba(20, 12, 4, 0.3)); }
+
+/* Intro type uses the site's own fonts: Bebas Neue (--font-display) for the
+   wordmark and headlines, Montserrat (--font-body) for labels and buttons. */
+.jp-wordmark { --tracking: 0.18em; margin: 0 calc(var(--tracking) * -1) 0 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(3.2rem, 10vw, 9.5rem); line-height: 1; letter-spacing: var(--tracking); color: #fff; text-shadow: 0 2px 40px rgba(10, 31, 54, 0.5), 0 1px 2px rgba(10, 31, 54, 0.3); white-space: nowrap; user-select: none; }
+@media (max-width: 640px) { .jp-wordmark { --tracking: 0.1em; } }
+
+.jp-meta { font-family: var(--font-body); font-weight: 600; font-size: 10.5px; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85); white-space: nowrap; }
+
+/* chapter headlines, styled like the site's headings: uppercase Bebas, last line in brand red */
+.jp-headline { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(2.8rem, 5.4vw, 5.4rem); line-height: 1.02; letter-spacing: 0.02em; text-transform: uppercase; color: #fff; text-shadow: 0 2px 30px rgba(10, 31, 54, 0.45); }
+.jp-headline > span:last-child { color: var(--color-red-600); }
+.jp-headline--lg { font-size: clamp(3.4rem, 7.6vw, 7.6rem); }
+
+/* Enter Full Screen: the site's outlined button — softly squared corners, white
+   hairline, Montserrat caps; the white .btn-fill rises on hover (set in JSX) */
+.jp-enter { display: inline-flex; align-items: center; gap: 14px; padding: 15px 28px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; background: transparent; font-family: var(--font-body); font-size: 12px; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: #fff; cursor: pointer; transition: color 0.3s ease, border-color 0.3s ease, transform 0.2s ease; }
+.jp-enter:hover { color: var(--color-navy-950); border-color: #fff; }
+.jp-enter:active { transform: scale(0.97); }
+.jp-enter svg { color: var(--color-red-600); transition: transform 0.3s ease; }
+.jp-enter:hover svg { transform: translateX(3px); }
+.jp-enter[aria-busy="true"] { cursor: default; animation: jp-breathe 1.6s ease-in-out infinite; }
+@keyframes jp-breathe { 50% { opacity: 0.45; } }
+
+.jp-cue { display: block; width: 1px; height: 52px; background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.85)); transform-origin: top; animation: jp-cue 2.8s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+@keyframes jp-cue { 0% { transform: scaleY(0); opacity: 0; } 35% { opacity: 1; } 70% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .jp-cue { animation: none; } }
+
+/* ---------------------------------------------------------------------------
+   Location page (components/Location.jsx) — in the site's own palette:
+   navy (primary) chrome over a cool, navy-tinted daylight map, with brand
+   red (secondary) for the selection, the route and active states. Controls
+   use the site's round glass buttons (navy glass, white hairline, .btn-fill).
+   --------------------------------------------------------------------------- */
+.jp-loc-map .maplibregl-canvas {
+  outline: none;
+}
+
+.jp-loc-vignette {
+  background: radial-gradient(ellipse 120% 90% at 55% 50%, transparent 60%, rgba(10, 31, 54, 0.22) 100%);
+}
+
+/* attribution: kept (required) but quiet, moved clear of the side panel */
+.jp-loc-map .maplibregl-ctrl-bottom-right {
+  right: auto;
+  left: 96px;
+}
+.jp-loc-map .maplibregl-ctrl-attrib {
+  background: rgba(10, 31, 54, 0.6) !important;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: var(--font-body);
+  font-size: 10px;
+}
+.jp-loc-map .maplibregl-ctrl-attrib a {
+  color: rgba(255, 255, 255, 0.7);
+}
+.jp-loc-map .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
+.jp-loc-map .maplibregl-ctrl-logo {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+/* Round glass control — the same treatment as the site's BackButton / arrows */
+.jp-loc-ctrl {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(10, 31, 54, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 32px -12px rgba(10, 31, 54, 0.55);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.jp-loc-ctrl:hover {
+  transform: scale(1.05);
+}
+.jp-loc-ctrl:active {
+  transform: scale(0.9);
+}
+.jp-loc-ctrl:focus-visible {
+  outline: 2px solid var(--color-red-600);
+  outline-offset: 3px;
+}
+.jp-loc-ctrl-text {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  margin-right: -0.16em;
+}
+/* zoom in / out share one glass column */
+.jp-loc-ctrl-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(10, 31, 54, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 32px -12px rgba(10, 31, 54, 0.55);
+}
+.jp-loc-ctrl-group .jp-loc-ctrl {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.jp-loc-ctrl-rule {
+  display: block;
+  width: 18px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Camera controls: right edge (below the logo on small screens) */
+.jp-loc-controls {
+  position: absolute;
+  right: clamp(16px, 4vw, 64px);
+  top: calc(clamp(16px, 4svh, 40px) + 72px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+@media (min-width: 1024px) {
+  .jp-loc-controls {
+    top: auto;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(32px, 6svh, 56px));
+  }
+}
+
+/* Rings pulsing out from the foot of the project tower, in brand red */
+.jp-loc-pulse {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+.jp-loc-pulse i {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid rgba(238, 49, 52, 0.85);
+  border-radius: 999px;
+  transform: scaleY(0.55);
+  animation: jp-loc-ping 3s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+.jp-loc-pulse i + i {
+  animation-delay: 1.5s;
+}
+@keyframes jp-loc-ping {
+  0% { transform: scale(1, 0.55); opacity: 0.9; }
+  100% { transform: scale(9, 4.95); opacity: 0; }
+}
+
+/* The project: the Codename Endgame logo in black (no plate), a stem down to the
+   site, and the pulse rings at its foot */
+.jp-loc-project {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.jp-loc-project-badge {
+  display: block;
+  margin-bottom: 4px;
+  /* no plate: a soft white halo keeps the black logo legible over the map */
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
+}
+.jp-loc-project-logo {
+  width: clamp(96px, 7.5vw, 132px);
+  aspect-ratio: 360 / 107;
+  color: #000;
+}
+.jp-loc-project-stem {
+  display: block;
+  width: 2px;
+  height: 22px;
+  background: linear-gradient(to bottom, var(--color-navy-700), var(--color-red-600));
+}
+.jp-loc-project-pulse {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  margin-left: -9px;
+}
+.jp-loc-project-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 999px;
+  background: var(--color-red-600);
+  box-shadow: 0 0 0 2px #fff;
+}
+
+/* Place pins: navy dot ringed in white on a fine stem, name in a navy tag.
+   Only the picked place is shown — the map stays clear until a place is chosen,
+   then shows just that destination and its route from the project. */
+.jp-loc-poi {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0s linear 0.4s;
+}
+.jp-loc-poi.is-active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.4s ease;
+}
+.jp-loc-poi::after {
+  content: "";
+  width: 1.5px;
+  height: 10px;
+  background: var(--color-navy-950);
+}
+.jp-loc-poi-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-navy-700);
+  box-shadow: 0 0 0 3px #fff, 0 2px 8px rgba(10, 31, 54, 0.35);
+  transition: background-color 0.3s ease, box-shadow 0.35s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.jp-loc-poi-label {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: -6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(10, 31, 54, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 6px 16px rgba(10, 31, 54, 0.25);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.jp-loc-poi:hover .jp-loc-poi-dot,
+.jp-loc-poi.is-active .jp-loc-poi-dot {
+  transform: scale(1.2);
+  background: var(--color-red-600);
+  box-shadow: 0 0 0 3px #fff, 0 0 18px 4px rgba(238, 49, 52, 0.45);
+}
+.jp-loc-poi.is-active .jp-loc-poi-label {
+  border-color: rgba(238, 49, 52, 0.7);
+}
+/* while the route travels to it the pin breathes; on arrival it blooms red and stays lit */
+.jp-loc-poi.is-connecting .jp-loc-poi-dot {
+  animation: jp-loc-connect 0.9s ease-in-out infinite;
+}
+.jp-loc-poi.is-arrived .jp-loc-poi-dot {
+  transform: scale(1.35);
+  background: var(--color-red-600);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 7px rgba(238, 49, 52, 0.25), 0 0 36px 8px rgba(238, 49, 52, 0.45);
+  animation: jp-loc-arrive 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.jp-loc-poi.is-arrived .jp-loc-poi-label {
+  background: var(--color-red-600);
+  border-color: var(--color-red-600);
+  box-shadow: 0 6px 18px rgba(238, 49, 52, 0.35);
+}
+@keyframes jp-loc-connect {
+  50% { box-shadow: 0 0 0 3px #fff, 0 0 0 9px rgba(238, 49, 52, 0.22), 0 0 28px 6px rgba(238, 49, 52, 0.45); }
+}
+@keyframes jp-loc-arrive {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.7); }
+}
+.jp-loc-poi:focus-visible {
+  outline: 2px solid var(--color-red-600);
+  outline-offset: 3px;
+}
+
+/* Location highlights card: navy glass, left side (bottom sheet on small screens) */
+.jp-loc-panel {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  display: flex;
+  flex-direction: column;
+  max-height: 46svh;
+  padding: 22px 18px 8px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(15, 45, 77, 0.94), rgba(10, 31, 54, 0.96));
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 24px 60px -18px rgba(10, 31, 54, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.jp-loc-panel-title {
+  margin: 0 4px 6px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.2rem, 2.8vw, 3rem);
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.jp-loc-panel-rule {
+  display: block;
+  width: 44px;
+  height: 1px;
+  margin: 10px 4px 18px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* travel-time switch: hairline track, the chosen band filled in brand red */
+.jp-loc-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.jp-loc-tab {
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  cursor: pointer;
+  transition: color 0.3s ease, background-color 0.35s ease;
+}
+.jp-loc-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+.jp-loc-tab[aria-selected="true"] {
+  color: #fff;
+  background: var(--color-red-600);
+  box-shadow: 0 4px 14px -4px rgba(238, 49, 52, 0.6);
+}
+.jp-loc-tab:focus-visible {
+  outline: 2px solid var(--color-red-600);
+  outline-offset: 2px;
+}
+
+.jp-loc-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0 4px;
+  list-style: none;
+  overflow-y: auto;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+.jp-loc-list li {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  animation: jp-loc-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.jp-loc-list li:last-child {
+  border-bottom: 0;
+}
+.jp-loc-list li:nth-child(2) { animation-delay: 0.03s; }
+.jp-loc-list li:nth-child(3) { animation-delay: 0.06s; }
+.jp-loc-list li:nth-child(4) { animation-delay: 0.09s; }
+.jp-loc-list li:nth-child(5) { animation-delay: 0.12s; }
+.jp-loc-list li:nth-child(6) { animation-delay: 0.15s; }
+.jp-loc-list li:nth-child(n + 7) { animation-delay: 0.18s; }
+@keyframes jp-loc-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+.jp-loc-item {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  width: 100%;
+  padding: 13px 2px 13px 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: padding-left 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* a short red line slides in before the chosen place */
+.jp-loc-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 14px;
+  height: 1.5px;
+  background: var(--color-red-600);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.jp-loc-item:disabled {
+  cursor: default;
+}
+.jp-loc-item:not(:disabled):hover .jp-loc-item-name {
+  color: #fff;
+}
+.jp-loc-item[aria-pressed="true"] {
+  padding-left: 24px;
+}
+.jp-loc-item[aria-pressed="true"]::before {
+  transform: scaleX(1);
+}
+.jp-loc-item:focus-visible {
+  outline: 2px solid var(--color-red-600);
+  outline-offset: 2px;
+}
+.jp-loc-item-n {
+  flex: none;
+  width: 18px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.35);
+}
+.jp-loc-item-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.8);
+  transition: color 0.3s ease;
+}
+.jp-loc-item:disabled .jp-loc-item-name {
+  color: rgba(255, 255, 255, 0.5);
+}
+.jp-loc-item[aria-pressed="true"] .jp-loc-item-name {
+  color: #fff;
+}
+.jp-loc-item[aria-pressed="true"] .jp-loc-item-n {
+  color: var(--color-red-600);
+}
+.jp-loc-item-km {
+  flex: none;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+.jp-loc-item[aria-pressed="true"] .jp-loc-item-km {
+  color: var(--color-red-500);
+}
+
+@media (min-width: 1024px) {
+  .jp-loc-panel {
+    left: clamp(16px, 4vw, 56px);
+    right: auto;
+    top: calc(clamp(16px, 4svh, 40px) + 72px);
+    bottom: auto;
+    width: 380px;
+    max-height: calc(100svh - clamp(16px, 4svh, 40px) - 72px - clamp(24px, 4svh, 40px));
+    padding: 28px 22px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jp-loc-pulse i,
+  .jp-loc-poi .jp-loc-poi-dot,
+  .jp-loc-list li {
+    animation: none;
   }
 }

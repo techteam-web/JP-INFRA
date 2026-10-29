@@ -174,13 +174,6 @@ export default function FloorPlans({ onBack }) {
               })}
             </div>
           </div>
-
-          <div className="mt-6 hidden lg:block">
-            <span className="mb-3 block h-px w-8 bg-white/20" />
-            <p className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/40 3xl:text-xs">
-              A Brighter Tomorrow
-            </p>
-          </div>
         </aside>
 
         {/* Center: floor plan + unit tabs + stat strip */}
