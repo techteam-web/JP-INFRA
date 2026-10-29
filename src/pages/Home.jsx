@@ -4,6 +4,7 @@ import heroImg from "../assets/jpinfra hero.png";
 import Logo from "../components/Logo";
 import EndgameLogo from "../components/EndgameLogo";
 import BottomNav from "../components/BottomNav";
+import MobileNav from "../components/MobileNav";
 
 export default function Home({ animate = false, onNavigate }) {
   const contentRef = useRef(null);
@@ -73,6 +74,7 @@ export default function Home({ animate = false, onNavigate }) {
         </div>
 
         <BottomNav onSelect={onNavigate} />
+        <MobileNav onSelect={onNavigate} />
       </div>
     </div>
   );

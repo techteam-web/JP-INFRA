@@ -195,7 +195,7 @@ export default function Amenities({ onBack }) {
           type="button"
           onClick={toggleInfluencers}
           style={{ "--btn-fill-color": "rgba(238,49,52,0.85)" }}
-          className={`btn-fill rounded-full border px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-200 sm:text-xs 3xl:px-5 3xl:py-2 3xl:text-sm ${
+          className={`btn-fill whitespace-nowrap rounded-full border px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors duration-200 max-sm:absolute max-sm:left-6 max-sm:top-full max-sm:mt-3 max-sm:bg-navy-950/40 max-sm:backdrop-blur sm:text-xs 3xl:px-5 3xl:py-2 3xl:text-sm ${
             showInfluencers ? "border-red-600 bg-red-600 text-white" : "border-white/25 text-white/70 hover:text-white"
           }`}
         >

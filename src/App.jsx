@@ -189,16 +189,17 @@ function App() {
           {content}
         </div>
       )}
-      {/* Brainwing credit, bottom right on every screen: lifted above Home's
-          navbar where they'd meet, and dark over the Location page's light map */}
+      {/* Brainwing credit, bottom right: lifted above Home's navbar where
+          they'd meet, dark over the Location page's light map, and on phones
+          shown only on the intro and Home */}
       <img
         src={brainwingLogo}
         alt="Powered by Brainwing Innovations"
         width="420"
         height="112"
         className={`jp-credit ${intro !== "playing" && screen === "home" ? "jp-credit--lifted" : ""} ${
-          intro !== "playing" && screen === "location" ? "jp-credit--dark" : ""
-        }`}
+          intro !== "playing" && screen !== "home" ? "jp-credit--page" : ""
+        } ${intro !== "playing" && screen === "location" ? "jp-credit--dark" : ""}`}
       />
     </>
   );

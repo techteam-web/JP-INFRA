@@ -101,7 +101,7 @@ export default function Contact({ onBack }) {
       {/* Top-left: back + breadcrumb */}
       <div
         data-anim
-        className="absolute left-6 top-6 z-10 flex items-center gap-3 sm:left-10 sm:top-8 3xl:left-14 3xl:top-10 4xl:left-16 4xl:top-12"
+        className="absolute left-6 top-6 z-20 flex items-center gap-3 sm:left-10 sm:top-8 3xl:left-14 3xl:top-10 4xl:left-16 4xl:top-12"
       >
         <BackButton onClick={onBack} />
         <span className="hidden items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60 sm:flex 3xl:text-xs 4xl:text-sm">
@@ -113,7 +113,7 @@ export default function Contact({ onBack }) {
       {/* Top-right: logo */}
       <div
         data-anim
-        className="absolute right-6 top-6 z-10 sm:right-10 sm:top-8 3xl:right-14 3xl:top-10 4xl:right-16 4xl:top-12"
+        className="absolute right-6 top-6 z-20 sm:right-10 sm:top-8 3xl:right-14 3xl:top-10 4xl:right-16 4xl:top-12"
       >
         <div className="rounded-lg bg-navy-700 p-1.5 3xl:p-2">
           <Logo className="h-9 w-auto sm:h-10 2xl:h-11 3xl:h-12 4xl:h-14" />
@@ -121,8 +121,10 @@ export default function Contact({ onBack }) {
       </div>
 
       {/* Center: headline + info + form, all within one viewport */}
-      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6 pb-6 pt-20 sm:px-10 sm:pt-24 lg:px-16 lg:pt-20 xl:px-20 2xl:px-24 3xl:px-28 3xl:pt-24 4xl:px-32">
-        <div className="pointer-events-auto w-full max-w-5xl 3xl:max-w-6xl">
+      {/* Below lg it scrolls when a short phone can't fit it all (auto margins
+          keep it centred when it does fit) */}
+      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6 pb-6 pt-20 max-lg:pointer-events-auto max-lg:items-start max-lg:overflow-y-auto sm:px-10 sm:pt-24 lg:px-16 lg:pt-20 xl:px-20 2xl:px-24 3xl:px-28 3xl:pt-24 4xl:px-32">
+        <div className="pointer-events-auto w-full max-w-5xl max-lg:my-auto 3xl:max-w-6xl">
           <div data-anim className="text-center lg:text-left">
             <span className="text-[10px] font-semibold uppercase tracking-[0.4em] text-white/70 sm:text-xs 3xl:text-sm">
               Reach Out

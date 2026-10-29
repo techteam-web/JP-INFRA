@@ -124,13 +124,16 @@ body {
     bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
   }
 }
-/* Location: dark on the light map; hidden below lg, where the panel is a bottom sheet */
+/* Location: dark on the light map */
 .jp-credit--dark {
   opacity: 0.6;
   filter: brightness(0);
 }
+/* Phones / tablets: the section pages keep their bottom edge for their own
+   controls (counters, floor tabs, forms, bottom sheets), so the credit shows
+   only on the intro and Home there */
 @media (max-width: 1023px) {
-  .jp-credit--dark {
+  .jp-credit--page {
     display: none;
   }
 }
@@ -495,7 +498,8 @@ html.jp-lock, html.jp-lock body, html.jp-end-lock, html.jp-end-lock body { overf
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  /* clear of the map credit line along the bottom edge */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
   display: flex;
   flex-direction: column;
   max-height: 46svh;

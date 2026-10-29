@@ -86,9 +86,14 @@ export default function AboutUs({ onBack }) {
   }, []);
 
   return (
-    <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-navy-950">
+    // Below sm the headline and pillars stack in normal flow and the page
+    // scrolls if a short phone can't fit them; from sm up they're pinned as before.
+    <div
+      ref={rootRef}
+      className="relative h-[100svh] w-full overflow-hidden bg-navy-950 max-sm:flex max-sm:flex-col max-sm:justify-between max-sm:gap-10 max-sm:overflow-y-auto max-sm:pb-8 max-sm:pt-28"
+    >
       {/* Background photo */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden max-sm:fixed">
         <img
           src={aboutImg}
           alt=""
@@ -109,7 +114,7 @@ export default function AboutUs({ onBack }) {
       {/* Top-left: back + breadcrumb */}
       <div
         data-anim
-        className="absolute left-6 top-6 z-10 flex items-center gap-3 sm:left-10 sm:top-8 3xl:left-14 3xl:top-10 4xl:left-16 4xl:top-12"
+        className="absolute left-6 top-6 z-20 flex items-center gap-3 sm:left-10 sm:top-8 3xl:left-14 3xl:top-10 4xl:left-16 4xl:top-12"
       >
         <BackButton onClick={onBack} />
         <span className="hidden items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60 sm:flex 3xl:text-xs 4xl:text-sm">
@@ -121,7 +126,7 @@ export default function AboutUs({ onBack }) {
       {/* Top-right: logo */}
       <div
         data-anim
-        className="absolute right-6 top-6 flex flex-col items-end gap-1.5 sm:right-10 sm:top-8 3xl:right-14 3xl:top-10 4xl:right-16 4xl:top-12"
+        className="absolute right-6 top-6 z-20 flex flex-col items-end gap-1.5 sm:right-10 sm:top-8 3xl:right-14 3xl:top-10 4xl:right-16 4xl:top-12"
       >
         <div className="rounded-lg bg-navy-700 p-1.5 3xl:p-2">
           <Logo className="h-9 w-auto sm:h-10 2xl:h-11 3xl:h-12 4xl:h-14" />
@@ -131,25 +136,25 @@ export default function AboutUs({ onBack }) {
       {/* Center: story headline */}
       <div
         data-anim
-        className="pointer-events-none absolute inset-x-0 top-[32%] flex -translate-y-1/2 flex-col items-center px-6 text-center sm:top-1/2"
+        className="pointer-events-none flex flex-col items-center px-6 text-center max-sm:relative sm:absolute sm:inset-x-0 sm:top-1/2 sm:-translate-y-1/2"
       >
         <span className="text-[10px] font-semibold uppercase tracking-[0.4em] text-white/70 sm:text-xs 3xl:text-sm">
           Our Story
         </span>
         <span className="mt-4 h-8 w-px bg-white/25 3xl:h-10" />
-        <h1 className="mt-4 font-display uppercase text-4xl leading-[1.05] text-white sm:text-5xl md:text-6xl lg:text-7xl xl:text-[5.5rem] 2xl:text-[6rem] 3xl:text-[7rem] 4xl:text-[8.5rem]">
+        <h1 className="mt-4 font-display uppercase text-[2.1rem] leading-[1.05] text-white sm:text-5xl md:text-6xl lg:text-7xl xl:text-[5.5rem] 2xl:text-[6rem] 3xl:text-[7rem] 4xl:text-[8.5rem]">
           Built On Trust
           <br />
           <span className="text-red-600">For A Brighter Tomorrow</span>
         </h1>
         <span className="mt-4 h-8 w-px bg-white/25 3xl:h-10" />
-        <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.5em] text-white/60 sm:text-xs 3xl:text-sm">
+        <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60 sm:text-xs sm:tracking-[0.5em] 3xl:text-sm">
           People &nbsp; Spaces &nbsp; Possibilities
         </p>
       </div>
 
       {/* Bottom: five pillars */}
-      <div className="absolute inset-x-0 bottom-6 z-10 flex flex-wrap items-start justify-center gap-x-6 gap-y-6 px-6 sm:bottom-10 sm:gap-x-10 lg:gap-x-14 3xl:bottom-12 3xl:gap-x-20">
+      <div className="z-10 flex flex-wrap items-start justify-center gap-x-6 gap-y-6 px-6 max-sm:relative sm:absolute sm:inset-x-0 sm:bottom-10 sm:gap-x-10 lg:gap-x-14 3xl:bottom-12 3xl:gap-x-20">
         {PILLARS.map((p) => (
           <div
             key={p.label}
