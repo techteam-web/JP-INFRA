@@ -4,6 +4,7 @@ import CinematicIntro from "./components/CinematicIntro";
 import Home from "./pages/Home";
 import Explore from "./pages/Explore";
 import homeHeroImg from "./assets/jpinfra hero.png";
+import brainwingLogo from "./assets/Brainwinglogo/brainwing.webp";
 import { trackPageView } from "./lib/analytics";
 import { initHeatmapTracking, setHeatmapPage } from "./lib/heatmap";
 
@@ -188,6 +189,17 @@ function App() {
           {content}
         </div>
       )}
+      {/* Brainwing credit, bottom right on every screen: lifted above Home's
+          navbar where they'd meet, and dark over the Location page's light map */}
+      <img
+        src={brainwingLogo}
+        alt="Powered by Brainwing Innovations"
+        width="420"
+        height="112"
+        className={`jp-credit ${intro !== "playing" && screen === "home" ? "jp-credit--lifted" : ""} ${
+          intro !== "playing" && screen === "location" ? "jp-credit--dark" : ""
+        }`}
+      />
     </>
   );
 }

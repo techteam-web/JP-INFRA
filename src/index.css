@@ -104,6 +104,37 @@ body {
   }
 }
 
+/* Brainwing credit, bottom right on every screen (App.jsx) */
+.jp-credit {
+  position: fixed;
+  z-index: 60;
+  right: clamp(16px, 3vw, 40px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(16px, 3svh, 28px));
+  width: clamp(110px, 9vw, 150px);
+  height: auto;
+  opacity: 0.92;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 1px 2px rgba(10, 31, 54, 0.6)) drop-shadow(0 2px 14px rgba(10, 31, 54, 0.55));
+  transition: bottom 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease, opacity 0.4s ease;
+}
+/* Home: where the centred navbar reaches the corner, sit just above it */
+@media (min-width: 1024px) and (max-width: 1499px) {
+  .jp-credit--lifted {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
+  }
+}
+/* Location: dark on the light map; hidden below lg, where the panel is a bottom sheet */
+.jp-credit--dark {
+  opacity: 0.6;
+  filter: brightness(0);
+}
+@media (max-width: 1023px) {
+  .jp-credit--dark {
+    display: none;
+  }
+}
+
 /* Photo name caption (ImageCaption): eases up into place on every slide change */
 @keyframes jp-caption-in {
   from {
@@ -300,7 +331,8 @@ html.jp-lock, html.jp-lock body, html.jp-end-lock, html.jp-end-lock body { overf
 @media (min-width: 1024px) {
   .jp-loc-controls {
     top: auto;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(32px, 6svh, 56px));
+    /* clear of the Brainwing credit in the corner below */
+    bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(72px, 10svh, 96px));
   }
 }
 

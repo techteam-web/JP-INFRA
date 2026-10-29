@@ -36,7 +36,6 @@ const CHAPTERS = [
   { n: '01', eyebrow: 'The city', title: 'Above it all,\nyet at its heart', at: 2.0, until: 4.9 },
   { n: '02', eyebrow: 'The address', title: 'A landmark\ntakes its place', at: 5.6, until: 8.0 },
 ]
-const STEPS = CHAPTERS.length
 const LAST_FRAME = Math.round((CUT / VIDEO_END) * (FRAME_COUNT - 1))
 
 // `onEndChange(true)` fires once the scroll reaches the hero frame (and false when
@@ -162,8 +161,6 @@ export default function CinematicIntro({ onEndChange }) {
 
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       const proxy = { p: 0 }
-      const count = root.querySelector('.js-count')
-      let step = 1
       let ended = false
       let atEnd = false
 
@@ -186,11 +183,6 @@ export default function CinematicIntro({ onEndChange }) {
           if (t >= CUT !== atEnd) {
             atEnd = !atEnd
             onEndRef.current?.(atEnd)
-          }
-          const next = t >= CHAPTERS[1].at - 0.4 ? 2 : 1
-          if (next !== step) {
-            step = next
-            count.textContent = String(step).padStart(2, '0')
           }
           // One-way journey: once the scrub has settled on the last frame, scrolling
           // is locked for good. Only a reload starts the intro again.
@@ -215,7 +207,6 @@ export default function CinematicIntro({ onEndChange }) {
       tl.to('.js-title', { yPercent: -40, opacity: 0, duration: 1.7, ease: 'power2.in' }, 0.15)
       tl.to('.js-title-shade', { opacity: 0, duration: 1.7 }, 0.15)
       tl.fromTo('.js-chrome', { opacity: 0 }, { opacity: 1, duration: 0.8 }, 1.4)
-      tl.fromTo('.js-rail-fill', { scaleX: 0 }, { scaleX: 1, duration: TOTAL }, 0)
 
       // Chapters
       CHAPTERS.forEach((c, i) => {
@@ -248,7 +239,6 @@ export default function CinematicIntro({ onEndChange }) {
       scrub.setProgress(1)
       gsap.set('.js-title, .js-title-shade, .js-cue', { autoAlpha: 0 })
       gsap.set('.js-chrome, .js-floor', { opacity: 1 })
-      gsap.set('.js-rail-fill', { scaleX: 1 })
     })
 
     return () => mm.revert()
@@ -279,18 +269,11 @@ export default function CinematicIntro({ onEndChange }) {
         style={{ background: 'linear-gradient(to bottom, rgba(23,23,19,.45), transparent)' }}
       />
 
-      {/* Persistent chrome: brand + chapter rail */}
+      {/* Persistent chrome: brand */}
       <div className="js-chrome pointer-events-none absolute left-[clamp(20px,5vw,72px)] top-[clamp(20px,4svh,40px)] opacity-0">
         <div className="jp-logo-shadow">
           <Logo className="w-[clamp(112px,9vw,150px)]" />
         </div>
-      </div>
-      <div className="js-chrome jp-meta pointer-events-none absolute right-[clamp(20px,5vw,72px)] top-[clamp(22px,4svh,42px)] flex items-center gap-3 opacity-0">
-        <span className="js-count tabular-nums">01</span>
-        <span className="relative block h-px w-16 overflow-hidden bg-white/25 sm:w-24">
-          <span className="js-rail-fill absolute inset-0 origin-left bg-[#C6A46A]" />
-        </span>
-        <span className="tabular-nums opacity-60">{String(STEPS).padStart(2, '0')}</span>
       </div>
 
       {/* Scene 1 — wordmark */}
