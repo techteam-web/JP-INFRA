@@ -208,21 +208,35 @@ function AmenityList({ onPick }) {
       aria-labelledby="amenity-list-title"
       className="absolute inset-0 z-[15] overflow-hidden bg-navy-950/90 backdrop-blur-xl"
     >
-      <div className="flex h-full flex-col px-6 pb-28 pt-24 short:pb-3 short:pt-[4.75rem] sm:px-10 sm:pt-28 lg:px-16 lg:pb-[clamp(96px,13vh,140px)] lg:pt-[clamp(104px,13vh,150px)] 3xl:px-24">
+      <div className="flex h-full flex-col px-6 pb-28 pt-24 short:pb-3 short:pt-[7rem] sm:px-10 sm:pt-28 lg:px-16 lg:pb-[clamp(96px,13vh,140px)] lg:pt-[clamp(104px,13vh,150px)] 3xl:px-24">
         {/* Title row */}
-        <div className="flex shrink-0 items-end justify-between gap-6 border-b border-white/10 pb-[2.2vh]">
+        <div className="flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-white/10 pb-[2.2vh]">
           <div>
             <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70 short:hidden 3xl:text-xs">
               <span className="h-px w-6 bg-red-600" />
-              Select an amenity to view it
+              <span className="sm:hidden">Tap a highlighted name</span>
+              <span className="max-sm:hidden">Select a highlighted amenity to see its photo</span>
             </span>
             <h1
               id="amenity-list-title"
-              className="mt-2 font-display text-[clamp(2rem,5.2vh,4.75rem)] uppercase leading-none text-white short:mt-0 short:text-3xl"
+              className="mt-2 whitespace-nowrap font-display text-[clamp(2rem,5.2vh,4.75rem)] uppercase leading-none text-white short:mt-0 short:text-3xl"
             >
               All <span className="text-red-600">Amenities</span>
             </h1>
           </div>
+          {/* every photo, one after another */}
+          <button
+            type="button"
+            onClick={() => onPick(0)}
+            style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+            className="btn-fill flex shrink-0 items-center gap-2.5 rounded-xl border border-red-500/60 bg-navy-950/40 px-3.5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-premium transition-transform duration-200 active:scale-95 sm:px-5 sm:py-3 sm:text-[11px] sm:tracking-[0.2em] short:py-2 3xl:text-xs"
+          >
+            <IconGrid />
+            <span>
+              <span className="max-sm:hidden">View </span>All Photos
+            </span>
+            <span className="font-bold text-red-500">{String(AMENITIES.length).padStart(2, "0")}</span>
+          </button>
         </div>
 
         {/* lg and up: every category at once */}
