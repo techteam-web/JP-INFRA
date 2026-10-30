@@ -1,20 +1,32 @@
-import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Suspense, lazy, startTransition, useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import CinematicIntro from "./components/CinematicIntro";
+import BrandCurtain from "./components/BrandCurtain";
 import Home from "./pages/Home";
 import Explore from "./pages/Explore";
 import homeHeroImg from "./assets/jpinfra hero.png";
 import brainwingLogo from "./assets/Brainwinglogo/brainwing.webp";
+import aboutImg from "./assets/aboutUs.png";
+import contactImg from "./assets/gallery/Meeting Room.webp";
 import { trackPageView } from "./lib/analytics";
 import { initHeatmapTracking, setHeatmapPage } from "./lib/heatmap";
 
-const Panorama = lazy(() => import("./pages/Panorama"));
-const Gallery = lazy(() => import("./pages/Gallery"));
-const AboutUs = lazy(() => import("./pages/AboutUs"));
-const Contact = lazy(() => import("./pages/Contact"));
-const FloorPlans = lazy(() => import("./pages/FloorPlans"));
-const Amenities = lazy(() => import("./pages/Amenities"));
-const Location = lazy(() => import("./components/Location"));
+const loadPanorama = () => import("./pages/Panorama");
+const loadGallery = () => import("./pages/Gallery");
+const loadAboutUs = () => import("./pages/AboutUs");
+const loadContact = () => import("./pages/Contact");
+const loadFloorPlans = () => import("./pages/FloorPlans");
+const loadAmenities = () => import("./pages/Amenities");
+const loadLocation = () => import("./components/Location");
+const PAGE_MODULES = [loadGallery, loadAmenities, loadAboutUs, loadFloorPlans, loadContact, loadLocation, loadPanorama];
+
+const Panorama = lazy(loadPanorama);
+const Gallery = lazy(loadGallery);
+const AboutUs = lazy(loadAboutUs);
+const Contact = lazy(loadContact);
+const FloorPlans = lazy(loadFloorPlans);
+const Amenities = lazy(loadAmenities);
+const Location = lazy(loadLocation);
 
 // One distinct GA4 page identity per screen — this app has no URL routing,
 // so without this every screen would be reported as the same "/" page.
@@ -97,12 +109,44 @@ function App() {
   // Section pages go back to whichever screen opened them: Home's navbar or
   // Explore.
   const [returnTo, setReturnTo] = useState("explore");
+  // Every section change plays the brand curtain (BrandCurtain): it covers the screen,
+  // the screen is swapped behind it (inside a transition, so a page still loading keeps
+  // the curtain closed rather than showing a blank frame), then it reveals. Clicks made
+  // while it runs are ignored.
+  const [curtainTarget, setCurtainTarget] = useState(null);
+  const show = (target) => {
+    if (curtainTarget || target === screen) return;
+    setCurtainTarget(target);
+  };
   const openFrom = (from) => (target) => {
     setReturnTo(from);
-    setScreen(target);
+    show(target);
   };
   const fromExplore = openFrom("explore");
-  const goBack = () => setScreen(returnTo);
+  const goBack = () => show(returnTo);
+
+  // Once Home is up, quietly fetch every page and its opening photo while the
+  // visitor looks around, so each section opens straight away.
+  useEffect(() => {
+    if (intro !== "done") return undefined;
+    const preload = () => {
+      PAGE_MODULES.forEach((load) => load());
+      Promise.all([import("./data/gallery"), import("./data/amenities")]).then(([g, a]) => {
+        const firsts = [g.GALLERY_IMAGES[0]?.image, a.AMENITIES[0]?.image, aboutImg, contactImg];
+        for (const src of firsts.filter(Boolean)) {
+          const img = new Image();
+          img.src = src;
+          img.decode?.().catch(() => {});
+        }
+      });
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(preload, { timeout: 2500 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(preload, 600);
+    return () => window.clearTimeout(id);
+  }, [intro]);
 
   let content;
   if (screen === "home") {
@@ -115,7 +159,7 @@ function App() {
   } else if (screen === "explore") {
     content = (
       <Explore
-        onBack={() => setScreen("home")}
+        onBack={() => show("home")}
         onOpen360={() => fromExplore("panorama")}
         onOpenGallery={() => fromExplore("gallery")}
         onOpenAbout={() => fromExplore("about")}
@@ -127,45 +171,31 @@ function App() {
     );
   } else if (screen === "panorama") {
     content = (
-      <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
-        <Panorama onBack={goBack} />
-      </Suspense>
+      <Panorama onBack={goBack} />
     );
   } else if (screen === "about") {
     content = (
-      <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
-        <AboutUs onBack={goBack} />
-      </Suspense>
+      <AboutUs onBack={goBack} />
     );
   } else if (screen === "contact") {
     content = (
-      <Suspense fallback={null}>
-        <Contact onBack={goBack} />
-      </Suspense>
+      <Contact onBack={goBack} />
     );
   } else if (screen === "floorplans") {
     content = (
-      <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
-        <FloorPlans onBack={goBack} />
-      </Suspense>
+      <FloorPlans onBack={goBack} onOpen360={() => openFrom("floorplans")("panorama")} />
     );
   } else if (screen === "amenities") {
     content = (
-      <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
-        <Amenities onBack={goBack} />
-      </Suspense>
+      <Amenities onBack={goBack} />
     );
   } else if (screen === "location") {
     content = (
-      <Suspense fallback={<div className="h-[100svh] w-full bg-[#eef2f6]" />}>
-        <Location label="Location" active onBack={goBack} />
-      </Suspense>
+      <Location label="Location" active onBack={goBack} />
     );
   } else {
     content = (
-      <Suspense fallback={<div className="h-[100svh] w-full bg-navy-950" />}>
-        <Gallery onBack={goBack} />
-      </Suspense>
+      <Gallery onBack={goBack} />
     );
   }
 
@@ -186,9 +216,19 @@ function App() {
             intro === "leaving" ? "fixed inset-0 z-50" : ""
           }`}
         >
-          {content}
+          {/* One boundary for every screen. Screens change inside a transition (behind
+              the curtain), so while a page that isn't loaded yet is fetched, the current
+              screen stays on view — never a blank frame. */}
+          <Suspense fallback={null}>{content}</Suspense>
         </div>
       )}
+      <BrandCurtain
+        pageRef={appRef}
+        target={curtainTarget}
+        screen={screen}
+        onCovered={(target) => startTransition(() => setScreen(target))}
+        onDone={() => setCurtainTarget(null)}
+      />
       {/* Brainwing credit, bottom right: lifted above Home's navbar where
           they'd meet, dark over the Location page's light map, and on phones
           shown only on the intro and Home */}

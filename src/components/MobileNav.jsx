@@ -57,9 +57,9 @@ export default function MobileNav({ onSelect }) {
             open ? "visible opacity-100" : "invisible opacity-0"
           }`}
         >
-          <div className="flex items-center justify-between px-5 pt-6 sm:px-10 sm:pt-8">
+          <div className="flex items-center justify-between px-5 pt-6 sm:px-10 sm:pt-8 short:pt-4">
             <span className="jp-logo-shadow">
-              <EndgameLogo className="w-28 sm:w-32" />
+              <EndgameLogo className="w-28 sm:w-32 short:w-24" />
             </span>
             <button
               ref={closeRef}
@@ -75,12 +75,13 @@ export default function MobileNav({ onSelect }) {
             </button>
           </div>
   
-          <nav className="flex flex-1 flex-col justify-center px-5 pb-16 sm:px-10">
-            <span className="mb-5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60">
+          <nav className="flex flex-1 flex-col justify-center px-5 pb-16 sm:px-10 short:pb-4">
+            <span className="mb-5 flex items-center gap-2 short:mb-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60">
               <span className="h-px w-6 bg-red-600" />
               Explore
             </span>
-            <ul>
+            {/* two columns on a short (landscape) screen */}
+            <ul className="short:grid short:grid-flow-col short:grid-rows-4 short:gap-x-10">
               {NAV_ITEMS.map((item, i) => (
                 <li
                   key={item.n}
@@ -97,10 +98,10 @@ export default function MobileNav({ onSelect }) {
                       setOpen(false);
                       onSelect?.(item.label);
                     }}
-                    className="group flex w-full items-baseline gap-4 py-3.5 text-left active:opacity-70"
+                    className="group flex w-full items-baseline gap-4 py-3.5 text-left active:opacity-70 short:py-2"
                   >
                     <span className="w-6 text-xs font-bold tracking-widest text-red-600">{item.n}</span>
-                    <span className="font-display text-[2.1rem] uppercase leading-none text-white transition-colors duration-300 group-hover:text-red-500 sm:text-5xl">
+                    <span className="font-display text-[2.1rem] uppercase leading-none text-white transition-colors duration-300 group-hover:text-red-500 sm:text-5xl short:text-[1.6rem]">
                       {item.caption ?? item.label}
                     </span>
                     <svg

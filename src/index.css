@@ -2,6 +2,9 @@
 
 /* Theme tokens are declared as standard CSS variables so CSS language services
   do not report an unknown at-rule. */
+/* short: screens 500px tall or less — phones in landscape */
+@custom-variant short (@media (max-height: 500px));
+
 @theme{
   --color-navy-950: #0a1f36;
   --color-navy-900: #0f2d4d;
@@ -149,6 +152,19 @@ body {
   animation: jp-caption-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* a timeline bar filling over --jp-progress-ms (About Us chapters) */
+@keyframes jp-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.jp-progress {
+  animation: jp-progress var(--jp-progress-ms, 8s) linear both;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -191,10 +207,21 @@ body {
 /* ---------------------------------------------------------------------------
    Cinematic intro (CinematicIntro / LogoDraw / EndgameLogo)
    --------------------------------------------------------------------------- */
-html, body { margin: 0; background: #0a0908; overflow-x: hidden; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-html, .jp-no-scrollbar { scrollbar-width: none; }
-html::-webkit-scrollbar, .jp-no-scrollbar::-webkit-scrollbar { display: none; }
+/* navy, not black: it shows around a page while the section transition shrinks it */
+html, body { margin: 0; background: var(--color-navy-950); overflow-x: hidden; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+html, body, .jp-no-scrollbar { scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar, .jp-no-scrollbar::-webkit-scrollbar { display: none; }
 html.jp-lock, html.jp-lock body, html.jp-end-lock, html.jp-end-lock body { overflow: hidden; }
+/* during a section transition (BrandCurtain): no scrolling, so no scrollbar */
+html.jp-transitioning, html.jp-transitioning body { overflow: hidden; }
+/* While the intro is locked (preloader + opening), it fills the real viewport whatever
+   its size: entering full screen grows the screen mid-opening, and the scroll pin
+   would otherwise hold the old pixel height (a band below, then a jump on re-measure).
+   The pin takes over again, re-measured, the moment the lock is lifted. */
+/* ...and the page behind it is the preloader's navy, so the frame or two the browser shows
+   before re-laying out (while it switches to full screen) is never a black band. */
+html.jp-lock, html.jp-lock body { background: var(--color-navy-950); }
+html.jp-lock #home { position: fixed !important; inset: 0 !important; width: 100% !important; max-width: none !important; height: 100% !important; max-height: none !important; transform: none !important; }
 
 .jp-logo { display: block; color: #f4ede1; background-color: currentColor; -webkit-mask: var(--jp-logo) center / contain no-repeat; mask: var(--jp-logo) center / contain no-repeat; }
 .jp-logo-shadow { filter: drop-shadow(0 2px 18px rgba(20, 12, 4, 0.45)) drop-shadow(0 1px 2px rgba(20, 12, 4, 0.3)); }
@@ -213,7 +240,7 @@ html.jp-lock, html.jp-lock body, html.jp-end-lock, html.jp-end-lock body { overf
 
 /* Enter Full Screen: the site's outlined button — softly squared corners, white
    hairline, Montserrat caps; the white .btn-fill rises on hover (set in JSX) */
-.jp-enter { display: inline-flex; align-items: center; gap: 14px; padding: 15px 28px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; background: transparent; font-family: var(--font-body); font-size: 12px; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: #fff; cursor: pointer; transition: color 0.3s ease, border-color 0.3s ease, transform 0.2s ease; }
+.jp-enter { display: inline-flex; align-items: center; justify-content: center; gap: 14px; padding: 15px 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; background: transparent; font-family: var(--font-body); font-size: 12px; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: #fff; cursor: pointer; transition: color 0.3s ease, border-color 0.3s ease, transform 0.2s ease; }
 .jp-enter:hover { color: var(--color-navy-950); border-color: #fff; }
 .jp-enter:active { transform: scale(0.97); }
 .jp-enter svg { color: var(--color-red-600); transition: transform 0.3s ease; }
@@ -532,7 +559,8 @@ html.jp-lock, html.jp-lock body, html.jp-end-lock, html.jp-end-lock body { overf
 /* travel-time switch: hairline track, the chosen band filled in brand red */
 .jp-loc-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* six travel-time bands, 2 to 30 min */
+  grid-template-columns: repeat(6, 1fr);
   gap: 4px;
   padding: 4px;
   margin-bottom: 10px;
@@ -541,14 +569,15 @@ html.jp-lock, html.jp-lock body, html.jp-end-lock, html.jp-end-lock body { overf
   background: rgba(255, 255, 255, 0.04);
 }
 .jp-loc-tab {
-  padding: 9px 6px;
+  padding: 9px 2px;
   border: 0;
   border-radius: 999px;
   background: transparent;
   font-family: var(--font-body);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.62);
   cursor: pointer;
@@ -686,6 +715,47 @@ html.jp-lock, html.jp-lock body, html.jp-end-lock, html.jp-end-lock body { overf
     width: 380px;
     max-height: calc(100svh - clamp(16px, 4svh, 40px) - 72px - clamp(24px, 4svh, 40px));
     padding: 28px 22px 10px;
+  }
+}
+/* Phones in landscape: too short for the bottom sheet — the panel becomes a compact
+   column down the left, the map stays visible to its right */
+@media (max-height: 500px) and (min-width: 600px) and (max-width: 1023px) {
+  .jp-loc-panel {
+    left: 12px;
+    right: auto;
+    top: 76px;
+    bottom: 12px;
+    width: min(320px, 42vw);
+    max-height: none;
+    padding: 12px 12px 4px;
+    border-radius: 14px;
+  }
+  .jp-loc-panel-title {
+    font-size: 1.35rem;
+    margin-bottom: 0;
+  }
+  .jp-loc-panel-rule {
+    margin: 6px 4px 8px;
+  }
+  .jp-loc-tabs {
+    margin-bottom: 4px;
+  }
+  .jp-loc-tab {
+    padding: 6px 1px;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+  .jp-loc-item {
+    padding: 7px 2px 7px 0;
+  }
+  .jp-loc-controls {
+    top: 76px;
+    bottom: auto;
+    gap: 6px;
+  }
+  .jp-loc-ctrl {
+    width: 38px;
+    height: 38px;
   }
 }
 

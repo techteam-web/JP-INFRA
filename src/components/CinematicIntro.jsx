@@ -19,7 +19,7 @@ const frameSrc = (i) => `/frames/${FRAME_SET}/${String(i).padStart(3, '0')}.webp
 // No-JS fallback picture
 const HERO = '/images/jpinfra-hero.webp'
 
-const WORDMARK = 'JP INFRA'
+const WORDMARK = 'Codename Endgame — North Garden City'
 const VIDEO_END = 10 // timeline units; the footage finishes here
 // The footage plays to its very last frame — the street-level shot that IS the Home
 // page's hero (same render, same framing) — and Home takes over on that exact frame.
@@ -37,6 +37,10 @@ const CHAPTERS = [
   { n: '02', eyebrow: 'The address', title: 'A landmark\ntakes its place', at: 5.6, until: 8.0 },
 ]
 const LAST_FRAME = Math.round((CUT / VIDEO_END) * (FRAME_COUNT - 1))
+// Enter opens the intro once this many leading frames are in (the opening scroll:
+// title lift-off and the first city pass) — the rest keep streaming in behind it,
+// well ahead of where the visitor has scrolled to.
+const READY_AFTER = 32
 
 // `onEndChange(true)` fires once the scroll reaches the hero frame (and false when
 // scrolling back up) — the page shows its navigation only there.
@@ -74,16 +78,39 @@ export default function CinematicIntro({ onEndChange }) {
       return
     }
 
+    // The footage opens out of the middle of the screen: a small rounded window
+    // grows to full bleed, starting the instant Enter is pressed. Around it, the navy
+    // preloader gives way to a dimmed, blurred still of the footage's first frame, so
+    // the window opens out of the same dusk sky rather than a flat colour.
+    const stage = q('.js-stage')
+    const finish = () => {
+      gsap.set(q('.js-loader'), { autoAlpha: 0 })
+      gsap.set(stage, { clearProps: 'clipPath,zIndex' })
+      g.open = true
+      unlock()
+    }
+    gsap.set(stage, { zIndex: 20 })
     gsap
-      .timeline({ onComplete: unlock })
-      .to(q('.js-load-inner'), { opacity: 0, y: -10, duration: 0.5, ease: 'power2.in' })
-      .to(q('.js-loader'), { clipPath: 'inset(0% 0% 100% 0%)', duration: 1.3, ease: 'expo.inOut' }, '-=0.1')
-      .fromTo(q('.js-settle'), { scale: 1.16 }, { scale: 1, duration: 2.8, ease: 'expo.out' }, '<0.2')
+      .timeline()
+      // fade only — no movement, so nothing shifts while the screen goes full screen
+      .to(q('.js-load-inner'), { opacity: 0, duration: 0.4, ease: 'power1.in' }, 0)
+      .to(q('.js-loader-sky'), { opacity: 1, duration: 0.7, ease: 'power1.out' }, 0)
+      // explicit from/to: the browser shortens a computed inset() value, which GSAP
+      // would then mis-pair against the end value
+      .fromTo(
+        stage,
+        { clipPath: 'inset(50% 50% 50% 50% round 28px)' },
+        { clipPath: 'inset(0% 0% 0% 0% round 0px)', duration: 1.5, ease: 'expo.inOut', immediateRender: true },
+        0.05,
+      )
+      // scrolling unlocks as soon as the window is fully open; the title finishes in its own time
+      .call(finish, null, 1.6)
+      .fromTo(q('.js-settle'), { scale: 1.22 }, { scale: 1, duration: 2.6, ease: 'expo.out' }, 0.05)
       .fromTo(
         q('.js-letter'),
         { opacity: 0, yPercent: 60, filter: 'blur(14px)' },
         { opacity: 1, yPercent: 0, filter: 'blur(0px)', duration: 1.8, ease: 'expo.out', stagger: 0.07 },
-        '<0.55',
+        0.85,
       )
       .fromTo(q('.js-title-rule'), { scaleX: 0 }, { scaleX: 1, duration: 1.4, ease: 'expo.inOut' }, '<0.6')
       .fromTo(q('.js-cue-in'), { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 1, ease: 'power2.out' }, '<0.5')
@@ -119,7 +146,7 @@ export default function CinematicIntro({ onEndChange }) {
     tryReveal()
   }, [tryReveal])
 
-  const scrub = useFrameScrub(canvasRef, { count: LAST_FRAME + 1, src: frameSrc, onReady })
+  const scrub = useFrameScrub(canvasRef, { count: LAST_FRAME + 1, src: frameSrc, readyAfter: READY_AFTER, onReady })
 
   // Hold the page at the top, scroll locked, until the visitor enters.
   useEffect(() => {
@@ -136,9 +163,28 @@ export default function CinematicIntro({ onEndChange }) {
   // and on any resize made while in it.
   useEffect(() => {
     const inFullscreen = () => Boolean(document.fullscreenElement || document.webkitFullscreenElement)
-    const refresh = gsap.delayedCall(0.15, () => ScrollTrigger.refresh()).pause()
+    // Not while the preloader is still on screen or opening: re-measuring the pin then
+    // makes the picture jump. Opening re-measures once it's done (unlock).
+    const refresh = gsap
+      .delayedCall(0.15, () => gate.current.open && ScrollTrigger.refresh())
+      .pause()
     const onFullscreenChange = () => refresh.restart(true)
-    const onResize = () => inFullscreen() && refresh.restart(true)
+    // While the preloader is up, a taller/shorter screen (going full screen) would snap
+    // the centred logo and button to the new centre; glide them there instead.
+    let lastHeight = window.innerHeight
+    const onResize = () => {
+      const delta = window.innerHeight - lastHeight
+      lastHeight = window.innerHeight
+      const inner = rootRef.current?.querySelector('.js-load-inner')
+      if (delta && inner && !gate.current.open) {
+        gsap.fromTo(
+          inner,
+          { y: gsap.getProperty(inner, 'y') - delta / 2 },
+          { y: 0, duration: 0.7, ease: 'power3.out', overwrite: 'auto' },
+        )
+      }
+      if (inFullscreen()) refresh.restart(true)
+    }
     document.addEventListener('fullscreenchange', onFullscreenChange)
     document.addEventListener('webkitfullscreenchange', onFullscreenChange)
     window.addEventListener('resize', onResize)
@@ -246,6 +292,9 @@ export default function CinematicIntro({ onEndChange }) {
 
   return (
     <section ref={rootRef} id="home" aria-label="JP INFRA" className="relative h-svh w-full overflow-hidden bg-[#171713]">
+      {/* Stage: everything the visitor sees once inside. On Enter it opens out of the
+          middle of the screen (clip-path), over the preloader. */}
+      <div className="js-stage absolute inset-0">
       {/* Footage — frame sequence scrubbed by scroll */}
       <div className="absolute inset-0">
         <canvas ref={canvasRef} className="js-settle block h-full w-full will-change-transform" aria-hidden="true" />
@@ -276,15 +325,13 @@ export default function CinematicIntro({ onEndChange }) {
         </div>
       </div>
 
-      {/* Scene 1 — wordmark */}
+      {/* Scene 1 — the project's logo over the clouds (rises in on Enter, lifts away on scroll) */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="js-title flex flex-col items-center will-change-transform">
-          <h1 className="jp-wordmark" aria-label={WORDMARK}>
-            {WORDMARK.split('').map((ch, i) => (
-              <span key={i} className="js-letter inline-block opacity-0" aria-hidden="true">
-                {ch === ' ' ? ' ' : ch}
-              </span>
-            ))}
+          <h1 className="m-0" aria-label={WORDMARK}>
+            <span className="js-letter jp-logo-shadow block opacity-0" aria-hidden="true">
+              <Logo className="w-[clamp(260px,40vw,680px)]" />
+            </span>
           </h1>
           <span className="js-title-rule mt-[clamp(18px,3svh,32px)] block h-px w-[clamp(64px,10vw,140px)] origin-center scale-x-0 bg-[#C6A46A]/80" />
         </div>
@@ -301,12 +348,22 @@ export default function CinematicIntro({ onEndChange }) {
       {CHAPTERS.map((c, i) => (
         <Caption key={c.n} className={`js-ch-${i}`} eyebrow={`${c.n} — ${c.eyebrow}`} title={c.title} />
       ))}
+      </div>
 
       {/* Preloader */}
-      <div className="js-loader absolute inset-0 z-10 flex items-center justify-center bg-navy-950" style={{ clipPath: 'inset(0% 0% 0% 0%)' }}>
-        <div className="js-load-inner flex flex-col items-center gap-6">
-          <LogoDraw className="w-[clamp(180px,20vw,250px)] text-[#F3EBDD]" onDone={onDrawn} />
-          <button type="button" onClick={onEnter} className="js-enter jp-enter btn-fill invisible mt-4 opacity-0" style={{ transform: 'translateY(10px)', '--btn-fill-color': '#ffffff' }}>
+      <div className="js-loader absolute inset-0 z-10 flex items-center justify-center overflow-hidden bg-navy-950">
+        {/* dusk backdrop for the opening (see tryReveal); the frame is already cached */}
+        <img
+          src={frameSrc(0)}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          className="js-loader-sky pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-0 [filter:blur(28px)_brightness(0.5)_saturate(1.15)]"
+        />
+        {/* logo and button share one width, so their edges line up */}
+        <div className="js-load-inner relative flex w-[clamp(260px,20vw,300px)] flex-col items-center gap-6">
+          <LogoDraw className="w-full text-[#F3EBDD]" onDone={onDrawn} />
+          <button type="button" onClick={onEnter} className="js-enter jp-enter btn-fill invisible mt-4 w-full opacity-0" style={{ transform: 'translateY(10px)', '--btn-fill-color': '#ffffff' }}>
             Enter Full Screen
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />

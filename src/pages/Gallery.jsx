@@ -1,19 +1,14 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { GALLERY_IMAGES } from "../data/gallery";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
 import ImageCaption from "../components/ImageCaption";
+import CurtainStage from "../components/CurtainStage";
+import { useCurtainSlider } from "../hooks/useCurtainSlider";
 
-const TRANSITION_DURATION = 1.3;
-const TRANSITION_EASE = "power3.inOut";
-// Next: incoming image starts fully off-screen to the right (xPercent 100)
-// and slides to 0; outgoing slides from 0 to fully off-screen left
-// (xPercent -100) at the same time. Previous is the mirror: incoming starts
-// off-screen left (-100) and slides to 0; outgoing slides to the right
-// (100). Both layers move simultaneously — a real horizontal slide, not a
-// mask/reveal.
-const OFFSCREEN = 100;
+// Photo URLs in display order (module-level so the slider sees a stable array)
+const SRCS = GALLERY_IMAGES.map((g) => g.image);
 
 function IconChevron({ dir = "left" }) {
   return (
@@ -30,20 +25,11 @@ function IconChevron({ dir = "left" }) {
   );
 }
 
-// Two permanent fullscreen layers (A/B) that ping-pong roles. On Next, the
-// incoming layer is preloaded and parked off-screen right, then both layers
-// slide left simultaneously (incoming in, outgoing out); Previous mirrors
-// this from/to the left — a true horizontal slide via xPercent, not a
-// mask/reveal. GSAP exclusively owns xPercent/z-index on these two
-// persistent DOM nodes — neither is driven by React props/state — so a
-// React re-render can never interrupt or reset an in-flight transition.
+// Full-screen slideshow: the shared parallax curtain (useCurtainSlider) — next
+// unveils right → left, previous left → right.
 export default function Gallery({ onBack }) {
   const rootRef = useRef(null);
-  const layerARef = useRef(null);
-  const layerBRef = useRef(null);
-  const activeRef = useRef("A");
-  const isAnimatingRef = useRef(false);
-  const [index, setIndex] = useState(0);
+  const { index, go, layerARef, layerBRef } = useCurtainSlider(SRCS);
   const total = GALLERY_IMAGES.length;
 
   useLayoutEffect(() => {
@@ -60,91 +46,6 @@ export default function Gallery({ onBack }) {
       { opacity: 1, y: 0, duration: 0.8, stagger: 0.06, ease: "power3.out" }
     );
   }, []);
-
-  // One-time setup: layer A shows image 0, fully visible; layer B is primed
-  // with the next image, parked off-screen to the right and ready to slide in.
-  useLayoutEffect(() => {
-    const a = layerARef.current;
-    const b = layerBRef.current;
-    if (!a || !b || total === 0) return;
-
-    a.src = GALLERY_IMAGES[0].image;
-    gsap.set(a, { xPercent: 0, zIndex: 1 });
-
-    b.src = GALLERY_IMAGES[total > 1 ? 1 : 0].image;
-    gsap.set(b, { xPercent: OFFSCREEN, zIndex: 2 });
-
-    activeRef.current = "A";
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [total]);
-
-  // Warm the browser's cache for both neighbors of the current image in the
-  // background (fire-and-forget) so Next/Previous almost never has to wait
-  // on a network fetch before the slide can start — the on-click preload in
-  // goRelative below still covers the rare case a neighbor hasn't finished
-  // loading yet (e.g. rapid repeated clicks).
-  useLayoutEffect(() => {
-    if (!total) return;
-    const nextSrc = GALLERY_IMAGES[(index + 1) % total].image;
-    const prevSrc = GALLERY_IMAGES[(index - 1 + total) % total].image;
-    for (const src of [nextSrc, prevSrc]) {
-      const img = new Image();
-      img.src = src;
-    }
-  }, [index, total]);
-
-  const goRelative = (delta) => {
-    if (!total || isAnimatingRef.current) return;
-
-    const nextIndex = (index + delta + total) % total;
-    const nextSrc = GALLERY_IMAGES[nextIndex].image;
-
-    const activeEl = activeRef.current === "A" ? layerARef.current : layerBRef.current;
-    const inactiveEl = activeRef.current === "A" ? layerBRef.current : layerARef.current;
-    if (!activeEl || !inactiveEl) return;
-
-    const enterFrom = delta > 0 ? OFFSCREEN : -OFFSCREEN;
-    const exitTo = delta > 0 ? -OFFSCREEN : OFFSCREEN;
-
-    isAnimatingRef.current = true;
-    // No preload wait here — the background neighbor cache-warming effect
-    // above means this image is almost always already downloaded by the
-    // time the user clicks, so the slide starts the instant the click
-    // happens instead of pausing on a network round-trip first.
-    inactiveEl.src = nextSrc;
-    gsap.set(inactiveEl, { xPercent: enterFrom, zIndex: 2 });
-    gsap.set(activeEl, { xPercent: 0, zIndex: 1 });
-
-    // The name and counter change as the transition starts, not after it.
-    setIndex(nextIndex);
-
-    const finish = () => {
-      activeRef.current = activeRef.current === "A" ? "B" : "A";
-      isAnimatingRef.current = false;
-    };
-
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      gsap.set(inactiveEl, { xPercent: 0 });
-      gsap.set(activeEl, { xPercent: exitTo });
-      finish();
-      return;
-    }
-
-    const tl = gsap.timeline({ onComplete: finish });
-    tl.to(inactiveEl, { xPercent: 0, duration: TRANSITION_DURATION, ease: TRANSITION_EASE }, 0);
-    tl.to(activeEl, { xPercent: exitTo, duration: TRANSITION_DURATION, ease: TRANSITION_EASE }, 0);
-  };
-
-  useLayoutEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "ArrowLeft") goRelative(-1);
-      if (e.key === "ArrowRight") goRelative(1);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [total, index]);
 
   return (
     <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-navy-950">
@@ -167,40 +68,20 @@ export default function Gallery({ onBack }) {
 
       {total > 0 ? (
         <>
-          {/* Image stage — click to advance */}
-          <button
-            type="button"
-            onClick={() => goRelative(1)}
-            aria-label="Next image"
-            className="absolute inset-0 z-0 cursor-pointer overflow-hidden"
-          >
-            <img
-              ref={layerARef}
-              alt=""
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <img
-              ref={layerBRef}
-              alt=""
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div
-              className="pointer-events-none absolute inset-0 z-[3]"
-              style={{
-                background:
-                  "linear-gradient(180deg, rgba(10,31,54,0.5) 0%, transparent 20%, transparent 70%, rgba(10,31,54,0.65) 100%)",
-              }}
-            />
-          </button>
+          <CurtainStage
+            layerARef={layerARef}
+            layerBRef={layerBRef}
+            onNext={() => go(1)}
+            label="Next image"
+            shade={false}
+          />
 
           {/* Prev / next */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              goRelative(-1);
+              go(-1);
             }}
             aria-label="Previous image"
             style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
@@ -212,7 +93,7 @@ export default function Gallery({ onBack }) {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              goRelative(1);
+              go(1);
             }}
             aria-label="Next image"
             style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}

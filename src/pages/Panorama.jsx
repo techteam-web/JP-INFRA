@@ -2,13 +2,25 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Marzipano from "marzipano";
 import { APP_DATA } from "../data/data";
-import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
+import Logo from "../components/Logo";
 
 const DEG = Math.PI / 180;
 const IDLE_MS = 1200;
 const AUTOROTATE_YAW_SPEED = 0.05;
 const TILE_URL = (sceneId) => `/assets/panoroma/tiles/${sceneId}/{z}/{f}/{y}/{x}.jpg`;
+// Low-res cube strip the tiler exports per scene: the viewer shows it at once as the
+// fallback level while the sharp tiles stream in, so there's never an empty frame.
+const PREVIEW_URL = (sceneId) => `/assets/panoroma/tiles/${sceneId}/preview.jpg`;
+
+// Warm every scene's preview as soon as this page is fetched (App prefetches it in the
+// background), so opening the 360° view or switching scenes shows the picture instantly.
+if (typeof window !== "undefined") {
+  for (const scene of APP_DATA.scenes) {
+    const img = new Image();
+    img.src = PREVIEW_URL(scene.id);
+  }
+}
 
 function sceneLabel(scene) {
   return scene.name.replace(/^DJI_\d+_/, "").replace(/_/g, " ");
@@ -19,7 +31,6 @@ export default function Panorama({ onBack }) {
   const containerRef = useRef(null);
   const scenesRef = useRef(new Map());
   const activeIdRef = useRef(APP_DATA.scenes[0]?.id);
-  const yawElRef = useRef(null);
   const [activeId, setActiveId] = useState(APP_DATA.scenes[0]?.id);
   const [ready, setReady] = useState(false);
   const [interacted, setInteracted] = useState(false);
@@ -58,14 +69,17 @@ export default function Panorama({ onBack }) {
           Marzipano.RectilinearView.limit.vfov(24 * DEG, 100 * DEG)
         )
       );
-      const source = Marzipano.ImageUrlSource.fromString(TILE_URL(scene.id));
+      const source = Marzipano.ImageUrlSource.fromString(TILE_URL(scene.id), {
+        cubeMapPreviewUrl: PREVIEW_URL(scene.id),
+      });
       const geometry = new Marzipano.CubeGeometry(scene.levels);
       const marzipanoScene = viewer.createScene({ source, geometry, view, pinFirstLevel: true });
       map.set(scene.id, { scene: marzipanoScene, view });
     }
     scenesRef.current = map;
 
-    map.get(activeIdRef.current)?.scene.switchTo();
+    // no fade-in from the background: the picture (its preview first) is there at once
+    map.get(activeIdRef.current)?.scene.switchTo({ transitionDuration: 0 });
     setReady(true);
 
     viewer.setIdleMovement(
@@ -73,28 +87,11 @@ export default function Panorama({ onBack }) {
       Marzipano.autorotate({ yawSpeed: AUTOROTATE_YAW_SPEED, targetPitch: null })
     );
 
-    let pendingFrame = null;
-    const reportView = () => {
-      if (pendingFrame != null) return;
-      pendingFrame = requestAnimationFrame(() => {
-        pendingFrame = null;
-        const entry = map.get(activeIdRef.current);
-        if (entry && yawElRef.current) {
-          const deg = (entry.view.yaw() * 180) / Math.PI;
-          yawElRef.current.textContent = `${Math.round(((deg % 360) + 360) % 360)}°`;
-        }
-      });
-    };
-    map.forEach(({ view }) => view.addEventListener("change", reportView));
-    reportView();
-
     const onPointerDown = () => setInteracted(true);
     el.addEventListener("pointerdown", onPointerDown);
 
     return () => {
-      map.forEach(({ view }) => view.removeEventListener("change", reportView));
       el.removeEventListener("pointerdown", onPointerDown);
-      if (pendingFrame != null) cancelAnimationFrame(pendingFrame);
       viewer.destroy();
       scenesRef.current = new Map();
       setReady(false);
@@ -107,26 +104,18 @@ export default function Panorama({ onBack }) {
   }, [activeId, ready]);
 
   return (
-    <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-navy-950">
+    <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-[#0a0908]">
       <div ref={containerRef} className="absolute inset-0" aria-label="360 degree view" />
 
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_60%,rgba(0,0,0,0.45)_100%)]" />
 
       {/* Top bar */}
-      <div className="relative z-10 flex items-start justify-between px-6 pt-6 sm:px-10 sm:pt-8 3xl:px-14 3xl:pt-10 4xl:px-16 4xl:pt-12">
-        <div data-anim className="flex items-center gap-3">
+      <div className="relative z-10 flex items-center justify-between px-6 pt-6 sm:px-10 sm:pt-8 3xl:px-14 3xl:pt-10 4xl:px-16 4xl:pt-12">
+        <div data-anim>
           <BackButton onClick={onBack} />
-          <div className="flex items-center gap-2.5 rounded-full bg-navy-700/60 px-3 py-2 backdrop-blur 3xl:px-4 3xl:py-2.5">
-            <Logo className="h-8 w-auto sm:h-9 2xl:h-10 3xl:h-11 4xl:h-12" />
-          </div>
         </div>
-
-        <div
-          ref={yawElRef}
-          data-anim
-          className="rounded-full bg-black/40 px-4 py-1.5 text-xs font-bold tracking-widest text-white backdrop-blur 3xl:px-5 3xl:py-2 3xl:text-sm 4xl:px-6 4xl:text-base"
-        >
-          0°
+        <div data-anim className="rounded-lg bg-navy-700 p-1.5 3xl:p-2">
+          <Logo className="h-9 w-auto sm:h-10 2xl:h-11 3xl:h-12 4xl:h-14" />
         </div>
       </div>
 

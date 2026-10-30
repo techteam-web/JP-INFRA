@@ -48,10 +48,11 @@ const CONTACT_ITEMS = [
   {
     icon: IconPin,
     label: "Address",
-    value: "JP Infra Tower, Bandra Kurla Complex, Mumbai 400051",
+    value:
+      "3rd Floor, Viraj Tower, Western Express Hwy, Near WEH Metro Station, Gundavali, Andheri East, Mumbai 400093",
   },
-  { icon: IconPhone, label: "Phone", value: "+91 22 6123 4567" },
-  { icon: IconMail, label: "Email", value: "enquiry@jpinfra.com" },
+  { icon: IconPhone, label: "Phone", value: "1800-313-9999", href: "tel:18003139999" },
+  { icon: IconMail, label: "Email", value: "enquiry@jpinfra.com", href: "mailto:enquiry@jpinfra.com" },
 ];
 
 export default function Contact({ onBack }) {
@@ -136,7 +137,7 @@ export default function Contact({ onBack }) {
 
           <div className="mt-6 grid gap-6 sm:mt-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-10 3xl:mt-10 3xl:gap-14">
             <div data-anim className="space-y-3.5 3xl:space-y-4">
-              {CONTACT_ITEMS.map(({ icon: Icon, label, value }) => (
+              {CONTACT_ITEMS.map(({ icon: Icon, label, value, href }) => (
                 <div key={label} className="flex items-start gap-3">
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/20 backdrop-blur-sm 3xl:h-10 3xl:w-10">
                     <Icon />
@@ -145,7 +146,15 @@ export default function Contact({ onBack }) {
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50 3xl:text-xs">
                       {label}
                     </p>
-                    <p className="text-xs text-white/85 sm:text-sm 3xl:text-base">{value}</p>
+                    <p className="text-xs text-white/85 sm:text-sm 3xl:text-base">
+                      {href ? (
+                        <a href={href} className="transition-colors hover:text-white">
+                          {value}
+                        </a>
+                      ) : (
+                        value
+                      )}
+                    </p>
                   </div>
                 </div>
               ))}

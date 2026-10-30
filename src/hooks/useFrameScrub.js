@@ -28,9 +28,12 @@ const decode = (blob) => {
  * Optional `still`: a higher-quality image ({ src, x, y, w, h }, placed in the frame's own
  * pixel space) that is cross-faded over the frames via setStillMix(0..1).
  *
+ * `readyAfter`: onReady fires once this many leading frames have downloaded (default: all),
+ * so playback can start while the rest keep streaming in behind it.
+ *
  * Returns a stable controller: { setProgress(p), setStillMix(m) }, both 0..1.
  */
-export function useFrameScrub(canvasRef, { count, src, still, onProgress, onReady }) {
+export function useFrameScrub(canvasRef, { count, src, still, readyAfter = count, onProgress, onReady }) {
   const state = useRef({ progress: 0, mix: 0 })
   const cb = useRef({ onProgress, onReady })
 
@@ -65,6 +68,9 @@ export function useFrameScrub(canvasRef, { count, src, still, onProgress, onRead
         canvas.height = h
         ctx.imageSmoothingQuality = 'high'
         dirty = true
+        // Resizing clears the canvas; repaint at once (e.g. entering full screen)
+        // rather than flashing an empty frame until the next tick.
+        if (frames.has(drawn)) draw(frames.get(drawn))
       }
     }
     const ro = new ResizeObserver(resize)
@@ -128,11 +134,14 @@ export function useFrameScrub(canvasRef, { count, src, still, onProgress, onRead
       drawn = pick
       drawnMix = s.mix
       dirty = pick !== target
-      if (!readyFired && stillDone && blobs.every(Boolean)) {
-        readyFired = true
-        cb.current.onReady?.()
-      }
     }
+    // Ready once a frame is on the canvas and the leading frames are in.
+    const checkReady = () => {
+      if (readyFired || drawn < 0 || !stillDone || !blobs.slice(0, readyAfter).every(Boolean)) return
+      readyFired = true
+      cb.current.onReady?.()
+    }
+    gsap.ticker.add(checkReady)
     gsap.ticker.add(tick)
 
     // Download every frame (compressed) with bounded concurrency; the still counts as one more.
@@ -193,11 +202,12 @@ export function useFrameScrub(canvasRef, { count, src, still, onProgress, onRead
       ctrl.abort()
       ro.disconnect()
       gsap.ticker.remove(tick)
+      gsap.ticker.remove(checkReady)
       for (const bmp of frames.values()) bmp.close?.()
       frames.clear()
       stillImg?.close?.()
     }
-  }, [canvasRef, count, src, still])
+  }, [canvasRef, count, src, still, readyAfter])
 
   return useMemo(
     () => ({

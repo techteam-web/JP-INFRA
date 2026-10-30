@@ -1,17 +1,14 @@
 import { byName, imageName } from "./imageName";
 
-// Picks up every photo dropped into src/assets/Aminities-optimized/
-// automatically — nothing to maintain by hand when images are added or
-// removed. These are web-sized copies (resized to max 2560px wide, webp
-// quality 78) of the originals in src/assets/Aminities/, which were
-// multi-megapixel exports up to ~17MB each — far too large to load
-// quickly. The originals are kept untouched; only this optimized copy is
-// referenced by the app. The on-screen name comes from the filename (see
+// Picks up every photo in src/assets/Amenities final webp/ automatically — the client's
+// final amenity renders (src/assets/Amenities final/), converted to WebP (quality 82, full
+// 1920 × 1080) and named for display. The JPG originals are kept untouched; only the WebP
+// copies are referenced by the app. The on-screen name comes from the filename (see
 // imageName.js).
-const modules = import.meta.glob(
-  "../assets/Aminities-optimized/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}",
-  { eager: true, import: "default" }
-);
+const modules = import.meta.glob("../assets/Amenities final webp/*.webp", {
+  eager: true,
+  import: "default",
+});
 
 export const AMENITIES = Object.keys(modules)
   .map((key) => {

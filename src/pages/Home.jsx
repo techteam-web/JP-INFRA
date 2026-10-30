@@ -55,20 +55,17 @@ export default function Home({ animate = false, onNavigate }) {
       </div>
 
       <div ref={contentRef} className="relative z-10 flex h-full flex-col">
-        {/* Project logo */}
-        <div
-          data-anim
-          className="jp-logo-shadow absolute left-6 top-6 sm:left-12 sm:top-8 lg:left-20 xl:left-24 2xl:left-28 3xl:left-32 3xl:top-10 4xl:left-40 4xl:top-12"
-        >
-          <EndgameLogo className="w-28 sm:w-32 2xl:w-36 3xl:w-40 4xl:w-48" />
-        </div>
+        {/* Top bar: project logo left, JP Infra right — one row, so both sit on the
+            same centre line with the same edge padding as the other pages' top bars.
+            The Endgame logo matches the JP Infra badge's full height (logo + padding);
+            its widest step uses a rem breakpoint because the px-defined 3xl/4xl ones
+            lose to 2xl in the cascade (see --breakpoint-3xl in index.css). */}
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-6 pt-6 sm:px-10 sm:pt-8 3xl:px-14 3xl:pt-10 4xl:px-16 4xl:pt-12">
+          <div data-anim className="jp-logo-shadow">
+            <EndgameLogo className="h-12 w-auto sm:h-[52px] 2xl:h-14 min-[120rem]:h-15" />
+          </div>
 
-        {/* Logo */}
-        <div
-          data-anim
-          className="absolute right-6 top-6 flex flex-col items-end gap-1.5 sm:right-10 sm:top-8 3xl:right-14 3xl:top-10 4xl:right-16 4xl:top-12"
-        >
-          <div className="rounded-lg bg-navy-700 p-1.5 3xl:p-2">
+          <div data-anim className="rounded-lg bg-navy-700 p-1.5 3xl:p-2">
             <Logo className="h-9 w-auto sm:h-10 2xl:h-11 3xl:h-12 4xl:h-14" />
           </div>
         </div>
