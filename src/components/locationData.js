@@ -1,6 +1,6 @@
-// The project's site, from the client's verified coordinates table. After changing it,
+// The project's site: 19.279946 N, 72.888789 E (the confirmed main location). After changing it,
 // re-fetch the driving routes so they start here: node scripts/fetch-routes.mjs
-export const PROJECT = { name: 'Codename Endgame', lngLat: [72.868, 19.2875] }
+export const PROJECT = { name: 'Codename Endgame', lngLat: [72.888789, 19.279946] }
 
 // Travel-time bands, as on the client's "Centre of Convenience" chart. lngLat is
 // [longitude, latitude] from the client's verified coordinates table; the few places the

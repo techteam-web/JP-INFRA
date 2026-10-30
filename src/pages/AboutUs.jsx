@@ -149,19 +149,6 @@ export default function AboutUs({ onBack }) {
           <p className="mt-3 text-[13px] leading-relaxed text-white/80 sm:text-sm lg:mt-[clamp(12px,2vh,22px)] lg:text-[clamp(13px,1.7vh,17px)] short:mt-2 short:text-xs">
             {chapter.text}
           </p>
-
-          {index === 0 && (
-            <button
-              type="button"
-              onClick={() => go(1)}
-              className="group mt-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-red-500 transition-colors hover:text-white short:mt-2"
-            >
-              Read our story
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1">
-                <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          )}
         </div>
       </div>
 

@@ -29,25 +29,8 @@ for (const cat of AMENITY_CATEGORIES) {
 }
 const captionOf = (amenity) => LISTED_NAMES.get(amenity.name.toLowerCase()) || amenity.name;
 
-// Photo sets for the slideshow: every photo, then one per category — the photos its
-// listed amenities point to, in the list's order (a category without photos is left out).
-const PHOTO_SETS = [
-  { id: "all", title: "All Photos", indices: AMENITIES.map((_, i) => i) },
-  ...AMENITY_CATEGORIES.map((cat) => {
-    const indices = [];
-    for (const item of cat.items) {
-      if (!item.photo) continue;
-      const name = item.photo.toLowerCase();
-      AMENITIES.forEach((a, i) => {
-        if (a.name.toLowerCase() === name && !indices.includes(i)) indices.push(i);
-      });
-    }
-    return { id: cat.id, title: cat.title, indices };
-  }).filter((set) => set.indices.length),
-];
-const SET_BY_ID = new Map(PHOTO_SETS.map((set) => [set.id, set]));
-// stable source arrays per set (the slider resets when its array changes)
-const SET_SRCS = new Map(PHOTO_SETS.map((set) => [set.id, set.indices.map((i) => AMENITIES[i].image)]));
+// every amenity photo, in order (a stable array: the slider resets when its array changes)
+const SRCS = AMENITIES.map((a) => a.image);
 
 
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -97,14 +80,13 @@ function IconGrid() {
   );
 }
 
-// The page opens on the full-screen slideshow of every amenity photo. The "All Amenities"
-// button pops up the categories — picking one shows only that category's photos — and
-// "Full List" opens the complete list over the slideshow (sized to fit the screen); an
-// amenity with a photo jumps the slideshow to it.
+// The page opens on the list of every amenity (sized to fit the screen). Clicking an amenity
+// with a photo opens it full screen, where the visitor can browse the photos; "All Amenities"
+// (or Esc) brings the list back.
 export default function Amenities({ onBack }) {
   const rootRef = useRef(null);
-  const [photos, setPhotos] = useState({ set: "all", start: 0, key: 0 });
-  const [listOpen, setListOpen] = useState(false);
+  const [photos, setPhotos] = useState({ start: 0, key: 0 });
+  const [listOpen, setListOpen] = useState(true);
 
   useLayoutEffect(() => {
     const els = rootRef.current?.querySelectorAll("[data-anim]");
@@ -120,19 +102,18 @@ export default function Amenities({ onBack }) {
     );
   }, []);
 
-  // Esc closes the list
+  // Esc goes from a photo back to the list
   useEffect(() => {
-    if (!listOpen) return undefined;
-    const onKey = (e) => e.key === "Escape" && setListOpen(false);
+    if (listOpen) return undefined;
+    const onKey = (e) => e.key === "Escape" && setListOpen(true);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [listOpen]);
 
   const pick = (start) => {
-    setPhotos({ set: "all", start, key: Date.now() });
+    setPhotos({ start, key: Date.now() });
     setListOpen(false);
   };
-  const showSet = (set) => setPhotos({ set, start: 0, key: Date.now() });
 
   return (
     <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-navy-950">
@@ -153,15 +134,9 @@ export default function Amenities({ onBack }) {
         </div>
       </div>
 
-      <AmenityPhotos
-        key={photos.key}
-        set={SET_BY_ID.get(photos.set)}
-        start={photos.start}
-        listOpen={listOpen}
-        onList={() => setListOpen(true)}
-        onSet={showSet}
-      />
-      {listOpen && <AmenityList onPick={pick} onClose={() => setListOpen(false)} />}
+      {/* the photos stay behind the list, so the last one viewed shows through it */}
+      <AmenityPhotos key={photos.key} start={photos.start} listOpen={listOpen} onList={() => setListOpen(true)} />
+      {listOpen && <AmenityList onPick={pick} />}
     </div>
   );
 }
@@ -217,21 +192,19 @@ function CategoryHeading({ cat, as: Tag = "h2" }) {
   );
 }
 
-// The full list, over the slideshow — never scrolls. From lg up it's a grid: one column per
+// The full list, over the photos — never scrolls. From lg up it's a grid: one column per
 // category with every heading on the same line, Lifestyle (the longest) spread over two
 // columns, sizes tied to the screen height so it all fits. Below lg, category tabs show
 // one category at a time (in two columns).
-function AmenityList({ onPick, onClose }) {
+function AmenityList({ onPick }) {
   const ref = useRef(null);
   useViewIn(ref);
   const [tab, setTab] = useState(AMENITY_CATEGORIES[0].id);
   const tabCat = AMENITY_CATEGORIES.find((c) => c.id === tab);
 
   return (
-    <div
+    <section
       ref={ref}
-      role="dialog"
-      aria-modal="true"
       aria-labelledby="amenity-list-title"
       className="absolute inset-0 z-[15] overflow-hidden bg-navy-950/90 backdrop-blur-xl"
     >
@@ -250,17 +223,6 @@ function AmenityList({ onPick, onClose }) {
               All <span className="text-red-600">Amenities</span>
             </h1>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-            className="btn-fill flex shrink-0 items-center gap-2.5 rounded-xl border border-white/25 bg-navy-950/40 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition-transform duration-200 active:scale-95 3xl:text-xs"
-          >
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-            Close
-          </button>
         </div>
 
         {/* lg and up: every category at once */}
@@ -338,7 +300,7 @@ function AmenityList({ onPick, onClose }) {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -357,15 +319,16 @@ function AndManyMore({ onPick }) {
   );
 }
 
-function AmenityPhotos({ set, start, listOpen, onList, onSet }) {
+function AmenityPhotos({ start, listOpen, onList }) {
   const ref = useRef(null);
   useViewIn(ref);
-  const { index, go, layerARef, layerBRef } = useCurtainSlider(SET_SRCS.get(set.id), start);
-  const amenity = AMENITIES[set.indices[index]];
-  const total = set.indices.length;
+  const { index, go, layerARef, layerBRef } = useCurtainSlider(SRCS, start);
+  const amenity = AMENITIES[index];
+  const total = AMENITIES.length;
 
   return (
-    <div ref={ref} className="absolute inset-0">
+    // behind the list it's only a backdrop: out of reach for clicks, keys and screen readers
+    <div ref={ref} inert={listOpen} className="absolute inset-0">
       <CurtainStage layerARef={layerARef} layerBRef={layerBRef} onNext={() => go(1)} label="Next amenity" />
 
       {/* Prev / next */}
@@ -394,9 +357,9 @@ function AmenityPhotos({ set, start, listOpen, onList, onSet }) {
         <IconChevron dir="right" />
       </button>
 
-      <ImageCaption id={amenity.id} label={set.id === "all" ? "Amenities" : set.title} name={captionOf(amenity)} />
+      <ImageCaption id={amenity.id} label="Amenities" name={captionOf(amenity)} />
 
-      {!listOpen && <CategoryMenu activeId={set.id} onSet={onSet} onList={onList} />}
+      {!listOpen && <ListButton onList={onList} />}
 
       {/* Counter, bottom centre (bottom-left on phones, clear of the button) */}
       <div className="absolute inset-x-0 bottom-6 z-10 mx-auto flex w-fit items-center max-sm:left-6 max-sm:right-auto max-sm:mx-0 sm:bottom-8 2xl:bottom-10 3xl:bottom-12 4xl:bottom-14">
@@ -416,132 +379,17 @@ function AmenityPhotos({ set, start, listOpen, onList, onSet }) {
 
 // "All Amenities", bottom right — on desktop stacked just above the Brainwing credit,
 // which keeps the very bottom (same right edge; its bottom offset + height + a gap; see
-// .jp-credit — height is width × 112/420). Hovering it (or tapping it) pops up the
-// categories; picking one shows just that category's photos. "Full List" opens the list.
-function CategoryMenu({ activeId, onSet, onList }) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
-  const closeTimer = useRef(null);
-
-  const show = () => {
-    window.clearTimeout(closeTimer.current);
-    setOpen(true);
-  };
-  const hideSoon = () => {
-    window.clearTimeout(closeTimer.current);
-    closeTimer.current = window.setTimeout(() => setOpen(false), 180);
-  };
-  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
-
-  // Esc or a tap outside closes it
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => e.key === "Escape" && setOpen(false);
-    const onDown = (e) => !wrapRef.current?.contains(e.target) && setOpen(false);
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("pointerdown", onDown);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("pointerdown", onDown);
-    };
-  }, [open]);
-
-  const choose = (fn) => {
-    setOpen(false);
-    fn();
-  };
-
+// .jp-credit — height is width × 112/420). It brings the list back.
+function ListButton({ onList }) {
   return (
-    <div
-      ref={wrapRef}
-      // hover opens/closes it for a mouse only; on touch, a tap opens it and a tap outside closes it
-      onPointerEnter={(e) => e.pointerType === "mouse" && show()}
-      onPointerLeave={(e) => e.pointerType === "mouse" && hideSoon()}
-      className="absolute bottom-6 right-6 z-30 sm:bottom-8 sm:right-10 lg:right-[clamp(16px,3vw,40px)] lg:bottom-[calc(clamp(16px,3svh,28px)+clamp(29px,2.4vw,40px)+12px)]"
+    <button
+      type="button"
+      onClick={onList}
+      style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+      className="btn-fill absolute bottom-6 right-6 z-30 flex items-center gap-2.5 rounded-xl border border-red-500/45 bg-navy-950/55 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white shadow-premium backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:bottom-8 sm:right-10 lg:right-[clamp(16px,3vw,40px)] lg:bottom-[calc(clamp(16px,3svh,28px)+clamp(29px,2.4vw,40px)+12px)] xl:px-5 xl:py-3 3xl:text-xs"
     >
-      {/* the menu pops up from the button; its bottom padding bridges the gap for the pointer */}
-      <div
-        className={`absolute bottom-full right-0 pb-3 transition-[opacity,transform,visibility] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          open ? "visible translate-y-0 opacity-100" : "invisible translate-y-2 opacity-0"
-        }`}
-      >
-        <div
-          role="menu"
-          aria-label="Amenity categories"
-          className="w-64 rounded-2xl border border-white/15 bg-navy-950/85 p-2 shadow-premium backdrop-blur-xl 3xl:w-72"
-        >
-          {PHOTO_SETS.map((s) => {
-            const on = s.id === activeId;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                role="menuitemradio"
-                aria-checked={on}
-                onClick={() => choose(() => onSet(s.id))}
-                className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 short:py-1.5 text-left transition-colors duration-200 hover:bg-white/10 focus-visible:bg-white/10 focus-visible:outline-none ${
-                  on ? "bg-white/[0.08]" : ""
-                }`}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={`h-5 w-5 shrink-0 ${on ? "text-red-500" : "text-white/60 group-hover:text-red-500"}`}
-                >
-                  {s.id === "all" ? <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" /> : CATEGORY_ICONS[s.id]}
-                </svg>
-                <span
-                  className={`flex-1 font-display text-lg uppercase leading-none tracking-wide 3xl:text-xl ${
-                    on ? "text-white" : "text-white/80 group-hover:text-white"
-                  }`}
-                >
-                  {s.title}
-                </span>
-                <span className={`text-[10px] font-bold tracking-widest ${on ? "text-red-500" : "text-white/40"}`}>
-                  {String(s.indices.length).padStart(2, "0")}
-                </span>
-              </button>
-            );
-          })}
-          <div className="mx-3 my-1.5 h-px bg-white/10 short:my-0.5" />
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => choose(onList)}
-            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 short:py-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70 transition-colors duration-200 hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:outline-none"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-white/60 group-hover:text-red-500" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-              <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />
-            </svg>
-            Full List
-          </button>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={show}
-        onFocus={show}
-        style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-        className="btn-fill flex items-center gap-2.5 rounded-xl border border-red-500/45 bg-navy-950/55 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-white shadow-premium backdrop-blur-xl transition-transform duration-200 active:scale-95 xl:px-5 xl:py-3 3xl:text-xs"
-      >
-        <IconGrid />
-        All Amenities
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          className={`h-3 w-3 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
-        >
-          <path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-    </div>
+      <IconGrid />
+      All Amenities
+    </button>
   );
 }

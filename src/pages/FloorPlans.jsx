@@ -29,9 +29,20 @@ const TOP = FLOORS.length;
 
 // Floor-plan drawings by floor number, once the client supplies them (e.g. 8: plan8Img).
 const FLOOR_PLANS = {};
+// The floors' 360° views aren't uploaded yet: until then the card's 360° button shows locked.
+const FLOOR_360_READY = false;
 
 const pad = (n) => String(n).padStart(2, "0");
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function IconLock({ className = "h-3 w-3" }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function IconArrow({ dir = "right", className = "h-3 w-3" }) {
   const d = { right: "M5 12h14M13 6l6 6-6 6", up: "M6 15l6-6 6 6", down: "M6 9l6 6 6-6" }[dir];
@@ -261,14 +272,25 @@ export default function FloorPlans({ onBack, onOpen360 }) {
               >
                 Floor Plan <IconArrow />
               </button>
-              <button
-                type="button"
-                onClick={onOpen360}
-                style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-                className="btn-fill flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/25 px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-transform active:scale-95"
-              >
-                360° View <IconArrow />
-              </button>
+              {FLOOR_360_READY ? (
+                <button
+                  type="button"
+                  onClick={onOpen360}
+                  style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+                  className="btn-fill flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/25 px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-transform active:scale-95"
+                >
+                  360° View <IconArrow />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Coming soon"
+                  className="flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40"
+                >
+                  360° View <IconLock />
+                </button>
+              )}
             </div>
           </div>
         </>
