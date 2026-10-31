@@ -36,10 +36,19 @@ const cumulative = (coords) => coords.reduce((acc, c, i) => [...acc, i ? acc[i -
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
 
-const MAJOR = ['motorway', 'trunk', 'primary']
-
-// Roads are clean white ribbons, edged in a soft blue-grey casing.
-const ROAD_COLOR = ['match', ['get', 'class'], MAJOR, '#ffffff', ['secondary', 'tertiary'], '#fdfdfe', '#f9fbfc']
+// The arteries — the Western Express Highway and Ghodbunder Road — carry the site's navy;
+// every other road stays a quiet white ribbon, so the main roads read at a glance.
+const ARTERY = ['motorway', 'trunk', 'primary']
+const isArtery = ['in', ['get', 'class'], ['literal', ARTERY]]
+const ROAD_COLOR = ['case', isArtery, '#ffffff', ['match', ['get', 'class'], ['secondary', 'tertiary'], '#fcfdfe', '#f7fafc']]
+// navy casing on the arteries, soft blue-grey on the rest
+const CASING_COLOR = ['case', isArtery, '#2b5a8f', '#cbd6e2']
+// widen a layer's own line-width by a factor, keeping its zoom curve
+const wider = (layer, artery, rest) => [
+  '*',
+  ['case', isArtery, artery, rest],
+  ['coalesce', layer.paint?.['line-width'], 1],
+]
 
 // Daylight palette from the site: a cool, navy-tinted ground (navy-50 family), pale
 // blue-grey city, soft blue water and navy (#0a1f36) type; brand red is kept for the
@@ -49,22 +58,32 @@ function theme(map) {
     const { id, type } = layer
     const has = (re) => re.test(id)
     try {
-      if (type === 'background') map.setPaintProperty(id, 'background-color', '#eef2f6')
+      if (type === 'background') map.setPaintProperty(id, 'background-color', '#e7edf4')
       else if (type === 'fill') {
         if (has(/building/i)) map.setLayoutProperty(id, 'visibility', 'none')
-        else if (has(/water/i)) map.setPaintProperty(id, 'fill-color', '#c6d6e6')
-        else if (has(/wood|forest|grass|park/i)) map.setPaintProperty(id, 'fill-color', '#dfe8e3')
-        else map.setPaintProperty(id, 'fill-color', '#e9eef4')
+        else if (has(/water/i)) map.setPaintProperty(id, 'fill-color', '#bed2e4')
+        else if (has(/wood|forest|grass|park/i)) map.setPaintProperty(id, 'fill-color', '#d8e4db')
+        else map.setPaintProperty(id, 'fill-color', '#e1e8f1')
       } else if (type === 'line') {
-        if (has(/waterway/i)) map.setPaintProperty(id, 'line-color', '#b7cbe0')
-        else if (has(/casing/i) && !has(/tunnel/i)) map.setPaintProperty(id, 'line-color', '#d5dde7')
-        else if (has(/^highway_(minor|major|motorway)/i)) map.setPaintProperty(id, 'line-color', ROAD_COLOR)
-        else if (has(/railway/i)) map.setPaintProperty(id, 'line-color', 'rgba(10,31,54,0.2)')
+        if (has(/waterway/i)) map.setPaintProperty(id, 'line-color', '#aec4da')
+        else if (has(/casing/i) && !has(/tunnel/i)) {
+          map.setPaintProperty(id, 'line-color', CASING_COLOR)
+          map.setPaintProperty(id, 'line-width', wider(layer, 1.7, 1.05))
+        } else if (has(/^highway_(minor|major|motorway)/i)) {
+          map.setPaintProperty(id, 'line-color', ROAD_COLOR)
+          map.setPaintProperty(id, 'line-width', wider(layer, 1.45, 1))
+        } else if (has(/railway/i)) map.setPaintProperty(id, 'line-color', 'rgba(10,31,54,0.22)')
         else map.setLayoutProperty(id, 'visibility', 'none')
       } else if (type === 'symbol') {
         if (has(/shield|airport|path/i)) map.setLayoutProperty(id, 'visibility', 'none')
-        else if (has(/^highway-name/i)) {
-          map.setPaintProperty(id, 'text-color', 'rgba(10,31,54,0.6)')
+        else if (has(/^highway-name-major/i)) {
+          // the arteries name themselves in the site's navy
+          map.setPaintProperty(id, 'text-color', '#19497c')
+          map.setPaintProperty(id, 'text-halo-color', '#ffffff')
+          map.setPaintProperty(id, 'text-halo-width', 1.6)
+          map.setLayoutProperty(id, 'text-letter-spacing', 0.12)
+        } else if (has(/^highway-name/i)) {
+          map.setPaintProperty(id, 'text-color', 'rgba(10,31,54,0.55)')
           map.setPaintProperty(id, 'text-halo-color', 'rgba(255,255,255,0.95)')
           map.setPaintProperty(id, 'text-halo-width', 1.4)
         } else {
@@ -99,7 +118,7 @@ function addCityAndSite(map) {
       'source-layer': 'building',
       minzoom: 13,
       paint: {
-        'fill-extrusion-color': ['interpolate', ['linear'], height, 0, '#e3e9f0', 30, '#d3dde8', 90, '#bfcddc'],
+        'fill-extrusion-color': ['interpolate', ['linear'], height, 0, '#dde5ef', 30, '#c9d6e4', 90, '#b2c4d7'],
         'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 13, 0, 14.5, height],
         'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
         'fill-extrusion-opacity': 1,
@@ -337,7 +356,14 @@ export default function Location({ label, active, onBack }) {
     route?.setData(EMPTY)
     head?.setData(EMPTY)
     const index = band.places.findIndex((p) => p.name === picked && p.lngLat)
-    for (const m of markersRef.current) m?.getElement().classList.remove('is-active', 'is-connecting', 'is-arrived')
+    // with nothing picked, every place in the chosen time band is lit; picking one narrows to it
+    markersRef.current.forEach((m, i) => {
+      const el = m?.getElement()
+      if (!el) return
+      el.classList.remove('is-active', 'is-connecting', 'is-arrived')
+      el.style.setProperty('--lit-delay', `${i * 35}ms`)
+      el.classList.toggle('is-lit', index < 0)
+    })
     focusRoads(map, index >= 0)
     if (index < 0) return undefined
 

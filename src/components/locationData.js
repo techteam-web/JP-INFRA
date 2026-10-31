@@ -13,7 +13,7 @@ export const BANDS = [
       { name: 'Podar International School (Mira Road)', category: 'Education', lngLat: [72.886450, 19.279120] },
       { name: 'Euro Kids (Vinay Nagar)', category: 'Education', lngLat: [72.885820, 19.278410] },
       { name: 'Surya Legacy', category: 'Restaurant', lngLat: [72.889410, 19.276890] },
-      { name: 'Western Express Highway (Kashimira Junction)', category: 'Highway', lngLat: [72.883210, 19.272540] },
+      { name: 'Western Express Highway', category: 'Highway', lngLat: [72.88983321835849, 19.277428612169455] },
       { name: 'Bhaktivedanta Wellness Centre', category: 'Hospital', lngLat: [72.877450, 19.266280] },
     ],
   },

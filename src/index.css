@@ -431,8 +431,8 @@ html.jp-lock #home { position: fixed !important; inset: 0 !important; width: 100
 }
 
 /* Place pins: navy dot ringed in white on a fine stem, name in a navy tag.
-   Only the picked place is shown — the map stays clear until a place is chosen,
-   then shows just that destination and its route from the project. */
+   A chosen time band lights all its places; picking one then shows just that
+   destination and its route from the project. */
 .jp-loc-poi {
   position: relative;
   display: flex;
@@ -451,6 +451,31 @@ html.jp-lock #home { position: fixed !important; inset: 0 !important; width: 100
   opacity: 1;
   visibility: visible;
   transition: opacity 0.4s ease;
+}
+/* a chosen time band: all its places lit at once, names on hover (one is picked to read its route) */
+.jp-loc-poi.is-lit {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s ease var(--lit-delay, 0s);
+}
+.jp-loc-poi.is-lit .jp-loc-poi-dot {
+  background: var(--color-red-600);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px rgba(238, 49, 52, 0.2), 0 0 18px 3px rgba(238, 49, 52, 0.4);
+}
+.jp-loc-poi.is-lit .jp-loc-poi-label {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.jp-loc-poi.is-lit:hover,
+.jp-loc-poi.is-lit:focus-visible {
+  z-index: 2;
+}
+.jp-loc-poi.is-lit:hover .jp-loc-poi-label,
+.jp-loc-poi.is-lit:focus-visible .jp-loc-poi-label {
+  opacity: 1;
+  transform: none;
 }
 .jp-loc-poi::after {
   content: "";

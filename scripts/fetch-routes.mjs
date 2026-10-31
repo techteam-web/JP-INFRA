@@ -6,7 +6,8 @@
 // the site and from points 150 m round it, in every direction, and the shortest wins. Each
 // route is then cut where it first reaches the destination, so the line stops at the pin and
 // never runs past it and turns back.
-import { writeFileSync } from 'node:fs'
+// Give place names as arguments to refresh only those routes (the rest of the file is kept).
+import { readFileSync, writeFileSync } from 'node:fs'
 import { BANDS, PROJECT } from '../src/components/locationData.js'
 
 const OUT = new URL('../src/components/locationRoutes.json', import.meta.url)
@@ -68,6 +69,16 @@ async function osrmAll(from, to) {
   return (res.routes ?? []).map((r) => r.geometry.coordinates)
 }
 
+// Places where OpenStreetMap's car data blocks a short link that exists in reality (the car
+// routers send the line a long way round): these follow the bike router's short road instead.
+const BIKE = new Set(['Western Express Highway', 'Surya Legacy', 'Hotel Western', "Dara's Dhaba", 'Royal Hometel Suites', 'Ghodbunder Road'])
+
+async function bikeAll(from, to) {
+  const url = `https://routing.openstreetmap.de/routed-bike/route/v1/driving/${from.join(',')};${to.join(',')}?overview=full&geometries=geojson`
+  const res = await fetch(url, { headers: HEADERS }).then((r) => r.json())
+  return (res.routes ?? []).map((r) => r.geometry.coordinates)
+}
+
 // Cut a route where it first gets as close to the destination as it ever does, so it
 // ends at the pin; then measure the walk from the site in and from the road out to the pin.
 function finish(coords, from, to) {
@@ -80,11 +91,13 @@ function finish(coords, from, to) {
   return { km: len / 1000, coords: kept }
 }
 
-const routes = {}
-for (const place of BANDS.flatMap((b) => b.places).filter((p) => p.lngLat)) {
+const only = process.argv.slice(2)
+const routes = only.length ? JSON.parse(readFileSync(OUT, 'utf8')) : {}
+for (const place of BANDS.flatMap((b) => b.places).filter((p) => p.lngLat && (!only.length || only.includes(p.name)))) {
   const found = []
-  for (const from of STARTS) {
-    for (const router of [osrmAll, ...(from === STARTS[0] ? [valhallaShortest] : [])]) {
+  for (const from of BIKE.has(place.name) ? [STARTS[0]] : STARTS) {
+    const routers = BIKE.has(place.name) ? [bikeAll] : [osrmAll, ...(from === STARTS[0] ? [valhallaShortest] : [])]
+    for (const router of routers) {
       try {
         for (const coords of await router(from, place.lngLat)) found.push(finish(coords, from, place.lngLat))
       } catch {
