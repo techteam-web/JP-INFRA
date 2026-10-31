@@ -3,31 +3,56 @@ import gsap from "gsap";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
 import renderImg from "../assets/building svg/CAM_01.png";
-import floorsSvg from "../assets/building svg/JP infra landzen.svg?raw";
+import floorsSvg from "../assets/jp_infra_SVG/Asset 1.svg?raw";
 
 // The render and its floor outlines share one 1672 × 941 space.
 const VIEW_W = 1672;
 const VIEW_H = 941;
 
-// One outline per floor, from the SVG (data-name = floor number), bottom floor first.
-// `anchor` is the floor's right-hand tip, where the floor card points to.
-const FLOORS = [...floorsSvg.matchAll(/<polygon[^>]*data-name="(\d+)"[^>]*points="([^"]+)"/g)]
-  .map(([, n, pts]) => {
-    const v = pts.trim().split(/[\s,]+/).map(Number);
-    const xy = [];
-    for (let i = 0; i < v.length; i += 2) xy.push([v[i], v[i + 1]]);
-    const maxX = Math.max(...xy.map(([x]) => x));
-    const tip = xy.filter(([x]) => x > maxX - 1);
-    return {
-      n: Number(n),
-      points: pts.trim(),
-      anchor: [maxX, tip.reduce((s, [, y]) => s + y, 0) / tip.length],
-    };
-  })
-  .sort((a, b) => a.n - b.n);
-const TOP = FLOORS.length;
+// The outlines were drawn on their own sheet; this puts them back over the render.
+const OFFSET = [552.03, 119.63];
 
-// Floor-plan drawings by floor number, once the client supplies them (e.g. 8: plan8Img).
+// Every floor of the two towers, from the SVG. Tower B is drawn in three sections (groups
+// B, B1, B2) and tower A in three (A2, A1, A); a floor is its outline in every section, so
+// choosing one lights the same floor across all three. `anchor` is the floor's right-hand
+// tip, where the card points to.
+const BUILDINGS = (() => {
+  const doc = new DOMParser().parseFromString(floorsSvg, "image/svg+xml");
+  const sections = {};
+  for (const poly of doc.querySelectorAll("polygon")) {
+    const points = poly.getAttribute("points").trim();
+    const v = points.split(/[\s,]+/).map(Number);
+    const xy = [];
+    for (let i = 0; i < v.length; i += 2) xy.push([v[i] + OFFSET[0], v[i + 1] + OFFSET[1]]);
+    const y = xy.reduce((t, [, py]) => t + py, 0) / xy.length;
+    (sections[poly.parentElement.id] ??= []).push({ n: Number(poly.getAttribute("data-name")) || 0, points, xy, y });
+  }
+  const out = {};
+  for (const [id, list] of Object.entries(sections)) {
+    // sections A and A1 come without floor numbers: they're numbered from the ground up
+    if (list.some((o) => !o.n)) list.sort((p, q) => q.y - p.y).forEach((o, i) => (o.n = i + 1));
+    const b = id[0];
+    for (const { n, points, xy } of list) {
+      const floor = ((out[b] ??= [])[n - 1] ??= { b, n, pieces: [], xy: [] });
+      floor.pieces.push(points);
+      floor.xy.push(...xy);
+    }
+  }
+  for (const floors of Object.values(out)) {
+    for (const f of floors) {
+      const maxX = Math.max(...f.xy.map(([x]) => x));
+      const tip = f.xy.filter(([x]) => x > maxX - 1);
+      f.anchor = [maxX, tip.reduce((t, [, y]) => t + y, 0) / tip.length];
+    }
+  }
+  return out;
+})();
+const ORDER = Object.keys(BUILDINGS).sort(); // A, B
+const ALL = ORDER.flatMap((b) => BUILDINGS[b]);
+const TOP = BUILDINGS[ORDER[0]].length;
+const same = (x, y) => !!x && !!y && x.b === y.b && x.n === y.n;
+
+// Floor-plan drawings by tower and floor, once the client supplies them (e.g. "B-8": planB8Img).
 const FLOOR_PLANS = {};
 // The floors' 360° views aren't uploaded yet: until then the card's 360° button shows locked.
 const FLOOR_360_READY = false;
@@ -99,29 +124,28 @@ export default function FloorPlans({ onBack, onOpen360 }) {
           { fillOpacity: 0.7, duration: 0.18, ease: "power2.out" },
           { fillOpacity: 0, duration: 0.55, ease: "power1.in" },
         ],
-        stagger: 0.045,
-        delay: 0.7,
+        delay: (i, el) => 0.7 + (Number(el.dataset.n) - 1) * 0.045, // floor by floor, every building together
       },
     ));
     return () => tween.kill();
   }, []);
 
-  const choose = (n) => {
+  const choose = (f) => {
     sweepRef.current?.progress(1); // a choice made while it's still climbing ends it at once
-    setSelected(n);
+    setSelected(f ? { b: f.b, n: f.n } : null);
     setPlanOpen(false);
   };
-  const step = (by) => choose(Math.min(TOP, Math.max(1, (selected ?? 0) + by)));
+  const step = (by) => choose({ b: selected.b, n: Math.min(TOP, Math.max(1, selected.n + by)) });
 
   // Up / down move between floors; Esc closes the plan, then the selection
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelected((s) => Math.min(TOP, (s ?? 0) + 1));
+        setSelected((s) => s && { b: s.b, n: Math.min(TOP, s.n + 1) });
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelected((s) => Math.max(1, (s ?? 2) - 1));
+        setSelected((s) => s && { b: s.b, n: Math.max(1, s.n - 1) });
       } else if (e.key === "Escape") {
         setPlanOpen((open) => {
           if (!open) setSelected(null);
@@ -136,7 +160,8 @@ export default function FloorPlans({ onBack, onOpen360 }) {
   // Render space → screen (the render is shown like object-fit: cover)
   const scale = Math.max(size.w / VIEW_W, size.h / VIEW_H) || 1;
   const toScreen = ([x, y]) => [x * scale + (size.w - VIEW_W * scale) / 2, y * scale + (size.h - VIEW_H * scale) / 2];
-  const floor = selected ? FLOORS[selected - 1] : null;
+  const floor = selected ? BUILDINGS[selected.b][selected.n - 1] : null;
+  const hovered = hover ? BUILDINGS[hover.b][hover.n - 1] : null;
   const [ax, ay] = floor ? toScreen(floor.anchor) : [0, 0];
   const CARD_W = 300;
   const GAP = 56;
@@ -180,50 +205,61 @@ export default function FloorPlans({ onBack, onOpen360 }) {
           </defs>
 
           {/* the climbing light */}
-          <g ref={lightsRef} pointerEvents="none" filter="url(#floor-glow)">
-            {FLOORS.map((f) => (
-              <polygon key={f.n} points={f.points} fill="#ffe8c2" fillOpacity="0" />
-            ))}
+          <g ref={lightsRef} pointerEvents="none" filter="url(#floor-glow)" transform={`translate(${OFFSET})`}>
+            {ALL.flatMap((f) =>
+              f.pieces.map((pts, i) => (
+                <polygon key={`${f.b}${f.n}-${i}`} data-n={f.n} points={pts} fill="#ffe8c2" fillOpacity="0" />
+              )),
+            )}
           </g>
 
           {/* the floors themselves */}
-          {FLOORS.map((f) => {
-            const on = f.n === selected;
-            const hot = f.n === hover && !on;
-            return (
-              <polygon
-                key={f.n}
-                points={f.points}
-                role="button"
-                tabIndex={-1}
-                aria-label={`Floor ${f.n}`}
-                aria-pressed={on}
-                pointerEvents="all"
-                fill={on ? "#ffe8c2" : "#ffffff"}
-                fillOpacity={on ? 0.6 : hot ? 0.28 : 0}
-                stroke="#ffffff"
-                strokeOpacity={on ? 0.95 : hot ? 0.7 : 0}
-                strokeWidth={on ? 1.4 : 1}
-                filter={on ? "url(#floor-glow)" : undefined}
-                className="cursor-pointer outline-none transition-[fill-opacity,stroke-opacity] duration-300"
-                onPointerEnter={() => setHover(f.n)}
-                onPointerLeave={() => setHover((h) => (h === f.n ? null : h))}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  choose(f.n);
-                }}
-              />
-            );
-          })}
+          <g transform={`translate(${OFFSET})`}>
+            {ALL.map((f) => {
+              const on = same(f, selected);
+              const hot = same(f, hover) && !on;
+              return (
+                <g
+                  key={`${f.b}${f.n}`}
+                  role="button"
+                  tabIndex={-1}
+                  aria-label={`Tower ${f.b}, floor ${f.n}`}
+                  aria-pressed={on}
+                  filter={on ? "url(#floor-glow)" : undefined}
+                  className="cursor-pointer outline-none"
+                  onPointerEnter={() => setHover({ b: f.b, n: f.n })}
+                  onPointerLeave={() => setHover((h) => (same(h, f) ? null : h))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    choose(f);
+                  }}
+                >
+                  {f.pieces.map((pts, i) => (
+                    <polygon
+                      key={i}
+                      points={pts}
+                      pointerEvents="all"
+                      fill={on ? "#ffe8c2" : "#ffffff"}
+                      fillOpacity={on ? 0.6 : hot ? 0.28 : 0}
+                      stroke="#ffffff"
+                      strokeOpacity={on ? 0.95 : hot ? 0.7 : 0}
+                      strokeWidth={on ? 1.4 : 1}
+                      className="transition-[fill-opacity,stroke-opacity] duration-300"
+                    />
+                  ))}
+                </g>
+              );
+            })}
+          </g>
         </svg>
 
         {/* hovered floor's number, beside the pointer's floor */}
-        {hover && hover !== selected && (
+        {hovered && !same(hover, selected) && (
           <span
             className="pointer-events-none absolute z-10 -translate-y-1/2 rounded-md bg-navy-950/75 px-2 py-1 text-[10px] font-bold tracking-widest text-white backdrop-blur max-md:hidden"
-            style={{ left: toScreen(FLOORS[hover - 1].anchor)[0] + 12, top: toScreen(FLOORS[hover - 1].anchor)[1] }}
+            style={{ left: toScreen(hovered.anchor)[0] + 12, top: toScreen(hovered.anchor)[1] }}
           >
-            {pad(hover)}
+            {hovered.b} · {pad(hover.n)}
           </span>
         )}
       </div>
@@ -242,9 +278,9 @@ export default function FloorPlans({ onBack, onOpen360 }) {
             style={{ left: ax, top: ay }}
           />
           <div
-            key={floor.n}
+            key={`${floor.b}${floor.n}`}
             role="dialog"
-            aria-label={`Floor ${floor.n}`}
+            aria-label={`Tower ${floor.b}, floor ${floor.n}`}
             onClick={(e) => e.stopPropagation()}
             // on phones: a sheet at the top when the floor is low on screen, else at the bottom
             className={`jp-caption-in absolute z-20 rounded-2xl border border-white/20 bg-navy-950/70 p-5 text-white shadow-premium backdrop-blur-xl short:p-3.5 ${
@@ -254,7 +290,7 @@ export default function FloorPlans({ onBack, onOpen360 }) {
           >
             <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70">
               <span className="h-px w-6 bg-red-600" />
-              Floor
+              Tower {floor.b} · Floor
             </span>
             <div className="mt-1 flex items-end justify-between">
               <span className="font-display text-7xl leading-none short:text-5xl">{pad(floor.n)}</span>
@@ -322,15 +358,15 @@ export default function FloorPlans({ onBack, onOpen360 }) {
           type="button"
           aria-label="Floor below"
           onClick={() => step(-1)}
-          disabled={selected === 1}
+          disabled={!selected || selected.n === 1}
           className="grid h-9 w-9 place-items-center rounded-lg transition-colors hover:bg-white/10 disabled:opacity-30"
         >
           <IconArrow dir="down" className="h-4 w-4" />
         </button>
-        <span className="min-w-[9.5rem] text-center text-[11px] font-semibold uppercase tracking-[0.22em]">
+        <span className="min-w-[11rem] text-center text-[11px] font-semibold uppercase tracking-[0.22em]">
           {selected ? (
             <>
-              Floor <span className="text-red-500">{pad(selected)}</span>
+              {selected.b} · Floor <span className="text-red-500">{pad(selected.n)}</span>
               <span className="text-white/45"> / {TOP}</span>
             </>
           ) : (
@@ -341,7 +377,7 @@ export default function FloorPlans({ onBack, onOpen360 }) {
           type="button"
           aria-label="Floor above"
           onClick={() => step(1)}
-          disabled={selected === TOP}
+          disabled={!selected || selected.n === TOP}
           className="grid h-9 w-9 place-items-center rounded-lg transition-colors hover:bg-white/10 disabled:opacity-30"
         >
           <IconArrow dir="up" className="h-4 w-4" />
@@ -353,7 +389,7 @@ export default function FloorPlans({ onBack, onOpen360 }) {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`Floor ${floor.n} plan`}
+          aria-label={`Tower ${floor.b}, floor ${floor.n} plan`}
           className="jp-caption-in absolute inset-0 z-40 grid place-items-center bg-navy-950/85 p-6 backdrop-blur-xl"
           onClick={() => setPlanOpen(false)}
         >
@@ -365,7 +401,7 @@ export default function FloorPlans({ onBack, onOpen360 }) {
               <div>
                 <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70">
                   <span className="h-px w-6 bg-red-600" />
-                  Floor Plan
+                  Tower {floor.b} · Floor Plan
                 </span>
                 <h2 className="mt-2 font-display text-4xl uppercase leading-none sm:text-5xl">
                   Floor <span className="text-red-600">{pad(floor.n)}</span>
@@ -384,8 +420,8 @@ export default function FloorPlans({ onBack, onOpen360 }) {
               </button>
             </div>
             <div className="mt-6 grid aspect-[16/9] place-items-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-              {FLOOR_PLANS[floor.n] ? (
-                <img src={FLOOR_PLANS[floor.n]} alt={`Floor ${floor.n} plan`} className="h-full w-full object-contain" />
+              {FLOOR_PLANS[`${floor.b}-${floor.n}`] ? (
+                <img src={FLOOR_PLANS[`${floor.b}-${floor.n}`]} alt={`Floor ${floor.n} plan`} className="h-full w-full object-contain" />
               ) : (
                 <p className="px-6 text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-white/50">
                   The floor plan for this floor is coming soon

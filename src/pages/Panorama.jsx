@@ -13,14 +13,13 @@ const TILE_URL = (sceneId) => `/assets/panoroma/tiles/${sceneId}/{z}/{f}/{y}/{x}
 // fallback level while the sharp tiles stream in, so there's never an empty frame.
 const PREVIEW_URL = (sceneId) => `/assets/panoroma/tiles/${sceneId}/preview.jpg`;
 
-// Day / Evening / Night: each shows its own panorama. Only the day view exists so far,
-// so Evening and Night are shown but inactive. To add one, export its tiles to
-// public/assets/panoroma/tiles/, add its scene to data.js and set its `scene` here.
-const sceneNamed = (re) => APP_DATA.scenes.find((s) => re.test(s.name)) ?? null;
+// Day / Evening / Twilight: each shows its own panorama. To change one, export its tiles to
+// public/assets/panoroma/tiles/, put its scene in data.js and point its `scene` here.
+const sceneNamed = (id) => APP_DATA.scenes.find((s) => s.id === id) ?? null;
 const MOODS = [
-  { id: "day", label: "Day", scene: sceneNamed(/terrace/i) ?? APP_DATA.scenes[0] },
-  { id: "evening", label: "Evening", scene: null },
-  { id: "night", label: "Night", scene: null },
+  { id: "day", label: "Day", scene: sceneNamed("0-dji_0001_terrace-150") },
+  { id: "evening", label: "Evening", scene: sceneNamed("2-dji_0071_d") },
+  { id: "twilight", label: "Twilight", scene: sceneNamed("1-dji_0075_d") },
 ];
 const SCENES = MOODS.map((m) => m.scene).filter(Boolean);
 

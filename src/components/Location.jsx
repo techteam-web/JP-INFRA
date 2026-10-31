@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import * as maptilersdk from '@maptiler/sdk'
-import '@maptiler/sdk/dist/maptiler-sdk.css'
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import { BANDS, PROJECT } from './locationData'
 import ROUTES from './locationRoutes.json' // driving routes, from scripts/fetch-routes.mjs
 import BackButton from './BackButton'
@@ -8,7 +8,8 @@ import Logo from './Logo'
 import { LOGO_LABEL } from './EndgameLogo'
 import endgameLogoUrl from '../assets/logo-endgame.png'
 
-maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_KEY
+// OpenStreetMap data, served as free vector tiles by OpenFreeMap (no API key); restyled below.
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron'
 
 const HOME_VIEW = { center: PROJECT.lngLat, zoom: 15.3, pitch: 60, bearing: -22 }
 
@@ -50,19 +51,19 @@ function theme(map) {
     try {
       if (type === 'background') map.setPaintProperty(id, 'background-color', '#eef2f6')
       else if (type === 'fill') {
-        if (has(/building|water shadow/i)) map.setLayoutProperty(id, 'visibility', 'none')
-        else if (has(/water|ocean|sea|lake/i)) map.setPaintProperty(id, 'fill-color', '#c6d6e6')
+        if (has(/building/i)) map.setLayoutProperty(id, 'visibility', 'none')
+        else if (has(/water/i)) map.setPaintProperty(id, 'fill-color', '#c6d6e6')
         else if (has(/wood|forest|grass|park/i)) map.setPaintProperty(id, 'fill-color', '#dfe8e3')
         else map.setPaintProperty(id, 'fill-color', '#e9eef4')
       } else if (type === 'line') {
-        if (has(/river|water/i)) map.setPaintProperty(id, 'line-color', '#b7cbe0')
-        else if (has(/road|bridge/i) && has(/outline/i) && !has(/tunnel/i)) map.setPaintProperty(id, 'line-color', '#d5dde7')
-        else if (has(/road|bridge/i) && !has(/tunnel/i)) map.setPaintProperty(id, 'line-color', ROAD_COLOR)
-        else if (has(/rail/i) && !has(/tunnel/i)) map.setPaintProperty(id, 'line-color', 'rgba(10,31,54,0.2)')
+        if (has(/waterway/i)) map.setPaintProperty(id, 'line-color', '#b7cbe0')
+        else if (has(/casing/i) && !has(/tunnel/i)) map.setPaintProperty(id, 'line-color', '#d5dde7')
+        else if (has(/^highway_(minor|major|motorway)/i)) map.setPaintProperty(id, 'line-color', ROAD_COLOR)
+        else if (has(/railway/i)) map.setPaintProperty(id, 'line-color', 'rgba(10,31,54,0.2)')
         else map.setLayoutProperty(id, 'visibility', 'none')
       } else if (type === 'symbol') {
-        if (has(/poi|housenum|shield|oneway|pathway|pedestrian/i)) map.setLayoutProperty(id, 'visibility', 'none')
-        else if (has(/road/i)) {
+        if (has(/shield|airport|path/i)) map.setLayoutProperty(id, 'visibility', 'none')
+        else if (has(/^highway-name/i)) {
           map.setPaintProperty(id, 'text-color', 'rgba(10,31,54,0.6)')
           map.setPaintProperty(id, 'text-halo-color', 'rgba(255,255,255,0.95)')
           map.setPaintProperty(id, 'text-halo-width', 1.4)
@@ -70,11 +71,11 @@ function theme(map) {
           // area names in wide-tracked capitals
           map.setLayoutProperty(id, 'text-transform', 'uppercase')
           map.setLayoutProperty(id, 'text-letter-spacing', 0.35)
-          map.setPaintProperty(id, 'text-color', has(/water|sea|bay|ocean|lake|pond|strait/i) ? '#5f7f9e' : 'rgba(10,31,54,0.7)')
+          map.setPaintProperty(id, 'text-color', has(/water|waterway/i) ? '#5f7f9e' : 'rgba(10,31,54,0.7)')
           map.setPaintProperty(id, 'text-halo-color', 'rgba(238,242,246,0.9)')
           map.setPaintProperty(id, 'text-halo-width', 1.2)
         }
-      } else if (type === 'fill-extrusion') map.setLayoutProperty(id, 'visibility', 'none')
+      }
     } catch {
       // a layer without that property: leave it as the base style has it
     }
@@ -161,7 +162,7 @@ function addRoute(map) {
 // While a route is shown, the rest of the road network steps back so the drive reads clearly.
 function focusRoads(map, focused) {
   for (const layer of map.getStyle().layers) {
-    if (layer['source-layer'] !== 'road' || layer.type !== 'line' || layer.layout?.visibility === 'none') continue
+    if (layer['source-layer'] !== 'transportation' || layer.type !== 'line' || layer.layout?.visibility === 'none') continue
     map.setPaintProperty(layer.id, 'line-opacity-transition', { duration: 800 })
     map.setPaintProperty(layer.id, 'line-opacity', focused ? 0.45 : 1)
   }
@@ -217,30 +218,21 @@ export default function Location({ label, active, onBack }) {
   const [bandId, setBandId] = useState(BANDS[0].id)
   const [picked, setPicked] = useState(null)
   const [is3d, setIs3d] = useState(true)
-  const missingKey = !import.meta.env.VITE_MAPTILER_KEY
   const band = BANDS.find((b) => b.id === bandId)
 
   // Map setup, once
   useEffect(() => {
-    if (missingKey || !containerRef.current) return undefined
-    const map = new maptilersdk.Map({
+    if (!containerRef.current) return undefined
+    const map = new maplibregl.Map({
       container: containerRef.current,
-      style: maptilersdk.MapStyle.DATAVIZ.DARK,
+      style: MAP_STYLE,
       center: PROJECT.lngLat,
       zoom: 11,
       pitch: 0,
       bearing: 0,
       maxPitch: 75,
-      terrain: false, // the plain is flat here, and terrain holds back the detailed city tiles
-      navigationControl: false,
-      geolocateControl: false,
-      scaleControl: false,
-      fullscreenControl: false,
-      terrainControl: false,
-      space: false,
-      halo: false,
       attributionControl: { compact: true },
-      antialias: true,
+      canvasContextAttributes: { antialias: true },
     })
     mapRef.current = map
 
@@ -261,7 +253,7 @@ export default function Location({ label, active, onBack }) {
       } catch {
         // older renderer without sky: the vignette overlay carries the depth instead
       }
-      new maptilersdk.Marker({ element: projectMarker(), anchor: 'bottom' }).setLngLat(PROJECT.lngLat).addTo(map)
+      new maplibregl.Marker({ element: projectMarker(), anchor: 'bottom' }).setLngLat(PROJECT.lngLat).addTo(map)
       setReady(true)
     })
 
@@ -289,7 +281,7 @@ export default function Location({ label, active, onBack }) {
       mapRef.current = null
       markersRef.current = []
     }
-  }, [missingKey])
+  }, [])
 
   const flyHome = (opts = {}) => {
     const map = mapRef.current
@@ -324,7 +316,7 @@ export default function Location({ label, active, onBack }) {
     if (!ready || !map) return undefined
     markersRef.current = band.places.map((place) =>
       place.lngLat
-        ? new maptilersdk.Marker({ element: placeMarker(place.name, () => setPicked((p) => (p === place.name ? null : place.name))), anchor: 'bottom' })
+        ? new maplibregl.Marker({ element: placeMarker(place.name, () => setPicked((p) => (p === place.name ? null : place.name))), anchor: 'bottom' })
             .setLngLat(place.lngLat)
             .addTo(map)
         : null,
@@ -356,7 +348,7 @@ export default function Location({ label, active, onBack }) {
     const lengths = cumulative(coords)
 
     orbitRef.current = false
-    const bounds = coords.reduce((b, c) => b.extend(c), new maptilersdk.LngLatBounds(PROJECT.lngLat, PROJECT.lngLat))
+    const bounds = coords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(PROJECT.lngLat, PROJECT.lngLat))
     const reduce = reduceMotion()
     map.fitBounds(bounds, {
       padding: { ...viewPadding(), top: 160, bottom: viewPadding().bottom + 60 },
@@ -404,7 +396,7 @@ export default function Location({ label, active, onBack }) {
     const pinned = BANDS.find((b) => b.id === id).places.filter((p) => p.lngLat)
     if (!map || !pinned.length) return
     orbitRef.current = false
-    const bounds = pinned.reduce((b, p) => b.extend(p.lngLat), new maptilersdk.LngLatBounds(PROJECT.lngLat, PROJECT.lngLat))
+    const bounds = pinned.reduce((b, p) => b.extend(p.lngLat), new maplibregl.LngLatBounds(PROJECT.lngLat, PROJECT.lngLat))
     map.fitBounds(bounds, { padding: viewPadding(), pitch: 55, bearing: map.getBearing(), duration: reduceMotion() ? 0 : 2200, maxZoom: 15.3 })
   }
 
@@ -432,9 +424,9 @@ export default function Location({ label, active, onBack }) {
         <div className="absolute inset-0 grid place-items-center">
           <span
             className="text-[10px] font-semibold uppercase tracking-[0.3em] text-navy-950/70 3xl:text-xs"
-            style={{ animation: missingKey ? 'none' : 'jp-breathe 1.6s ease-in-out infinite' }}
+            style={{ animation: 'jp-breathe 1.6s ease-in-out infinite' }}
           >
-            {missingKey ? 'Map key missing — set VITE_MAPTILER_KEY in .env' : 'Charting the neighbourhood'}
+            Charting the neighbourhood
           </span>
         </div>
       )}

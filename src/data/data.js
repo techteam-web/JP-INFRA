@@ -1,8 +1,8 @@
 export const APP_DATA = {
   "scenes": [
     {
-      "id": "0-dji_0029_terrace-1501m",
-      "name": "DJI_0029_Terrace 150.1M",
+      "id": "0-dji_0001_terrace-150",
+      "name": "DJI_0001_Terrace 150",
       "levels": [
         {
           "tileSize": 256,
@@ -28,16 +28,16 @@ export const APP_DATA = {
       ],
       "faceSize": 3600,
       "initialViewParameters": {
-        "yaw": 0.07648617417602921,
-        "pitch": 0.04285125902819331,
+        "yaw": 3.0865943223250083,
+        "pitch": -0.19897137460986158,
         "fov": 1.4070723946101482
       },
       "linkHotspots": [],
       "infoHotspots": []
     },
     {
-      "id": "1-dji_0030_44th-floor_1443m",
-      "name": "DJI_0030_44th Floor_144.3M",
+      "id": "1-dji_0075_d",
+      "name": "DJI_0075_D",
       "levels": [
         {
           "tileSize": 256,
@@ -63,8 +63,43 @@ export const APP_DATA = {
       ],
       "faceSize": 3600,
       "initialViewParameters": {
-        "yaw": -0.22207291326754408,
-        "pitch": 0,
+        "yaw": 3.0537325415846333,
+        "pitch": -0.03908534429475097,
+        "fov": 1.4070723946101482
+      },
+      "linkHotspots": [],
+      "infoHotspots": []
+    },
+    {
+      "id": "2-dji_0071_d",
+      "name": "DJI_0071_D",
+      "levels": [
+        {
+          "tileSize": 256,
+          "size": 256,
+          "fallbackOnly": true
+        },
+        {
+          "tileSize": 512,
+          "size": 512
+        },
+        {
+          "tileSize": 512,
+          "size": 1024
+        },
+        {
+          "tileSize": 512,
+          "size": 2048
+        },
+        {
+          "tileSize": 512,
+          "size": 4096
+        }
+      ],
+      "faceSize": 3600,
+      "initialViewParameters": {
+        "yaw": 3.0166806304174614,
+        "pitch": -0.06148832727774689,
         "fov": 1.4070723946101482
       },
       "linkHotspots": [],
