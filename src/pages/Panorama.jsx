@@ -8,13 +8,13 @@ import Logo from "../components/Logo";
 const DEG = Math.PI / 180;
 const IDLE_MS = 1200;
 const AUTOROTATE_YAW_SPEED = 0.05;
-const TILE_URL = (sceneId) => `/assets/panoroma/tiles/${sceneId}/{z}/{f}/{y}/{x}.jpg`;
+const TILE_URL = (sceneId) => `/assets/360pano/tiles/${sceneId}/{z}/{f}/{y}/{x}.jpg`;
 // Low-res cube strip the tiler exports per scene: the viewer shows it at once as the
 // fallback level while the sharp tiles stream in, so there's never an empty frame.
-const PREVIEW_URL = (sceneId) => `/assets/panoroma/tiles/${sceneId}/preview.jpg`;
+const PREVIEW_URL = (sceneId) => `/assets/360pano/tiles/${sceneId}/preview.jpg`;
 
 // Day / Evening / Twilight: each shows its own panorama. To change one, export its tiles to
-// public/assets/panoroma/tiles/, put its scene in data.js and point its `scene` here.
+// public/assets/360pano/tiles/, put its scene in data.js and point its `scene` here.
 const sceneNamed = (id) => APP_DATA.scenes.find((s) => s.id === id) ?? null;
 const MOODS = [
   { id: "day", label: "Day", scene: sceneNamed("0-dji_0001_terrace-150") },

@@ -28,9 +28,9 @@ export const APP_DATA = {
       ],
       "faceSize": 3600,
       "initialViewParameters": {
-        "yaw": 3.0865943223250083,
-        "pitch": -0.19897137460986158,
-        "fov": 1.4070723946101482
+        "yaw": 1.0045861936766887,
+        "pitch": 0.005010061904677343,
+        "fov": 1.3473765980835988
       },
       "linkHotspots": [],
       "infoHotspots": []
@@ -63,9 +63,9 @@ export const APP_DATA = {
       ],
       "faceSize": 3600,
       "initialViewParameters": {
-        "yaw": 3.0537325415846333,
-        "pitch": -0.03908534429475097,
-        "fov": 1.4070723946101482
+        "yaw": 0.9409649458914551,
+        "pitch": 0.06210253214584327,
+        "fov": 1.3473765980835988
       },
       "linkHotspots": [],
       "infoHotspots": []
@@ -98,9 +98,9 @@ export const APP_DATA = {
       ],
       "faceSize": 3600,
       "initialViewParameters": {
-        "yaw": 3.0166806304174614,
-        "pitch": -0.06148832727774689,
-        "fov": 1.4070723946101482
+        "yaw": 0.9809822474395666,
+        "pitch": 0.1444572200949601,
+        "fov": 1.3473765980835988
       },
       "linkHotspots": [],
       "infoHotspots": []
