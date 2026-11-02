@@ -4,7 +4,7 @@ import CinematicIntro from "./components/CinematicIntro";
 import BrandCurtain from "./components/BrandCurtain";
 import Home from "./pages/Home";
 import Explore from "./pages/Explore";
-import homeHeroImg from "./assets/jpinfra hero.png";
+import homeHeroImg from "./assets/hero.png";
 import brainwingLogo from "./assets/Brainwinglogo/brainwing.webp";
 import aboutImg from "./assets/aboutUs.png";
 import contactImg from "./assets/gallery/Meeting Room.webp";

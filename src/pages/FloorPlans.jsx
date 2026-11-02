@@ -2,7 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
+import FloorPlanStudio from "../components/FloorPlanStudio";
 import renderImg from "../assets/building svg/CAM_01.png";
+import typicalWingA from "../assets/Floor-plan webp/Typical Floor Wing A.webp";
+import typicalWingB from "../assets/Floor-plan webp/Typical Floor Wing B.webp";
 import floorsSvg from "../assets/jp_infra_SVG/Asset 1.svg?raw";
 
 // The render and its floor outlines share one 1672 × 941 space.
@@ -12,10 +15,12 @@ const VIEW_H = 941;
 // The outlines were drawn on their own sheet; this puts them back over the render.
 const OFFSET = [552.03, 119.63];
 
-// Every floor of the two towers, from the SVG. Tower B is drawn in three sections (groups
-// B, B1, B2) and tower A in three (A2, A1, A); a floor is its outline in every section, so
-// choosing one lights the same floor across all three. `anchor` is the floor's right-hand
-// tip, where the card points to.
+// Every floor of the two towers, from the SVG. Each tower is drawn in three sections (groups
+// B, B1, B2 and A2, A1, A); a floor is its outline in every section, so choosing one lights
+// the same floor across all three. `anchor` is the floor's right-hand tip, where the card
+// points to. The SVG's group letters are the other way round from the towers' real names,
+// so TOWER_OF swaps them: the "B" groups are Tower A and the "A" groups Tower B.
+const TOWER_OF = { A: "B", B: "A" };
 const BUILDINGS = (() => {
   const doc = new DOMParser().parseFromString(floorsSvg, "image/svg+xml");
   const sections = {};
@@ -31,7 +36,7 @@ const BUILDINGS = (() => {
   for (const [id, list] of Object.entries(sections)) {
     // sections A and A1 come without floor numbers: they're numbered from the ground up
     if (list.some((o) => !o.n)) list.sort((p, q) => q.y - p.y).forEach((o, i) => (o.n = i + 1));
-    const b = id[0];
+    const b = TOWER_OF[id[0]] ?? id[0];
     for (const { n, points, xy } of list) {
       const floor = ((out[b] ??= [])[n - 1] ??= { b, n, pieces: [], xy: [] });
       floor.pieces.push(points);
@@ -52,8 +57,12 @@ const ALL = ORDER.flatMap((b) => BUILDINGS[b]);
 const TOP = BUILDINGS[ORDER[0]].length;
 const same = (x, y) => !!x && !!y && x.b === y.b && x.n === y.n;
 
-// Floor-plan drawings by tower and floor, once the client supplies them (e.g. "B-8": planB8Img).
+// Floor-plan drawings: each tower's typical floor (Wing A = Tower A, Wing B = Tower B) on
+// every floor, unless a floor has its own drawing in FLOOR_PLANS (e.g. "B-8": planB8Img).
+// The drawings are WebP copies (4800 px wide) of src/assets/Floor-plan/.
+const TYPICAL_PLANS = { A: typicalWingA, B: typicalWingB };
 const FLOOR_PLANS = {};
+const drawingFor = (b, n) => FLOOR_PLANS[`${b}-${n}`] ?? TYPICAL_PLANS[b];
 // The floors' 360° views aren't uploaded yet: until then the card's 360° button shows locked.
 const FLOOR_360_READY = false;
 
@@ -89,7 +98,12 @@ export default function FloorPlans({ onBack, onOpen360 }) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [planOpen, setPlanOpen] = useState(false);
+  // the Floor Plan screen (plan, filters, comparisons): null, or the tab it opens on
+  const [studio, setStudio] = useState(null);
+  const studioOpen = useRef(false);
+  useEffect(() => {
+    studioOpen.current = !!studio;
+  }, [studio]);
 
   // Page chrome eases in
   useLayoutEffect(() => {
@@ -133,13 +147,15 @@ export default function FloorPlans({ onBack, onOpen360 }) {
   const choose = (f) => {
     sweepRef.current?.progress(1); // a choice made while it's still climbing ends it at once
     setSelected(f ? { b: f.b, n: f.n } : null);
-    setPlanOpen(false);
+    setStudio(null);
   };
   const step = (by) => choose({ b: selected.b, n: Math.min(TOP, Math.max(1, selected.n + by)) });
 
-  // Up / down move between floors; Esc closes the plan, then the selection
+  // Up / down move between floors (not while the Floor Plan screen is open); Esc closes
+  // that screen, then the selection
   useEffect(() => {
     const onKey = (e) => {
+      if (studioOpen.current && e.key !== "Escape") return;
       if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelected((s) => s && { b: s.b, n: Math.min(TOP, s.n + 1) });
@@ -147,10 +163,8 @@ export default function FloorPlans({ onBack, onOpen360 }) {
         e.preventDefault();
         setSelected((s) => s && { b: s.b, n: Math.max(1, s.n - 1) });
       } else if (e.key === "Escape") {
-        setPlanOpen((open) => {
-          if (!open) setSelected(null);
-          return false;
-        });
+        if (studioOpen.current) setStudio(null);
+        else setSelected(null);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -302,7 +316,7 @@ export default function FloorPlans({ onBack, onOpen360 }) {
             <div className="mt-4 grid grid-cols-2 gap-2 short:mt-3">
               <button
                 type="button"
-                onClick={() => setPlanOpen(true)}
+                onClick={() => setStudio("plan")}
                 style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
                 className="btn-fill flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-red-500/50 px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-transform active:scale-95"
               >
@@ -349,11 +363,12 @@ export default function FloorPlans({ onBack, onOpen360 }) {
         </div>
       </div>
 
-      {/* Floor stepper */}
+      {/* Floor stepper, and Explore Units beside it */}
       <div
         data-anim
-        className="absolute inset-x-0 bottom-6 z-20 mx-auto flex w-fit items-center gap-1 rounded-xl border border-white/25 bg-navy-950/60 p-1 text-white shadow-premium backdrop-blur-xl sm:bottom-8 3xl:bottom-12"
+        className="absolute inset-x-0 bottom-6 z-20 mx-auto flex w-fit items-center gap-2 sm:bottom-8 3xl:bottom-12"
       >
+        <div className="flex items-center gap-1 rounded-xl border border-white/25 bg-navy-950/60 p-1 text-white shadow-premium backdrop-blur-xl">
         <button
           type="button"
           aria-label="Floor below"
@@ -382,54 +397,29 @@ export default function FloorPlans({ onBack, onOpen360 }) {
         >
           <IconArrow dir="up" className="h-4 w-4" />
         </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setStudio("filter")}
+          aria-label="Explore units"
+          style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+          className="btn-fill flex h-11 items-center gap-2 rounded-xl border border-red-500/60 bg-navy-950/60 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-premium backdrop-blur-xl transition-transform active:scale-95 sm:px-4 sm:text-[11px]"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+            <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+          </svg>
+          <span className="max-sm:hidden">Explore Units</span>
+        </button>
       </div>
 
-      {/* Floor plan */}
-      {planOpen && floor && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Tower ${floor.b}, floor ${floor.n} plan`}
-          className="jp-caption-in absolute inset-0 z-40 grid place-items-center bg-navy-950/85 p-6 backdrop-blur-xl"
-          onClick={() => setPlanOpen(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-4xl rounded-2xl border border-white/15 bg-navy-950/80 p-6 text-white shadow-premium sm:p-8"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70">
-                  <span className="h-px w-6 bg-red-600" />
-                  Tower {floor.b} · Floor Plan
-                </span>
-                <h2 className="mt-2 font-display text-4xl uppercase leading-none sm:text-5xl">
-                  Floor <span className="text-red-600">{pad(floor.n)}</span>
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPlanOpen(false)}
-                aria-label="Close floor plan"
-                style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-                className="btn-fill grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/25"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                  <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
-            <div className="mt-6 grid aspect-[16/9] place-items-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-              {FLOOR_PLANS[`${floor.b}-${floor.n}`] ? (
-                <img src={FLOOR_PLANS[`${floor.b}-${floor.n}`]} alt={`Floor ${floor.n} plan`} className="h-full w-full object-contain" />
-              ) : (
-                <p className="px-6 text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-white/50">
-                  The floor plan for this floor is coming soon
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Floor Plan screen: the plan, unit filtering and the comparisons */}
+      {studio && (
+        <FloorPlanStudio
+          start={floor ? { b: floor.b, n: floor.n } : { b: ORDER[0], n: 1 }}
+          startTab={studio}
+          onClose={() => setStudio(null)}
+          drawingFor={drawingFor}
+        />
       )}
     </div>
   );

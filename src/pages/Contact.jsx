@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import contactImg from "../assets/gallery/Meeting Room.webp";
 import Logo from "../components/Logo";
@@ -57,7 +57,10 @@ const CONTACT_ITEMS = [
 
 export default function Contact({ onBack }) {
   const rootRef = useRef(null);
-  const [sent, setSent] = useState(false);
+  // "idle" → "sending" (a beat) → "sent": the form clears and a thank-you shows, then idle again
+  const [status, setStatus] = useState("idle");
+  const timers = useRef([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   useLayoutEffect(() => {
     const els = rootRef.current?.querySelectorAll("[data-anim]");
@@ -76,7 +79,16 @@ export default function Contact({ onBack }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setSent(true);
+    if (status === "sending") return;
+    const form = e.currentTarget;
+    setStatus("sending");
+    timers.current.push(
+      setTimeout(() => {
+        form.reset();
+        setStatus("sent");
+        timers.current.push(setTimeout(() => setStatus("idle"), 5000));
+      }, 900)
+    );
   };
 
   return (
@@ -160,7 +172,7 @@ export default function Contact({ onBack }) {
               ))}
             </div>
 
-            <form data-anim onSubmit={handleSubmit} className="space-y-2.5 3xl:space-y-3">
+            <form data-anim onSubmit={handleSubmit} className="jp-form space-y-2.5 3xl:space-y-3">
               <div className="grid gap-2.5 sm:grid-cols-2 3xl:gap-3">
                 <input
                   required
@@ -187,29 +199,47 @@ export default function Contact({ onBack }) {
                 placeholder="Your Message"
                 className="w-full resize-none rounded-lg border border-white/15 bg-white/[0.04] px-3.5 py-2.5 text-xs text-white placeholder:text-white/40 outline-none transition-colors focus:border-red-600 sm:text-sm 3xl:px-4 3xl:py-3 3xl:text-base"
               />
-              <button
-                type="submit"
-                style={{ "--btn-fill-color": "#ffffff" }}
-                className="btn-fill group flex w-full items-center justify-between rounded-xl border border-white/40 px-6 py-3 text-white transition-[color,border-color,transform] duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 sm:w-auto 3xl:px-8 3xl:py-3.5"
-              >
-                <span className="text-[10px] font-semibold uppercase tracking-[0.25em] sm:text-xs 3xl:text-sm">
-                  {sent ? "Message Sent" : "Send Message"}
-                </span>
-                <svg
-                  viewBox="0 0 24 24"
-                  className="ml-3 h-3.5 w-3.5 -rotate-45 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 3xl:h-4 3xl:w-4"
-                  aria-hidden="true"
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+                <button
+                  type="submit"
+                  disabled={status === "sending"}
+                  style={{ "--btn-fill-color": "#ffffff" }}
+                  className="btn-fill group flex w-full items-center justify-between rounded-xl border border-white/40 px-6 py-3 text-white transition-[color,border-color,transform] duration-300 ease-out hover:border-white hover:text-navy-950 active:scale-95 disabled:cursor-wait disabled:opacity-70 sm:w-auto 3xl:px-8 3xl:py-3.5"
                 >
-                  <path
-                    d="M5 12h14M13 6l6 6-6 6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.25em] sm:text-xs 3xl:text-sm">
+                    {status === "sending" ? "Sending…" : "Send Message"}
+                  </span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="ml-3 h-3.5 w-3.5 -rotate-45 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 3xl:h-4 3xl:w-4"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M5 12h14M13 6l6 6-6 6"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                <p
+                  role="status"
+                  className={`flex items-center gap-2 text-xs text-white/85 transition-opacity duration-500 sm:text-sm 3xl:text-base ${
+                    status === "sent" ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  {status === "sent" && (
+                    <>
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-red-500" aria-hidden="true">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Thank you — we&apos;ll be in touch soon.
+                    </>
+                  )}
+                </p>
+              </div>
             </form>
           </div>
         </div>

@@ -141,6 +141,16 @@ body {
   }
 }
 
+/* Contact form: browser autofill paints fields light; keep them dark glass with white text */
+.jp-form input:-webkit-autofill,
+.jp-form input:-webkit-autofill:hover,
+.jp-form input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
+  box-shadow: 0 0 0 1000px rgba(13, 37, 64, 0.96) inset;
+  transition: background-color 9999s ease-out;
+}
+
 /* Photo name caption (ImageCaption): eases up into place on every slide change */
 @keyframes jp-caption-in {
   from {
