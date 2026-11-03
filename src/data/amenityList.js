@@ -20,7 +20,7 @@ export const AMENITY_CATEGORIES = [
       { label: 'Spinning Studio', photo: 'Spinning Studio' },
       { label: 'Activity Studio', photo: 'Activity Studio' },
       // { label: "Cycling Track" }, // no photo yet
-      { label: 'Swimming Pools', photo: 'Swimming Pool' },
+      { label: 'Swimming Pool', photo: 'Swimming Pool' },
       { label: "Women's Indoor Swimming Pool", photo: "Women's Indoor Swimming Pool" },
       { label: "Kids' Pool", photo: "Kids' Pool" },
       // { label: "Wading Pool" }, // no photo yet
@@ -69,10 +69,10 @@ export const AMENITY_CATEGORIES = [
       { label: 'Mini Theatre', photo: 'Mini Theatre' },
       { label: 'Library', photo: 'Library' },
       // { label: "Salon" }, // no photo yet
-      { label: 'Banquet Halls', photo: 'Banquet Hall' },
-      { label: 'Multipurpose Studios', photo: 'Multipurpose Studio' },
+      { label: 'Banquet Hall', photo: 'Banquet Hall' },
+      { label: 'Multipurpose Studio', photo: 'Multipurpose Studio' },
       // { label: "Prefunction Rooms" }, // no photo yet
-      { label: 'Jacuzzis', photo: 'Jacuzzi' },
+      { label: 'Jacuzzi', photo: 'Jacuzzi' },
       // { label: "Pool Deck" }, // no photo yet
       { label: 'Amphitheatre', photo: 'Amphitheatre' },
       // { label: "Performance Deck" }, // no photo yet

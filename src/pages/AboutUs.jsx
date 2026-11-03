@@ -7,7 +7,7 @@ import { useCurtainSlider } from "../hooks/useCurtainSlider";
 import storyImg from "../assets/aboutUs.png";
 import peopleImg from "../assets/Amenities final webp/Yoga & Meditation Lawn.webp";
 import natureImg from "../assets/Amenities final webp/Urban Forest.webp";
-import valuesImg from "../assets/Amenities final webp/Club Marvel.webp";
+import valuesImg from "../assets/gallery/Club North.webp";
 
 // The story in five chapters, each on its own full-screen photo.
 const CHAPTERS = [
