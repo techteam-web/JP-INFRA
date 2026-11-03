@@ -88,13 +88,13 @@ export const AMENITY_CATEGORIES = [
     title: "Lifestyle",
     items: [
       // { label: "Café" }, // no photo yet
-      { label: 'Indoor Games Studios', photo: 'Indoor Games Studio' },
+      { label: 'Indoor Games Studio', photo: 'Indoor Games Studio' },
       // { label: "Kids' Play Area" }, // no photo yet
-      { label: 'Crèches', photo: 'Crèche & Play School' },
+      { label: 'Crèche & Play School', photo: 'Crèche & Play School' },
       { label: 'Co-Working Spaces', photo: 'Co-Working Spaces' },
-      { label: 'Meeting Room', photo: 'Meeting Room' },
+      { label: 'Meeting Rooms', photo: 'Meeting Room' },
       { label: 'Guest Rooms', photo: 'Guest Room' },
-      { label: 'Lounge for Guest Rooms', photo: 'Guest Room Lounge' },
+      { label: 'Marvel Lounge Rooms', photo: 'Guest Room Lounge' },
       // { label: "Culinary Utilities" }, // no photo yet
       // { label: "Chess" }, // no photo yet
       // { label: "Foosball" }, // no photo yet

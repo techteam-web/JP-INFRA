@@ -74,6 +74,7 @@ export default function Gallery({ onBack }) {
             onNext={() => go(1)}
             label="Next image"
             shade={false}
+            fit
           />
 
           {/* Prev / next */}

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Marzipano from "marzipano";
+import { useSize } from "../hooks/useSize";
 import { APP_DATA } from "../data/data";
 import { SAMPLE_DATA, TOWERS, FLOORS, TYPES, FACINGS, UNITS, UNIT_BY_ID, unitsOn, viewFor } from "../data/units";
 
@@ -166,20 +167,6 @@ function StatusBadge({ status }) {
   );
 }
 
-// The size of an element, kept up to date
-function useSize(ref) {
-  const [size, setSize] = useState({ w: 0, h: 0 });
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return undefined;
-    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [ref]);
-  return size;
-}
 
 // ---- The plan drawing -----------------------------------------------------------------------
 

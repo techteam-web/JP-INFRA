@@ -1,5 +1,7 @@
-// Fetches the shortest driving route (by distance) from the project to every pinned place
-// and writes src/components/locationRoutes.json. Re-run after moving PROJECT or adding pins:
+// Fetches the driving route from the project to every pinned place and writes
+// src/components/locationRoutes.json: along the Western Express Highway wherever that's
+// barely longer than the shortest road (see pick() below), otherwise the shortest road.
+// Re-run after moving PROJECT or adding pins:
 //   node scripts/fetch-routes.mjs
 //
 // The site's own point can snap to a road that only leads one way, so routes are asked from
@@ -60,13 +62,17 @@ async function valhallaShortest(from, to) {
   const url = `https://valhalla1.openstreetmap.de/route?json=${encodeURIComponent(JSON.stringify(query))}`
   const res = await fetch(url, { headers: HEADERS }).then((r) => r.json())
   const leg = res.trip?.legs?.[0]
-  return leg ? [decodePolyline6(leg.shape)] : []
+  return leg ? [{ coords: decodePolyline6(leg.shape), highwayKm: 0 }] : []
 }
 
+// how much of a route runs on the Western Express Highway (NH 48), in km
+const highwayKm = (steps) =>
+  steps.filter((s) => /western express|NH ?48/i.test(`${s.name} ${s.ref ?? ''}`)).reduce((a, s) => a + s.distance, 0) / 1000
+
 async function osrmAll(from, to) {
-  const url = `https://router.project-osrm.org/route/v1/driving/${from.join(',')};${to.join(',')}?overview=full&geometries=geojson&alternatives=3`
+  const url = `https://router.project-osrm.org/route/v1/driving/${from.join(',')};${to.join(',')}?overview=full&geometries=geojson&steps=true&alternatives=3`
   const res = await fetch(url, { headers: HEADERS }).then((r) => r.json())
-  return (res.routes ?? []).map((r) => r.geometry.coordinates)
+  return (res.routes ?? []).map((r) => ({ coords: r.geometry.coordinates, highwayKm: highwayKm(r.legs[0].steps) }))
 }
 
 // Places where OpenStreetMap's car data blocks a short link that exists in reality (the car
@@ -76,7 +82,7 @@ const BIKE = new Set(['Western Express Highway', 'Surya Legacy', 'Hotel Western'
 async function bikeAll(from, to) {
   const url = `https://routing.openstreetmap.de/routed-bike/route/v1/driving/${from.join(',')};${to.join(',')}?overview=full&geometries=geojson`
   const res = await fetch(url, { headers: HEADERS }).then((r) => r.json())
-  return (res.routes ?? []).map((r) => r.geometry.coordinates)
+  return (res.routes ?? []).map((r) => ({ coords: r.geometry.coordinates, highwayKm: 0 }))
 }
 
 // Cut a route where it first gets as close to the destination as it ever does, so it
@@ -91,6 +97,17 @@ function finish(coords, from, to) {
   return { km: len / 1000, coords: kept }
 }
 
+// The drive takes the Western Express Highway (at least 1 km of it) when that route is no
+// more than a little longer than the shortest road — 400 m or a fifth, whichever is more —
+// so drives south and out of town follow the highway, while places close by keep their
+// direct road and never detour.
+const shortestOf = (list) => list.reduce((a, r) => (!a || r.km < a.km ? r : a), null)
+function pick(found) {
+  const shortest = shortestOf(found)
+  const highway = shortestOf(found.filter((r) => r.highwayKm >= 1))
+  return highway && highway.km <= shortest.km + Math.max(0.4, shortest.km * 0.2) ? highway : shortest
+}
+
 const only = process.argv.slice(2)
 const routes = only.length ? JSON.parse(readFileSync(OUT, 'utf8')) : {}
 for (const place of BANDS.flatMap((b) => b.places).filter((p) => p.lngLat && (!only.length || only.includes(p.name)))) {
@@ -99,14 +116,14 @@ for (const place of BANDS.flatMap((b) => b.places).filter((p) => p.lngLat && (!o
     const routers = BIKE.has(place.name) ? [bikeAll] : [osrmAll, ...(from === STARTS[0] ? [valhallaShortest] : [])]
     for (const router of routers) {
       try {
-        for (const coords of await router(from, place.lngLat)) found.push(finish(coords, from, place.lngLat))
+        for (const r of await router(from, place.lngLat)) found.push({ ...finish(r.coords, from, place.lngLat), highwayKm: r.highwayKm })
       } catch {
         /* that router is unavailable: the others still answer */
       }
       await wait(250)
     }
   }
-  const best = found.reduce((a, r) => (!a || r.km < a.km ? r : a), null)
+  const best = pick(found)
   if (!best) {
     console.warn('no route:', place.name)
     continue
@@ -115,7 +132,7 @@ for (const place of BANDS.flatMap((b) => b.places).filter((p) => p.lngLat && (!o
     km: +best.km.toFixed(1),
     coords: best.coords.map(([x, y]) => [+x.toFixed(5), +y.toFixed(5)]),
   }
-  console.log(place.name, routes[place.name].km, 'km')
+  console.log(place.name, routes[place.name].km, 'km', best.highwayKm >= 1 ? `(highway ${best.highwayKm.toFixed(1)} km)` : '')
 }
 
 writeFileSync(OUT, JSON.stringify(routes))

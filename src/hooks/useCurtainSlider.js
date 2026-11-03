@@ -32,7 +32,9 @@ export function useCurtainSlider(srcs, start = 0) {
   const [index, setIndex] = useState(0);
   const total = srcs.length;
 
+  // a layer's photo (what drifts); it holds the picture, and any backdrop copy of it
   const img = (layer) => layer?.firstElementChild;
+  const show = (layer, src) => layer.querySelectorAll("img").forEach((el) => (el.src = src));
 
   // The opening photo on layer A; layer B closed and waiting.
   useLayoutEffect(() => {
@@ -43,7 +45,7 @@ export function useCurtainSlider(srcs, start = 0) {
     busy.current = false;
     active.current = "A";
     setIndex(start);
-    img(a).src = srcs[start];
+    show(a, srcs[start]);
     gsap.set(a, { clipPath: OPEN, zIndex: 1 });
     gsap.set(b, { clipPath: closedFrom(1), zIndex: 2 });
     gsap.set([img(a), img(b)], { xPercent: 0, scale: 1 });
@@ -68,7 +70,7 @@ export function useCurtainSlider(srcs, start = 0) {
 
       const next = (index + delta + total) % total;
       busy.current = true;
-      img(to).src = srcs[next];
+      show(to, srcs[next]);
 
       const finish = () => {
         active.current = active.current === "A" ? "B" : "A";

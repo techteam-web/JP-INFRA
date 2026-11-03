@@ -1,13 +1,17 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
 import CurtainStage from "../components/CurtainStage";
+import ProjectsPanel from "../components/ProjectsPanel";
 import { useCurtainSlider } from "../hooks/useCurtainSlider";
 import storyImg from "../assets/aboutUs.png";
 import peopleImg from "../assets/Amenities final webp/Yoga & Meditation Lawn.webp";
 import natureImg from "../assets/Amenities final webp/Urban Forest.webp";
 import valuesImg from "../assets/gallery/Club North.webp";
+
+// the map (and MapLibre with it) loads only when Our Legacy is opened
+const LegacyMap = lazy(() => import("../components/LegacyMap"));
 
 // The story in five chapters, each on its own full-screen photo.
 const CHAPTERS = [
@@ -51,6 +55,12 @@ const CHAPTERS = [
     text: "Design innovation, integrated living, care and conscious capitalism guide our approach. Together, they express our commitment to creating living environments where thoughtful spaces and meaningful experiences come together.",
   },
 ];
+// After the story: two panels of their own, over the story's last photo
+const PANELS = [
+  { id: "projects", short: "Our Projects" },
+  { id: "legacy", short: "Our Legacy" },
+];
+const STEPS = [...CHAPTERS, ...PANELS]; // the timeline
 const SRCS = CHAPTERS.map((c) => c.image);
 const CHAPTER_MS = 9000; // each chapter's time on screen before the story moves on
 
@@ -76,13 +86,63 @@ function IconChevron({ dir }) {
 // Each chapter's photo arrives with the site's wipe (the same as the Gallery), its words
 // on a navy glass card; a timeline along the bottom shows the chapters, fills as each
 // one plays, moves on by itself (holding while the pointer is on the card or timeline) and lets the
-// visitor jump to any chapter.
+// visitor jump to any chapter. After the story come Our Projects and Our Legacy (the map):
+// panels the story plays into and then rests on.
 export default function AboutUs({ onBack }) {
   const rootRef = useRef(null);
   const { index, go, layerARef, layerBRef } = useCurtainSlider(SRCS);
   const [paused, setPaused] = useState(false);
+  const [panel, setPanel] = useState(null); // null (the story), "projects" or "legacy"
+  const [mapPick, setMapPick] = useState(null); // the project Our Legacy opens on
   const autoplay = typeof window !== "undefined" && !reduceMotion();
   const chapter = CHAPTERS[index];
+  const step = panel ? CHAPTERS.length + PANELS.findIndex((p) => p.id === panel) : index;
+
+  // any point on the timeline: a story chapter, or one of the panels
+  const goStep = (to) => {
+    if (to < CHAPTERS.length) {
+      setPanel(null);
+      if (to !== index) go(to - index);
+    } else {
+      if (PANELS[to - CHAPTERS.length].id === "legacy") setMapPick(null);
+      setPanel(PANELS[to - CHAPTERS.length].id);
+    }
+  };
+  const next = () => goStep((step + 1) % STEPS.length);
+  const prev = () => goStep((step - 1 + STEPS.length) % STEPS.length);
+  const showOnMap = (id) => {
+    setMapPick(id);
+    setPanel("legacy");
+  };
+
+  // ← → move along the whole timeline. Taken at the document's capture phase, ahead of the
+  // slider's own story-only arrow keys (on the window), which it stops.
+  const keysRef = useRef({ next, prev });
+  useEffect(() => {
+    keysRef.current = { next, prev };
+  });
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.stopPropagation();
+      if (e.key === "ArrowRight") keysRef.current.next();
+      else keysRef.current.prev();
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, []);
+
+  // the numbering shown over each chapter and panel
+  const counter = (at, label) => (
+    <>
+      <span className="font-bold text-red-500">
+        {pad(at)}
+        <span className="text-white/35"> / {pad(STEPS.length - 1)}</span>
+      </span>
+      <span className="h-px w-8 bg-red-600" />
+      {label}
+    </>
+  );
   // the story holds still while the pointer is on the words or the timeline
   const holdWhileOver = {
     onPointerEnter: (e) => e.pointerType === "mouse" && setPaused(true),
@@ -110,14 +170,22 @@ export default function AboutUs({ onBack }) {
       <CurtainStage
         layerARef={layerARef}
         layerBRef={layerBRef}
-        onNext={() => go(1)}
+        onNext={next}
         label="Next chapter"
         shade={false}
       />
 
+      {panel === "projects" && <ProjectsPanel eyebrow={counter(step, "Our Projects")} onShowOnMap={showOnMap} />}
+      {panel === "legacy" && (
+        <Suspense fallback={<div className="absolute inset-0 z-[5] bg-[#e7edf4]" />}>
+          <LegacyMap key={mapPick ?? "all"} eyebrow={counter(step, "Our Legacy")} initialPick={mapPick} />
+        </Suspense>
+      )}
+
       {/* The chapter's words */}
       <div
         data-anim
+        hidden={!!panel}
         className="pointer-events-none absolute inset-x-4 bottom-[7.5rem] z-10 sm:inset-x-auto sm:left-10 sm:w-[min(36rem,calc(100%-5rem))] lg:bottom-[clamp(124px,16vh,170px)] lg:w-[clamp(30rem,40vw,44rem)] 3xl:left-14 short:bottom-[5.5rem] short:w-[min(30rem,58%)]"
       >
         <div
@@ -126,12 +194,7 @@ export default function AboutUs({ onBack }) {
           className="jp-caption-in pointer-events-auto rounded-2xl border border-white/15 bg-navy-950/70 p-5 text-white shadow-premium backdrop-blur-xl sm:p-7 lg:p-[clamp(24px,3vh,40px)] short:p-4"
         >
           <span className="flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70 sm:text-[11px]">
-            <span className="font-bold text-red-500">
-              {pad(index)}
-              <span className="text-white/35"> / {pad(CHAPTERS.length - 1)}</span>
-            </span>
-            <span className="h-px w-8 bg-red-600" />
-            {chapter.label}
+            {counter(index, chapter.label)}
           </span>
 
           {index === 0 ? (
@@ -157,43 +220,50 @@ export default function AboutUs({ onBack }) {
         data-anim
         aria-label="Chapters"
         {...holdWhileOver}
-        className="absolute inset-x-4 bottom-4 z-10 mx-auto flex max-w-[56rem] items-center gap-1 rounded-2xl border border-white/20 bg-navy-950/65 p-1.5 shadow-premium backdrop-blur-xl sm:inset-x-10 sm:bottom-8 lg:inset-x-[clamp(170px,14vw,220px)] lg:bottom-[clamp(28px,4vh,48px)] short:bottom-3"
+        className="absolute inset-x-4 bottom-4 z-10 mx-auto flex max-w-[76rem] items-center gap-1 rounded-2xl border border-white/20 bg-navy-950/65 p-1.5 shadow-premium backdrop-blur-xl sm:inset-x-10 sm:bottom-8 lg:inset-x-[clamp(170px,14vw,220px)] lg:bottom-[clamp(28px,4vh,48px)] short:bottom-3"
       >
         <button
           type="button"
-          onClick={() => go(-1)}
+          onClick={prev}
           aria-label="Previous chapter"
           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white transition-colors hover:bg-white/10"
         >
           <IconChevron dir="left" />
         </button>
         <ol className="flex flex-1 items-stretch">
-          {CHAPTERS.map((c, i) => {
-            const on = i === index;
+          {STEPS.map((c, i) => {
+            const on = i === step;
+            // a story chapter fills over its time on screen; a panel just lights up
+            const playing = on && autoplay && !panel;
             return (
-              <li key={c.id} className="flex-1">
+              // Each step names itself only when it has room (a container query on its own
+              // width); the current step widens so its name always shows.
+              <li
+                key={c.id}
+                className={`@container min-w-0 transition-[flex-grow] duration-500 ${on ? "flex-[1.8]" : "flex-1"}`}
+              >
                 <button
                   type="button"
                   aria-current={on ? "step" : undefined}
                   aria-label={c.short}
-                  onClick={() => i !== index && go(i - index)}
+                  onClick={() => i !== step && goStep(i)}
                   className="group w-full px-1.5 py-2 text-left sm:px-2.5"
                 >
                   <span className="relative block h-[2px] overflow-hidden rounded-full bg-white/20">
                     <span
-                      key={on ? `play-${index}` : c.id}
+                      key={on ? `play-${step}` : c.id}
                       className={`absolute inset-0 origin-left bg-red-600 ${
-                        i < index ? "scale-x-100" : on && autoplay ? "jp-progress" : on ? "scale-x-100" : "scale-x-0"
+                        i < step ? "scale-x-100" : playing ? "jp-progress" : on ? "scale-x-100" : "scale-x-0"
                       }`}
-                      style={on && autoplay ? { "--jp-progress-ms": `${CHAPTER_MS}ms`, animationPlayState: paused ? "paused" : "running" } : undefined}
-                      onAnimationEnd={on && autoplay ? () => go(1) : undefined}
+                      style={playing ? { "--jp-progress-ms": `${CHAPTER_MS}ms`, animationPlayState: paused ? "paused" : "running" } : undefined}
+                      onAnimationEnd={playing ? next : undefined}
                     />
                   </span>
                   <span className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                    <span className={on ? "text-red-500" : "text-white/45"}>{pad(i)}</span>
+                    <span className={`shrink-0 ${on ? "text-red-500" : "text-white/45"}`}>{pad(i)}</span>
                     <span
-                      className={`truncate transition-colors max-sm:hidden ${
-                        on ? "text-white" : "text-white/55 group-hover:text-white"
+                      className={`min-w-0 truncate transition-colors max-sm:hidden ${
+                        on ? "text-white" : "hidden text-white/55 group-hover:text-white @min-[8.5rem]:block"
                       }`}
                     >
                       {c.short}
@@ -206,7 +276,7 @@ export default function AboutUs({ onBack }) {
         </ol>
         <button
           type="button"
-          onClick={() => go(1)}
+          onClick={next}
           aria-label="Next chapter"
           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white transition-colors hover:bg-white/10"
         >

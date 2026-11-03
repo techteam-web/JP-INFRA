@@ -54,7 +54,7 @@ export const VIEW_HEIGHTS = [
   {
     from: 1,
     to: FLOORS,
-    label: "Terrace, 150 m",
+    label: "Terrace",
     scenes: { Day: "0-dji_0001_terrace-150", Evening: "2-dji_0071_d", Twilight: "1-dji_0075_d" },
   },
 ];

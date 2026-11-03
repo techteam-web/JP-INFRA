@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { MAP_STYLE, theme } from './mapTheme'
 import { BANDS, PROJECT } from './locationData'
 import ROUTES from './locationRoutes.json' // driving routes, from scripts/fetch-routes.mjs
 import BackButton from './BackButton'
 import Logo from './Logo'
 import { LOGO_LABEL } from './EndgameLogo'
 import endgameLogoUrl from '../assets/logo-endgame.png'
-
-// OpenStreetMap data, served as free vector tiles by OpenFreeMap (no API key); restyled below.
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron'
 
 const HOME_VIEW = { center: PROJECT.lngLat, zoom: 15.3, pitch: 60, bearing: -22 }
 
@@ -36,69 +34,103 @@ const cumulative = (coords) => coords.reduce((acc, c, i) => [...acc, i ? acc[i -
 
 const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
 
-// The arteries — the Western Express Highway and Ghodbunder Road — carry the site's navy;
-// every other road stays a quiet white ribbon, so the main roads read at a glance.
-const ARTERY = ['motorway', 'trunk', 'primary']
-const isArtery = ['in', ['get', 'class'], ['literal', ARTERY]]
-const ROAD_COLOR = ['case', isArtery, '#ffffff', ['match', ['get', 'class'], ['secondary', 'tertiary'], '#fcfdfe', '#f7fafc']]
-// navy casing on the arteries, soft blue-grey on the rest
-const CASING_COLOR = ['case', isArtery, '#2b5a8f', '#cbd6e2']
-// widen a layer's own line-width by a factor, keeping its zoom curve
-const wider = (layer, artery, rest) => [
-  '*',
-  ['case', isArtery, artery, rest],
-  ['coalesce', layer.paint?.['line-width'], 1],
-]
+// Each travel-time band as a circle round the site: wide enough to take in every place in
+// the band (with a little room), and always wider than the band before it.
+const RINGS = BANDS.reduce((rings, b, order) => {
+  const far = Math.max(...b.places.filter((p) => p.lngLat).map((p) => km(PROJECT.lngLat, p.lngLat)))
+  const prev = rings[order - 1]?.km ?? 0
+  return [...rings, { id: b.id, label: b.label, order, km: Math.max(far * 1.08 + 0.06, prev * 1.12) }]
+}, [])
+const ringOf = (id) => RINGS.find((r) => r.id === id)
 
-// Daylight palette from the site: a cool, navy-tinted ground (navy-50 family), pale
-// blue-grey city, soft blue water and navy (#0a1f36) type; brand red is kept for the
-// selection and the route.
-function theme(map) {
-  for (const layer of map.getStyle().layers) {
-    const { id, type } = layer
-    const has = (re) => re.test(id)
-    try {
-      if (type === 'background') map.setPaintProperty(id, 'background-color', '#e7edf4')
-      else if (type === 'fill') {
-        if (has(/building/i)) map.setLayoutProperty(id, 'visibility', 'none')
-        else if (has(/water/i)) map.setPaintProperty(id, 'fill-color', '#bed2e4')
-        else if (has(/wood|forest|grass|park/i)) map.setPaintProperty(id, 'fill-color', '#d8e4db')
-        else map.setPaintProperty(id, 'fill-color', '#e1e8f1')
-      } else if (type === 'line') {
-        if (has(/waterway/i)) map.setPaintProperty(id, 'line-color', '#aec4da')
-        else if (has(/casing/i) && !has(/tunnel/i)) {
-          map.setPaintProperty(id, 'line-color', CASING_COLOR)
-          map.setPaintProperty(id, 'line-width', wider(layer, 1.7, 1.05))
-        } else if (has(/^highway_(minor|major|motorway)/i)) {
-          map.setPaintProperty(id, 'line-color', ROAD_COLOR)
-          map.setPaintProperty(id, 'line-width', wider(layer, 1.45, 1))
-        } else if (has(/railway/i)) map.setPaintProperty(id, 'line-color', 'rgba(10,31,54,0.22)')
-        else map.setLayoutProperty(id, 'visibility', 'none')
-      } else if (type === 'symbol') {
-        if (has(/shield|airport|path/i)) map.setLayoutProperty(id, 'visibility', 'none')
-        else if (has(/^highway-name-major/i)) {
-          // the arteries name themselves in the site's navy
-          map.setPaintProperty(id, 'text-color', '#19497c')
-          map.setPaintProperty(id, 'text-halo-color', '#ffffff')
-          map.setPaintProperty(id, 'text-halo-width', 1.6)
-          map.setLayoutProperty(id, 'text-letter-spacing', 0.12)
-        } else if (has(/^highway-name/i)) {
-          map.setPaintProperty(id, 'text-color', 'rgba(10,31,54,0.55)')
-          map.setPaintProperty(id, 'text-halo-color', 'rgba(255,255,255,0.95)')
-          map.setPaintProperty(id, 'text-halo-width', 1.4)
-        } else {
-          // area names in wide-tracked capitals
-          map.setLayoutProperty(id, 'text-transform', 'uppercase')
-          map.setLayoutProperty(id, 'text-letter-spacing', 0.35)
-          map.setPaintProperty(id, 'text-color', has(/water|waterway/i) ? '#5f7f9e' : 'rgba(10,31,54,0.7)')
-          map.setPaintProperty(id, 'text-halo-color', 'rgba(238,242,246,0.9)')
-          map.setPaintProperty(id, 'text-halo-width', 1.2)
-        }
-      }
-    } catch {
-      // a layer without that property: leave it as the base style has it
-    }
-  }
+// a circle of r km round a point, as a closed ring of [lng, lat]
+const circleCoords = ([lng, lat], r, steps = 128) => {
+  const dLat = r / 111.32
+  const dLng = dLat / Math.cos((lat * Math.PI) / 180)
+  return Array.from({ length: steps + 1 }, (_, i) => {
+    const a = (i / steps) * 2 * Math.PI
+    return [lng + dLng * Math.sin(a), lat + dLat * Math.cos(a)]
+  })
+}
+
+// The rings sit on the ground, under the buildings: the chosen band's in brand red with a
+// faint wash, the bands inside it as quiet dashed navy rings, each named at its top.
+function addRings(map) {
+  map.addSource('jp-rings', {
+    type: 'geojson',
+    data: {
+      type: 'FeatureCollection',
+      features: RINGS.map((r) => ({
+        type: 'Feature',
+        properties: { id: r.id, order: r.order },
+        geometry: { type: 'Polygon', coordinates: [circleCoords(PROJECT.lngLat, r.km)] },
+      })),
+    },
+  })
+  map.addSource('jp-ring-labels', {
+    type: 'geojson',
+    data: {
+      type: 'FeatureCollection',
+      features: RINGS.map((r) => ({
+        type: 'Feature',
+        properties: { id: r.id, order: r.order, label: r.label.toUpperCase() },
+        geometry: { type: 'Point', coordinates: [PROJECT.lngLat[0], PROJECT.lngLat[1] + r.km / 111.32] },
+      })),
+    },
+  })
+  const under = map.getLayer('jp-buildings') ? 'jp-buildings' : undefined
+  map.addLayer({ id: 'jp-ring-fill', type: 'fill', source: 'jp-rings', paint: { 'fill-color': '#ee3134', 'fill-opacity': 0.06 } }, under)
+  map.addLayer(
+    {
+      id: 'jp-ring-inner',
+      type: 'line',
+      source: 'jp-rings',
+      paint: { 'line-color': '#19497c', 'line-width': 1.2, 'line-opacity': 0.45, 'line-dasharray': [3, 3] },
+    },
+    under,
+  )
+  map.addLayer(
+    { id: 'jp-ring-line', type: 'line', source: 'jp-rings', paint: { 'line-color': '#ee3134', 'line-width': 2.4, 'line-opacity': 0.9 } },
+    under,
+  )
+  map.addLayer({
+    id: 'jp-ring-label',
+    type: 'symbol',
+    source: 'jp-ring-labels',
+    layout: {
+      'text-field': ['get', 'label'],
+      'text-font': ['Noto Sans Bold'],
+      'text-size': 12,
+      'text-letter-spacing': 0.2,
+      'text-anchor': 'bottom',
+      'text-offset': [0, -0.4],
+      'text-allow-overlap': true,
+    },
+    paint: { 'text-color': '#ee3134', 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
+  })
+}
+
+// show the chosen band's ring, with the bands inside it
+function showRing(map, id) {
+  const { order } = ringOf(id)
+  const chosen = ['==', ['get', 'id'], id]
+  map.setFilter('jp-ring-fill', chosen)
+  map.setFilter('jp-ring-line', chosen)
+  map.setFilter('jp-ring-inner', ['<', ['get', 'order'], order])
+  map.setFilter('jp-ring-label', ['<=', ['get', 'order'], order])
+  map.setPaintProperty('jp-ring-label', 'text-color', ['case', chosen, '#ee3134', 'rgba(25,73,124,0.6)'])
+}
+
+// the chosen band's circle, as bounds to frame
+const ringBounds = (id) => {
+  const r = ringOf(id).km
+  const dLat = r / 111.32
+  const dLng = dLat / Math.cos((PROJECT.lngLat[1] * Math.PI) / 180)
+  const [lng, lat] = PROJECT.lngLat
+  return [
+    [lng - dLng, lat - dLat],
+    [lng + dLng, lat + dLat],
+  ]
 }
 
 function addCityAndSite(map) {
@@ -225,7 +257,9 @@ const CTRL_FILL = { '--btn-fill-color': 'rgba(255,255,255,0.14)' }
 
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const isWide = () => window.matchMedia('(min-width: 1024px)').matches
-// keep the subject clear of the highlights panel
+// keep the subject clear of the highlights panel. Set on the map itself (map.setPadding) so
+// every move honours it; MapLibre adds a fit's own padding on top of the map's, so fits pass
+// only their extra margin.
 const viewPadding = () => (isWide() ? { top: 80, bottom: 60, left: 480, right: 80 } : { top: 80, bottom: 330, left: 30, right: 30 })
 
 export default function Location({ label, active, onBack }) {
@@ -258,6 +292,7 @@ export default function Location({ label, active, onBack }) {
     map.on('load', () => {
       theme(map)
       addCityAndSite(map)
+      addRings(map)
       addRoute(map)
       try {
         map.setSky({
@@ -294,7 +329,12 @@ export default function Location({ label, active, onBack }) {
     }
     raf = requestAnimationFrame(tick)
 
+    map.setPadding(viewPadding())
+    const onResize = () => map.setPadding(viewPadding())
+    window.addEventListener('resize', onResize)
+
     return () => {
+      window.removeEventListener('resize', onResize)
       cancelAnimationFrame(raf)
       map.remove()
       mapRef.current = null
@@ -377,7 +417,7 @@ export default function Location({ label, active, onBack }) {
     const bounds = coords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(PROJECT.lngLat, PROJECT.lngLat))
     const reduce = reduceMotion()
     map.fitBounds(bounds, {
-      padding: { ...viewPadding(), top: 160, bottom: viewPadding().bottom + 60 },
+      padding: { top: 80, bottom: 60, left: 0, right: 0 },
       pitch: 55,
       bearing: map.getBearing(),
       duration: reduce ? 0 : 2200,
@@ -414,17 +454,22 @@ export default function Location({ label, active, onBack }) {
     }
   }, [picked, band, ready])
 
+  // A band (picked again, too) frames just its circle: the camera comes in to fill the view
+  // with it, never pulling back past it onto empty ground.
   const pickBand = (id) => {
-    if (id === bandId) return
     setBandId(id)
     setPicked(null)
     const map = mapRef.current
-    const pinned = BANDS.find((b) => b.id === id).places.filter((p) => p.lngLat)
-    if (!map || !pinned.length) return
+    if (!map) return
     orbitRef.current = false
-    const bounds = pinned.reduce((b, p) => b.extend(p.lngLat), new maplibregl.LngLatBounds(PROJECT.lngLat, PROJECT.lngLat))
-    map.fitBounds(bounds, { padding: viewPadding(), pitch: 55, bearing: map.getBearing(), duration: reduceMotion() ? 0 : 2200, maxZoom: 15.3 })
+    map.fitBounds(ringBounds(id), { padding: 20, pitch: 40, bearing: map.getBearing(), duration: reduceMotion() ? 0 : 2200 })
   }
+
+  // the chosen band's ring
+  useEffect(() => {
+    const map = mapRef.current
+    if (ready && map) showRing(map, bandId)
+  }, [bandId, ready])
 
   const toggle3d = () => {
     const map = mapRef.current

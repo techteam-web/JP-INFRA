@@ -162,6 +162,17 @@ body {
   animation: jp-caption-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* About Us → Our Projects: a project's photo fades in and settles from a slight zoom */
+@keyframes jp-photo-in {
+  from {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+.jp-photo-in {
+  animation: jp-photo-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* a timeline bar filling over --jp-progress-ms (About Us chapters) */
 @keyframes jp-progress {
   from {
@@ -292,6 +303,27 @@ html.jp-lock #home { position: fixed !important; inset: 0 !important; width: 100
 }
 .jp-loc-map .maplibregl-ctrl-attrib-button {
   filter: invert(1);
+}
+/* About Us → Our Legacy: the attribution sits bottom right, just above the timeline */
+.jp-legacy-map .maplibregl-ctrl-bottom-right {
+  left: auto;
+  right: 4px;
+  bottom: 72px;
+}
+@media (min-width: 640px) {
+  .jp-legacy-map .maplibregl-ctrl-bottom-right {
+    bottom: 88px;
+  }
+}
+@media (min-width: 1024px) {
+  .jp-legacy-map .maplibregl-ctrl-bottom-right {
+    bottom: clamp(84px, 9vh, 104px);
+  }
+}
+@media (max-height: 500px) {
+  .jp-legacy-map .maplibregl-ctrl-bottom-right {
+    bottom: 68px;
+  }
 }
 .jp-loc-map .maplibregl-ctrl-logo {
   opacity: 0.5;
