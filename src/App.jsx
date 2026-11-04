@@ -4,7 +4,7 @@ import CinematicIntro from "./components/CinematicIntro";
 import BrandCurtain from "./components/BrandCurtain";
 import Home from "./pages/Home";
 import Explore from "./pages/Explore";
-import homeHeroImg from "./assets/hero.png";
+import homeHeroImg from "./assets/home-hero.webp";
 import brainwingLogo from "./assets/Brainwinglogo/brainwing.webp";
 import aboutImg from "./assets/aboutUs.png";
 import contactImg from "./assets/gallery/Meeting Room.webp";
@@ -64,7 +64,9 @@ function App() {
   const appRef = useRef(null);
 
   // The video's last frame is the same shot, in the same framing, as Home's
-  // background (jpinfra hero.png). Handing off on that exact frame makes Home
+  // background — both are assets/home-hero.webp, the closing render that
+  // scripts/build-frames.mjs writes as the sequence's last frame, so the two
+  // cannot drift apart. Handing off on that exact frame makes Home
   // read as the video simply coming to rest — one continuous picture, which
   // then sharpens into the full-resolution render as Home's logos and navbar
   // arrive. Decode the render up front so it's ready the moment it's needed.

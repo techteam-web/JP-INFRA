@@ -7,11 +7,12 @@ import LogoDraw from './LogoDraw'
 
 gsap.registerPlugin(ScrollTrigger)
 
-// Frames of /models/video.mp4 with the repeated first city pass cut out (clouds 0–0.7s
-// dissolve into 3.0s onward), full source resolution, WebP. Drawn to a canvas instead of
-// seeking a <video>, which lagged. Portrait screens get a 1080×1080 centre crop: same
-// sharpness, lighter, since they only show the middle of the frame anyway.
-const FRAME_COUNT = 164
+// Frames of /video/jp.mp4, every one of them at its native 24fps, as WebP — built by
+// scripts/build-frames.mjs, which is where the sizes and the closing frame are decided.
+// Drawn to a canvas instead of seeking a <video>, which lagged. Portrait screens get a
+// 1080×1080 centre crop: same sharpness, lighter, since they only show the middle anyway.
+// Keep this in step with the count that script prints.
+const FRAME_COUNT = 193
 const FRAME_SET =
   typeof window !== 'undefined' && window.matchMedia('(max-aspect-ratio: 1/1)').matches ? 'portrait' : 'wide'
 const frameSrc = (i) => `/frames/${FRAME_SET}/${String(i).padStart(3, '0')}.webp`
@@ -31,10 +32,10 @@ const TOTAL = CUT + 0.4 // a short tail so the hand-off fires before the scroll 
 const CLEAR_FROM = CUT - 1.4 // chrome and grading fade out from here to the last frame
 
 // Captions are timed to the footage (timeline units, 10 = end of clip):
-// clouds → city (≈1.3–5.3) → tower crown (≈5.8–7.5) → full tower → street (≈9–10).
+// clouds (0–2.5) → city (2.5–6.2) → tower crown (6.2–7.5) → full tower (7.5–8.7) → street.
 const CHAPTERS = [
-  { n: '01', eyebrow: 'The city', title: 'Above it all,\nyet at its heart', at: 2.0, until: 4.9 },
-  { n: '02', eyebrow: 'The address', title: 'A landmark\ntakes its place', at: 5.6, until: 8.0 },
+  { n: '01', eyebrow: 'The city', title: 'Above it all,\nyet at its heart', at: 2.6, until: 5.8 },
+  { n: '02', eyebrow: 'The address', title: 'A landmark\ntakes its place', at: 6.4, until: 8.5 },
 ]
 const LAST_FRAME = Math.round((CUT / VIDEO_END) * (FRAME_COUNT - 1))
 // Enter opens the intro once this many leading frames are in (the opening scroll:

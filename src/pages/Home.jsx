@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
-import heroImg from "../assets/jpinfra hero.png";
+import heroImg from "../assets/home-hero.webp";
 import Logo from "../components/Logo";
 import EndgameLogo from "../components/EndgameLogo";
 import BottomNav from "../components/BottomNav";
