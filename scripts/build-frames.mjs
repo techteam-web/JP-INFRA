@@ -17,7 +17,7 @@
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, readdirSync, rmSync, existsSync } from 'node:fs'
 
-const VIDEO = 'public/video/jp.mp4'
+const VIDEO = 'public/video/Final.mp4'
 const CLOSER = 'public/images/last render.webp'
 const WIDE = 'public/frames/wide'
 const PORTRAIT = 'public/frames/portrait'

@@ -7,12 +7,12 @@ import LogoDraw from './LogoDraw'
 
 gsap.registerPlugin(ScrollTrigger)
 
-// Frames of /video/jp.mp4, every one of them at its native 24fps, as WebP — built by
+// Frames of /video/Final.mp4, every one of them at its native 24fps, as WebP — built by
 // scripts/build-frames.mjs, which is where the sizes and the closing frame are decided.
 // Drawn to a canvas instead of seeking a <video>, which lagged. Portrait screens get a
 // 1080×1080 centre crop: same sharpness, lighter, since they only show the middle anyway.
 // Keep this in step with the count that script prints.
-const FRAME_COUNT = 193
+const FRAME_COUNT = 212
 const FRAME_SET =
   typeof window !== 'undefined' && window.matchMedia('(max-aspect-ratio: 1/1)').matches ? 'portrait' : 'wide'
 const frameSrc = (i) => `/frames/${FRAME_SET}/${String(i).padStart(3, '0')}.webp`
