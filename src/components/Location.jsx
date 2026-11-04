@@ -5,6 +5,7 @@ import { MAP_STYLE, theme } from './mapTheme'
 import { BANDS, PROJECT } from './locationData'
 import ROUTES from './locationRoutes.json' // driving routes, from scripts/fetch-routes.mjs
 import BackButton from './BackButton'
+import MapBirds from './MapBirds'
 import Logo from './Logo'
 import { LOGO_LABEL } from './EndgameLogo'
 import endgameLogoUrl from '../assets/logo-endgame.png'
@@ -121,6 +122,38 @@ function showRing(map, id) {
   map.setPaintProperty('jp-ring-label', 'text-color', ['case', chosen, '#ee3134', 'rgba(25,73,124,0.6)'])
 }
 
+// The zoom at which the band's circle fills the map: its diameter is matched to the longer
+// side of the view, so the camera is inside the circle and never shows ground beyond it.
+// (fitBounds does the opposite — it fits the circle in, leaving the band's surroundings on
+// screen.) Measured against the padded view, the same box every other camera move uses.
+const coverZoom = (map, id) => {
+  const pad = map.getPadding()
+  const el = map.getContainer()
+  const W = Math.max(160, el.clientWidth)
+  const H = Math.max(160, el.clientHeight)
+  // padding puts the site off-centre on the canvas, so the circle has to reach the far corner
+  const cx = (pad.left + (W - pad.right)) / 2
+  const cy = (pad.top + (H - pad.bottom)) / 2
+  const toCorner = Math.max(
+    ...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - cx, y - cy)),
+  )
+  const metresPerPixelAtZoom0 = 156543.03392 * Math.cos((PROJECT.lngLat[1] * Math.PI) / 180)
+  return Math.log2((metresPerPixelAtZoom0 * 2 * toCorner) / (ringOf(id).km * 2000))
+}
+
+// Hold the camera on the chosen band: it can't be zoomed out past the circle or dragged off
+// it. Let go while a destination is shown, since a drive can run beyond the band's edge, and
+// whenever the view goes home.
+const lockToBand = (map, id) => {
+  map.setMaxBounds(null)
+  map.setMinZoom(Math.max(0, coverZoom(map, id) - 0.2))
+  map.setMaxBounds(ringBounds(id))
+}
+const unlockBand = (map) => {
+  map.setMaxBounds(null)
+  map.setMinZoom(0)
+}
+
 // the chosen band's circle, as bounds to frame
 const ringBounds = (id) => {
   const r = ringOf(id).km
@@ -150,7 +183,23 @@ function addCityAndSite(map) {
       'source-layer': 'building',
       minzoom: 13,
       paint: {
-        'fill-extrusion-color': ['interpolate', ['linear'], height, 0, '#dde5ef', 30, '#c9d6e4', 90, '#b2c4d7'],
+        // low blocks warm and sunlit, towers cooling into the haze with height — the
+        // spread of tone is what makes the skyline read as depth rather than a flat mass
+        'fill-extrusion-color': [
+          'interpolate',
+          ['linear'],
+          height,
+          0,
+          '#e8eef5',
+          12,
+          '#dbe4ee',
+          30,
+          '#c6d4e3',
+          60,
+          '#b0c2d6',
+          120,
+          '#9eb4cb',
+        ],
         'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 13, 0, 14.5, height],
         'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
         'fill-extrusion-opacity': 1,
@@ -175,7 +224,10 @@ function addCityAndSite(map) {
     },
   })
 
-  map.setLight({ anchor: 'viewport', color: '#ffffff', intensity: 0.32, position: [1.3, 210, 40] })
+  // A warm high sun, held to the viewport rather than the map: anchored to the map the
+  // buildings fall almost black whenever the camera turns away from it. This keeps a lit
+  // and a shaded side on every block at any bearing.
+  map.setLight({ anchor: 'viewport', color: '#fff1dd', intensity: 0.36, position: [1.4, 215, 48] })
 }
 
 const EMPTY = { type: 'FeatureCollection', features: [] }
@@ -267,6 +319,7 @@ export default function Location({ label, active, onBack }) {
   const mapRef = useRef(null)
   const markersRef = useRef([])
   const orbitRef = useRef(false)
+  const lockedBandRef = useRef(null) // the band the camera is held on, if any
   const [ready, setReady] = useState(false)
   const [bandId, setBandId] = useState(BANDS[0].id)
   const [picked, setPicked] = useState(null)
@@ -295,14 +348,16 @@ export default function Location({ label, active, onBack }) {
       addRings(map)
       addRoute(map)
       try {
+        // a real sky: blue overhead, warming to a pale haze at the horizon, with the
+        // far ground fading into it so the city has somewhere to recede to
         map.setSky({
-          'sky-color': '#eef2f6',
-          'horizon-color': '#f4f7fa',
-          'fog-color': '#eef2f6',
-          'sky-horizon-blend': 0.6,
-          'horizon-fog-blend': 0.5,
-          'fog-ground-blend': 0.5,
-          'atmosphere-blend': 0,
+          'sky-color': '#b7d2ea',
+          'horizon-color': '#f3e9dd',
+          'fog-color': '#e8eef5',
+          'sky-horizon-blend': 0.85,
+          'horizon-fog-blend': 0.7,
+          'fog-ground-blend': 0.78,
+          'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 12, 0.5, 16, 0.2],
         })
       } catch {
         // older renderer without sky: the vignette overlay carries the depth instead
@@ -347,6 +402,9 @@ export default function Location({ label, active, onBack }) {
     if (!map) return
     const reduce = reduceMotion()
     orbitRef.current = false
+    // the wide view home is outside any band, so the hold on one is let go
+    lockedBandRef.current = null
+    unlockBand(map)
     map[reduce ? 'jumpTo' : 'flyTo']({ ...HOME_VIEW, padding: viewPadding(), duration: 4200, curve: 1.6, essential: true, ...opts })
     if (!reduce) map.once('moveend', () => (orbitRef.current = true))
   }
@@ -360,6 +418,8 @@ export default function Location({ label, active, onBack }) {
       return
     }
     map.resize()
+    lockedBandRef.current = null
+    unlockBand(map) // the arrival starts far out, well outside any band
     map.jumpTo({ center: PROJECT.lngLat, zoom: 11, pitch: 0, bearing: 30 })
     const t = setTimeout(() => {
       setPicked(null)
@@ -405,7 +465,13 @@ export default function Location({ label, active, onBack }) {
       el.classList.toggle('is-lit', index < 0)
     })
     focusRoads(map, index >= 0)
-    if (index < 0) return undefined
+    if (index < 0) {
+      // back to the whole band: take hold of its circle again
+      if (lockedBandRef.current === bandId) lockToBand(map, bandId)
+      return undefined
+    }
+    // a drive can leave the band's circle, so the camera is free while one is shown
+    unlockBand(map)
 
     const place = band.places[index]
     const pin = markersRef.current[index]?.getElement()
@@ -454,15 +520,24 @@ export default function Location({ label, active, onBack }) {
     }
   }, [picked, band, ready])
 
-  // A band (picked again, too) frames just its circle: the camera comes in to fill the view
-  // with it, never pulling back past it onto empty ground.
+  // A band (picked again, too) frames just its circle: the camera comes in until the ring
+  // fills the view and is then held there, so nothing outside the band is on screen.
   const pickBand = (id) => {
     setBandId(id)
     setPicked(null)
     const map = mapRef.current
     if (!map) return
     orbitRef.current = false
-    map.fitBounds(ringBounds(id), { padding: 20, pitch: 40, bearing: map.getBearing(), duration: reduceMotion() ? 0 : 2200 })
+    lockedBandRef.current = id
+    lockToBand(map, id)
+    const reduce = reduceMotion()
+    map[reduce ? 'jumpTo' : 'easeTo']({
+      center: PROJECT.lngLat,
+      zoom: coverZoom(map, id),
+      pitch: 40,
+      bearing: map.getBearing(),
+      duration: reduce ? 0 : 2200,
+    })
   }
 
   // the chosen band's ring
@@ -489,6 +564,7 @@ export default function Location({ label, active, onBack }) {
         role="region"
         aria-label="Map of the project and its surroundings"
       />
+      <MapBirds active={ready && active} />
       <div className="jp-loc-vignette pointer-events-none absolute inset-0" />
 
       {!ready && (

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { NAV_ITEMS } from "../data/navItems";
 import { trackButtonClick } from "../lib/analytics";
+import { CLICK_BREATH, playClick } from "../lib/sound";
 import EndgameLogo from "./EndgameLogo";
 
 // Phone / tablet navigation for Home (below lg, where the bottom bar is
@@ -23,6 +24,7 @@ export default function MobileNav({ onSelect }) {
   }, [open]);
 
   const close = () => {
+    playClick();
     setOpen(false);
     menuButtonRef.current?.focus();
   };
@@ -35,7 +37,10 @@ export default function MobileNav({ onSelect }) {
         data-anim
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          playClick();
+          setOpen(true);
+        }}
         className="absolute bottom-5 left-5 z-20 flex items-center gap-3 rounded-xl border border-red-500/45 bg-navy-950/60 px-5 py-3.5 text-white shadow-premium backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:bottom-8 sm:left-10 lg:hidden"
       >
         <span aria-hidden="true" className="flex w-4 flex-col gap-[4px]">
@@ -94,9 +99,13 @@ export default function MobileNav({ onSelect }) {
                     type="button"
                     data-button-name={item.trackingName}
                     onClick={() => {
+                      // the click sounds first, then the sheet closes and the page moves
+                      playClick();
                       trackButtonClick(item.label);
-                      setOpen(false);
-                      onSelect?.(item.label);
+                      setTimeout(() => {
+                        setOpen(false);
+                        onSelect?.(item.label);
+                      }, CLICK_BREATH);
                     }}
                     className="group flex w-full items-baseline gap-4 py-3.5 text-left active:opacity-70 short:py-2"
                   >

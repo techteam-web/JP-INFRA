@@ -28,8 +28,9 @@ export function theme(map) {
       if (type === 'background') map.setPaintProperty(id, 'background-color', '#e7edf4')
       else if (type === 'fill') {
         if (has(/building/i)) map.setLayoutProperty(id, 'visibility', 'none')
-        else if (has(/water/i)) map.setPaintProperty(id, 'fill-color', '#bed2e4')
-        else if (has(/wood|forest|grass|park/i)) map.setPaintProperty(id, 'fill-color', '#d8e4db')
+        else if (has(/water/i)) map.setPaintProperty(id, 'fill-color', '#aac9e2')
+        else if (has(/wood|forest/i)) map.setPaintProperty(id, 'fill-color', '#c7dcc6')
+        else if (has(/grass|park/i)) map.setPaintProperty(id, 'fill-color', '#d2e3d1')
         else map.setPaintProperty(id, 'fill-color', '#e1e8f1')
       } else if (type === 'line') {
         if (has(/waterway/i)) map.setPaintProperty(id, 'line-color', '#aec4da')

@@ -1,5 +1,6 @@
 import { NAV_ITEMS } from "../data/navItems";
 import { trackButtonClick } from "../lib/analytics";
+import { CLICK_BREATH, playClick } from "../lib/sound";
 
 const EASE = "ease-[cubic-bezier(0.7,0,0.2,1)]";
 
@@ -56,8 +57,10 @@ export default function BottomNav({ onSelect }) {
               aria-label={text}
               data-button-name={item.trackingName}
               onClick={() => {
+                // the click sounds first, then the page moves a beat later
+                playClick();
                 trackButtonClick(item.label);
-                onSelect?.(item.label);
+                setTimeout(() => onSelect?.(item.label), CLICK_BREATH);
               }}
               className="group relative flex items-center gap-2.5 overflow-hidden rounded-xl px-4 py-3.5 text-white/75 outline-none transition-transform duration-300 active:scale-95 xl:gap-3 xl:px-5 3xl:px-7 3xl:py-4.5 4xl:px-8 4xl:py-5"
             >

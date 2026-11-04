@@ -69,15 +69,31 @@ async function valhallaShortest(from, to) {
 const highwayKm = (steps) =>
   steps.filter((s) => /western express|NH ?48/i.test(`${s.name} ${s.ref ?? ''}`)).reduce((a, s) => a + s.distance, 0) / 1000
 
-async function osrmAll(from, to) {
-  const url = `https://router.project-osrm.org/route/v1/driving/${from.join(',')};${to.join(',')}?overview=full&geometries=geojson&steps=true&alternatives=3`
+async function osrmAll(from, to, via) {
+  const points = (via ? [from, via, to] : [from, to]).map((p) => p.join(',')).join(';')
+  const url = `https://router.project-osrm.org/route/v1/driving/${points}?overview=full&geometries=geojson&steps=true&alternatives=3`
   const res = await fetch(url, { headers: HEADERS }).then((r) => r.json())
-  return (res.routes ?? []).map((r) => ({ coords: r.geometry.coordinates, highwayKm: highwayKm(r.legs[0].steps) }))
+  return (res.routes ?? []).map((r) => ({
+    coords: r.geometry.coordinates,
+    highwayKm: highwayKm(r.legs.flatMap((l) => l.steps)),
+  }))
 }
 
 // Places where OpenStreetMap's car data blocks a short link that exists in reality (the car
 // routers send the line a long way round): these follow the bike router's short road instead.
-const BIKE = new Set(['Western Express Highway', 'Surya Legacy', 'Hotel Western', "Dara's Dhaba", 'Royal Hometel Suites', 'Ghodbunder Road'])
+const BIKE = new Set(['Western Express Highway', 'Surya Legacy', 'Hotel Western', "Dara's Dhaba", 'Royal Hometel Suites'])
+
+// Places where the shortest road is a chain of back lanes nobody actually drives: these keep
+// the car router's main-road drive from the site, the way a phone's navigation gives it.
+const MAIN_ROADS = new Set(['Nakoda Hospital', 'Samartha Hospital'])
+
+// Places the drive should reach by the Western Express Highway even though a shorter run of
+// back roads exists — the length rule in pick() below would never choose it. The route is
+// asked through the given point on the highway itself, so it joins and leaves it there.
+const VIA = { 'D-Mart (Mira Road)': [72.876356, 19.266392] }
+
+// Places the line should stop at as the drive passes them, in metres (see finish() below).
+const STOP_SHORT = { 'D-Mart (Mira Road)': 200 }
 
 async function bikeAll(from, to) {
   const url = `https://routing.openstreetmap.de/routed-bike/route/v1/driving/${from.join(',')};${to.join(',')}?overview=full&geometries=geojson`
@@ -87,12 +103,14 @@ async function bikeAll(from, to) {
 
 // Cut a route where it first gets as close to the destination as it ever does, so it
 // ends at the pin; then measure the walk from the site in and from the road out to the pin.
-function finish(coords, from, to) {
+// A place in STOP_SHORT is cut as soon as the drive comes within its distance instead, so a
+// store passed on the highway ends there rather than looping off and back to its entrance.
+function finish(coords, from, to, stopShort = 0) {
   const d = coords.map((c) => metres(c, to))
-  const closest = Math.min(...d)
-  const end = d.findIndex((x) => x <= closest + 20)
+  const reach = stopShort && d.some((x) => x <= stopShort) ? stopShort : Math.min(...d) + 20
+  const end = d.findIndex((x) => x <= reach)
   const kept = coords.slice(0, end + 1)
-  let len = metres(PROJECT.lngLat, from) + metres(from, kept[0]) + closest
+  let len = metres(PROJECT.lngLat, from) + metres(from, kept[0]) + d[end]
   for (let i = 1; i < kept.length; i++) len += metres(kept[i - 1], kept[i])
   return { km: len / 1000, coords: kept }
 }
@@ -108,15 +126,33 @@ function pick(found) {
   return highway && highway.km <= shortest.km + Math.max(0.4, shortest.km * 0.2) ? highway : shortest
 }
 
+// Places whose lines are drawn by hand in locationRoutes.json and must survive a re-run.
+// The lanes around the site aren't in OpenStreetMap, so every router leaves the wrong way
+// and loops back — 1.2 km of driving for a 260 m walk. Their routes are kept as they are.
+const HAND_DRAWN = new Set(['Shree Ganesha Temple (JP North Vinay Nagar)'])
+
 const only = process.argv.slice(2)
-const routes = only.length ? JSON.parse(readFileSync(OUT, 'utf8')) : {}
+// a full run starts from scratch, but the hand-drawn lines are carried over from the file
+const saved = JSON.parse(readFileSync(OUT, 'utf8'))
+const routes = only.length ? saved : Object.fromEntries([...HAND_DRAWN].filter((n) => saved[n]).map((n) => [n, saved[n]]))
 for (const place of BANDS.flatMap((b) => b.places).filter((p) => p.lngLat && (!only.length || only.includes(p.name)))) {
+  if (HAND_DRAWN.has(place.name)) {
+    console.log(place.name, '— kept, drawn by hand')
+    continue
+  }
   const found = []
+  const via = VIA[place.name]
+  // only the bike router is tied to the site itself; the rest still try the ring of starts,
+  // or the line leaves the site the wrong way and U-turns to come back past it
   for (const from of BIKE.has(place.name) ? [STARTS[0]] : STARTS) {
-    const routers = BIKE.has(place.name) ? [bikeAll] : [osrmAll, ...(from === STARTS[0] ? [valhallaShortest] : [])]
+    const routers = BIKE.has(place.name)
+      ? [bikeAll]
+      : MAIN_ROADS.has(place.name) || via
+        ? [osrmAll]
+        : [osrmAll, ...(from === STARTS[0] ? [valhallaShortest] : [])]
     for (const router of routers) {
       try {
-        for (const r of await router(from, place.lngLat)) found.push({ ...finish(r.coords, from, place.lngLat), highwayKm: r.highwayKm })
+        for (const r of await router(from, place.lngLat, via)) found.push({ ...finish(r.coords, from, place.lngLat, STOP_SHORT[place.name]), highwayKm: r.highwayKm })
       } catch {
         /* that router is unavailable: the others still answer */
       }

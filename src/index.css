@@ -473,8 +473,8 @@ html.jp-lock #home { position: fixed !important; inset: 0 !important; width: 100
 }
 
 /* Place pins: navy dot ringed in white on a fine stem, name in a navy tag.
-   A chosen time band lights all its places; picking one then shows just that
-   destination and its route from the project. */
+   A chosen time band lights all its places in blue; picking one turns that
+   destination red and draws its route from the project. */
 .jp-loc-poi {
   position: relative;
   display: flex;
@@ -501,8 +501,8 @@ html.jp-lock #home { position: fixed !important; inset: 0 !important; width: 100
   transition: opacity 0.5s ease var(--lit-delay, 0s);
 }
 .jp-loc-poi.is-lit .jp-loc-poi-dot {
-  background: var(--color-red-600);
-  box-shadow: 0 0 0 3px #fff, 0 0 0 6px rgba(238, 49, 52, 0.2), 0 0 18px 3px rgba(238, 49, 52, 0.4);
+  background: var(--color-navy-500);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px rgba(54, 112, 174, 0.22), 0 0 18px 3px rgba(54, 112, 174, 0.45);
 }
 .jp-loc-poi.is-lit .jp-loc-poi-label {
   opacity: 0;
@@ -551,7 +551,12 @@ html.jp-lock #home { position: fixed !important; inset: 0 !important; width: 100
   white-space: nowrap;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
-.jp-loc-poi:hover .jp-loc-poi-dot,
+/* hovering only lifts the pin and brightens its blue; red is kept for the one picked */
+.jp-loc-poi:hover .jp-loc-poi-dot {
+  transform: scale(1.2);
+  background: var(--color-navy-600);
+  box-shadow: 0 0 0 3px #fff, 0 0 18px 4px rgba(54, 112, 174, 0.5);
+}
 .jp-loc-poi.is-active .jp-loc-poi-dot {
   transform: scale(1.2);
   background: var(--color-red-600);
