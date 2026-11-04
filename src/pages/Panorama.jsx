@@ -2,27 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Marzipano from "marzipano";
 import { APP_DATA } from "../data/data";
+import { panoLimiter, yawRange } from "../data/panoLimits";
 import BackButton from "../components/BackButton";
 import Logo from "../components/Logo";
 
-const DEG = Math.PI / 180;
 const IDLE_MS = 1200;
 const AUTOROTATE_YAW_SPEED = 0.05;
-// The view doesn't go all the way round: it turns this far in all, half to each side of
-// the direction each panorama opens on.
-const YAW_RANGE = 360 * DEG;
-// Up and down: the top and bottom of the picture never pass these, so the view can't tip
-// up into the empty sky or down to the spot under the camera.
-const TOP_EDGE = 80 * DEG;
-const BOTTOM_EDGE = -90 * DEG;
-const limitEdges = (params) => {
-  const half = params.fov / 2; // the view's vertical field of view
-  params.pitch = Math.min(TOP_EDGE - half, Math.max(BOTTOM_EDGE + half, params.pitch));
-  return params;
-};
+// How far the view turns (left / right, up / down) is set in data/panoLimits.js, shared with
+// the Floor Plans' Compare Views.
 
-// Idle drift: the view sways slowly from side to side within that range, easing off and
-// turning back at each end (it can't spin round any more).
+// Idle drift: the view sways slowly from side to side within the turning range, easing off
+// and turning back at each end.
 const sway = (min, max) => () => {
   let last = null;
   let dir = 1;
@@ -53,12 +43,6 @@ const MOODS = [
   { id: "evening", label: "Evening", icon: "sunset", scene: sceneNamed("2-dji_0071_d") },
   { id: "twilight", label: "Twilight", icon: "moon", scene: sceneNamed("1-dji_0075_d") },
 ];
-
-// the range a panorama may turn within, around the direction it opens on
-const yawRange = (scene) => {
-  const mid = scene.initialViewParameters.yaw;
-  return [mid - YAW_RANGE / 2, mid + YAW_RANGE / 2];
-};
 
 function MoodIcon({ name }) {
   const common = {
@@ -135,16 +119,7 @@ export default function Panorama({ onBack }) {
 
     const map = new Map();
     for (const scene of SCENES) {
-      const view = new Marzipano.RectilinearView(
-        scene.initialViewParameters,
-        Marzipano.util.compose(
-          Marzipano.RectilinearView.limit.resolution(scene.faceSize),
-          // zoomed fully out, the picture spans exactly top edge to bottom edge
-          Marzipano.RectilinearView.limit.vfov(24 * DEG, TOP_EDGE - BOTTOM_EDGE),
-          Marzipano.RectilinearView.limit.yaw(...yawRange(scene)),
-          limitEdges
-        )
-      );
+      const view = new Marzipano.RectilinearView(scene.initialViewParameters, panoLimiter(scene));
       const source = Marzipano.ImageUrlSource.fromString(TILE_URL(scene.id), {
         cubeMapPreviewUrl: PREVIEW_URL(scene.id),
       });

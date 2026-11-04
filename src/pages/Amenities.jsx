@@ -332,7 +332,7 @@ function AmenityPhotos({ start, listOpen, onList }) {
   return (
     // behind the list it's only a backdrop: out of reach for clicks, keys and screen readers
     <div ref={ref} inert={listOpen} className="absolute inset-0">
-      <CurtainStage layerARef={layerARef} layerBRef={layerBRef} onNext={() => go(1)} label="Next amenity" />
+      <CurtainStage layerARef={layerARef} layerBRef={layerBRef} label="Amenity photo" />
 
       {/* Prev / next */}
       <button

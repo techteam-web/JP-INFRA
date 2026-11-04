@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSize } from "../hooks/useSize";
+import { useCurtainSlider } from "../hooks/useCurtainSlider";
+import CurtainStage from "./CurtainStage";
+import ImageCaption from "./ImageCaption";
 import { STATUS, projectsBy } from "../data/projects";
 
 // About Us → Our Projects: Ongoing / Delivered, each a grid of project photos sized to fit
@@ -66,36 +70,149 @@ function PinIcon() {
   );
 }
 
+function ExpandIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+      <path
+        d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// The projects full screen, as the Gallery shows its photos: the same curtain slideshow,
+// each photo whole and as tall as the screen with a blurred copy of itself filling the
+// sides; its name bottom left, a counter, ‹ › and a close button. Over the page's own top
+// bar, so it's portalled to <body>. Opens on `start`; closing hands back where it got to.
+function FullPhotos({ list, start, onClose }) {
+  const srcs = useMemo(() => list.map((q) => q.image), [list]); // stable: the slideshow restarts when it changes
+  const { index, go, layerARef, layerBRef } = useCurtainSlider(srcs, start);
+  const p = list[index];
+  const side =
+    "btn-fill absolute top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur transition-transform duration-200 hover:scale-105 active:scale-90 xl:h-12 xl:w-12";
+
+  // ← → turn the slides, Esc closes. At the window's capture phase, like ProjectView's.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "ArrowLeft") go(-1);
+      else if (e.key === "ArrowRight") go(1);
+      else if (e.key === "Escape") onClose(index);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [go, onClose, index]);
+
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label={`${p.name}, full screen`} className="fixed inset-0 z-[80] overflow-hidden bg-navy-950">
+      <CurtainStage layerARef={layerARef} layerBRef={layerBRef} label={p.name} shade={false} fit />
+
+      <button
+        type="button"
+        onClick={() => onClose(index)}
+        aria-label="Close full screen"
+        style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+        className="btn-fill absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full border border-white/25 bg-navy-950/40 text-white backdrop-blur sm:right-8 sm:top-8 xl:h-12 xl:w-12"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => go(-1)}
+        aria-label="Previous project"
+        style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+        className={`${side} left-4 sm:left-8`}
+      >
+        <Chevron dir="left" />
+      </button>
+      <button
+        type="button"
+        onClick={() => go(1)}
+        aria-label="Next project"
+        style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+        className={`${side} right-4 sm:right-8`}
+      >
+        <Chevron dir="right" />
+      </button>
+
+      <ImageCaption id={p.id} label={STATUS[p.status].plural} name={p.name} detail={p.area} />
+
+      {/* Counter */}
+      <div className="absolute inset-x-0 bottom-6 z-10 mx-auto flex w-fit items-center gap-2.5 rounded-xl border border-white/25 bg-navy-950/55 px-5 py-2.5 text-white shadow-premium backdrop-blur-xl sm:bottom-8 xl:px-6 xl:py-3 2xl:bottom-10">
+        <span className="text-xs font-bold tracking-widest text-red-600 xl:text-sm">{pad(index + 1)}</span>
+        <span className="h-3 w-px bg-white/30" aria-hidden="true" />
+        <span className="text-xs font-semibold tracking-widest text-white/70 xl:text-sm">{pad(list.length)}</span>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 // One project, large: a framed card, its photo filling one half, the project in the other
 // (photo on top on phones held upright), with the rest of the list as thumbnails to jump to.
+// The photo (or its Full size button) opens it whole, over the whole screen.
 function ProjectView({ list, at, onStep, onJump, onClose, onShowOnMap }) {
   const p = list[at];
+  const [full, setFull] = useState(null); // full screen: the project it opened on, or null
 
-  // ← → step through the projects, Esc goes back to the grid. Taken at the window's capture
-  // phase so the About Us timeline (listening further along) doesn't move as well.
+  // ← → step through the projects, Esc goes back to the grid (full screen, FullPhotos takes
+  // them instead). Taken at the window's capture phase, stopping them there, so the About Us
+  // timeline and the slideshow's own keys (listening further along) don't move as well.
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "Escape") e.stopPropagation();
+      if (full !== null) return;
       if (e.key === "ArrowLeft") onStep(-1);
       if (e.key === "ArrowRight") onStep(1);
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [onStep, onClose]);
+  }, [onStep, onClose, full]);
+
+  // leaving full screen: the card shows the project the slideshow got to
+  const closeFull = (reached) => {
+    setFull(null);
+    onJump(reached);
+  };
 
   return (
     <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-3xl border border-white/15 bg-navy-950/55 shadow-premium sm:grid-cols-2 sm:grid-rows-1 short:grid-cols-2 short:grid-rows-1">
+      {full !== null && <FullPhotos list={list} start={full} onClose={closeFull} />}
+
       {/* The photo, filling its half */}
       <div className="relative min-h-0 overflow-hidden">
-        <img
-          key={p.id}
-          src={p.image}
-          alt={`${p.name}, ${p.area}`}
-          decoding="async"
-          className="jp-photo-in absolute inset-0 h-full w-full object-cover"
-        />
-        <span className="absolute left-4 top-4 rounded-full border border-white/25 bg-navy-950/60 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur-md sm:left-6 sm:top-6 short:left-3 short:top-3">
+        <button
+          type="button"
+          onClick={() => setFull(at)}
+          aria-label={`${p.name}: view full size`}
+          className="absolute inset-0 cursor-zoom-in"
+        >
+          <img
+            key={p.id}
+            src={p.image}
+            alt={`${p.name}, ${p.area}`}
+            decoding="async"
+            className="jp-photo-in h-full w-full object-cover"
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => setFull(at)}
+          aria-label="View full size"
+          className="btn-fill absolute right-4 top-4 flex items-center gap-2 rounded-full border border-white/25 bg-navy-950/60 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur-md sm:right-6 sm:top-6 short:right-3 short:top-3 short:py-1.5"
+          style={{ "--btn-fill-color": "#ee3134" }}
+        >
+          <ExpandIcon />
+          <span className="max-sm:hidden short:hidden">Full size</span>
+        </button>
+        <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/25 bg-navy-950/60 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur-md sm:left-6 sm:top-6 short:left-3 short:top-3">
           <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${p.status === "ongoing" ? "bg-red-500" : "bg-white"}`} />
           {STATUS[p.status].label}
         </span>
@@ -183,7 +300,7 @@ function ProjectView({ list, at, onStep, onJump, onClose, onShowOnMap }) {
   );
 }
 
-export default function ProjectsPanel({ eyebrow, onShowOnMap }) {
+export default function ProjectsPanel({ eyebrow, onShowOnMap, onOpenLegacy }) {
   const [status, setStatus] = useState("ongoing");
   const [page, setPage] = useState(0);
   const [viewing, setViewing] = useState(null); // index in the list, or null for the grid
@@ -210,7 +327,7 @@ export default function ProjectsPanel({ eyebrow, onShowOnMap }) {
 
   return (
     <div className="absolute inset-0 z-[5] bg-navy-950/85 backdrop-blur-md">
-      <div className="absolute inset-x-4 top-[84px] bottom-[80px] flex flex-col sm:inset-x-10 sm:top-[100px] sm:bottom-[100px] lg:top-[clamp(104px,12vh,140px)] lg:bottom-[clamp(112px,13vh,150px)] 3xl:inset-x-14 short:top-[90px] short:bottom-[72px]">
+      <div className="absolute inset-x-4 top-[84px] bottom-5 flex flex-col sm:inset-x-10 sm:top-[100px] sm:bottom-8 lg:top-[clamp(104px,12vh,140px)] lg:bottom-[clamp(64px,8vh,96px)] 3xl:inset-x-14 short:top-[90px] short:bottom-4">
         {/* Heading, Ongoing / Delivered, pages */}
         <div className="jp-caption-in flex flex-wrap items-end justify-between gap-x-6 gap-y-3 short:gap-y-1">
           <div>
@@ -222,6 +339,17 @@ export default function ProjectsPanel({ eyebrow, onShowOnMap }) {
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            {/* over to Our Legacy, the map of every project */}
+            <button
+              type="button"
+              onClick={onOpenLegacy}
+              aria-label="Our Legacy: every project on the map"
+              className="btn-fill flex h-[42px] items-center gap-2 rounded-full border border-white/20 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white sm:px-4 sm:text-[11px] short:h-[34px]"
+              style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+            >
+              <PinIcon />
+              <span className="max-sm:hidden short:hidden">Our Legacy</span>
+            </button>
             <div role="radiogroup" aria-label="Projects" className="flex rounded-full border border-white/20 p-1">
               {Object.keys(STATUS).map((s) => (
                 <button

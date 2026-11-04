@@ -60,4 +60,7 @@ export const PROJECTS = [
   { id: "dreamland", name: "Dreamland Apartment", area: "Khar", status: "delivered", image: dreamland, lngLat: [72.836, 19.071] },
 ];
 
-export const projectsBy = (status) => PROJECTS.filter((p) => p.status === status);
+// each status's projects, as fixed lists (the same array every time, so a slideshow of one
+// doesn't restart when the page re-renders)
+const BY_STATUS = Object.fromEntries(Object.keys(STATUS).map((s) => [s, PROJECTS.filter((p) => p.status === s)]));
+export const projectsBy = (status) => BY_STATUS[status];

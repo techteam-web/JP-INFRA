@@ -4,8 +4,7 @@ import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
 import FloorPlanStudio from "../components/FloorPlanStudio";
 import renderImg from "../assets/building svg/CAM_01.png";
-import typicalWingA from "../assets/Floor-plan webp/Typical Floor Wing A.webp";
-import typicalWingB from "../assets/Floor-plan webp/Typical Floor Wing B.webp";
+import { PLAN_FLOOR } from "../data/units";
 import floorsSvg from "../assets/jp_infra_SVG/Asset 1.svg?raw";
 
 // The render and its floor outlines share one 1672 × 941 space.
@@ -43,11 +42,16 @@ const BUILDINGS = (() => {
       floor.xy.push(...xy);
     }
   }
+  // each floor's tips, where its card's connector starts: `anchor` on the right, `leftTip`
+  // on the left (the card sits on the side of the building the floor is on)
+  const tipAt = (xy, x) => {
+    const tip = xy.filter(([px]) => Math.abs(px - x) < 1);
+    return [x, tip.reduce((t, [, y]) => t + y, 0) / tip.length];
+  };
   for (const floors of Object.values(out)) {
     for (const f of floors) {
-      const maxX = Math.max(...f.xy.map(([x]) => x));
-      const tip = f.xy.filter(([x]) => x > maxX - 1);
-      f.anchor = [maxX, tip.reduce((t, [, y]) => t + y, 0) / tip.length];
+      f.anchor = tipAt(f.xy, Math.max(...f.xy.map(([x]) => x)));
+      f.leftTip = tipAt(f.xy, Math.min(...f.xy.map(([x]) => x)));
     }
   }
   return out;
@@ -57,12 +61,9 @@ const ALL = ORDER.flatMap((b) => BUILDINGS[b]);
 const TOP = BUILDINGS[ORDER[0]].length;
 const same = (x, y) => !!x && !!y && x.b === y.b && x.n === y.n;
 
-// Floor-plan drawings: each tower's typical floor (Wing A = Tower A, Wing B = Tower B) on
-// every floor, unless a floor has its own drawing in FLOOR_PLANS (e.g. "B-8": planB8Img).
-// The drawings are WebP copies (4800 px wide) of src/assets/Floor-plan/.
-const TYPICAL_PLANS = { A: typicalWingA, B: typicalWingB };
-const FLOOR_PLANS = {};
-const drawingFor = (b, n) => FLOOR_PLANS[`${b}-${n}`] ?? TYPICAL_PLANS[b];
+// The floor plans (the Floor Plan screen, data/units.js) are Tower A's: wings A1 and A2,
+// as drawn for the 8th floor. Tower B's plans aren't in yet: its Floor Plan button shows locked.
+const PLANS_TOWER = "A";
 // The floors' 360° views aren't uploaded yet: until then the card's 360° button shows locked.
 const FLOOR_360_READY = false;
 
@@ -176,19 +177,27 @@ export default function FloorPlans({ onBack, onOpen360 }) {
   const toScreen = ([x, y]) => [x * scale + (size.w - VIEW_W * scale) / 2, y * scale + (size.h - VIEW_H * scale) / 2];
   const floor = selected ? BUILDINGS[selected.b][selected.n - 1] : null;
   const hovered = hover ? BUILDINGS[hover.b][hover.n - 1] : null;
-  const [ax, ay] = floor ? toScreen(floor.anchor) : [0, 0];
-  const CARD_W = 300;
-  const GAP = 56;
-  const cardLeft = Math.min(ax + GAP, size.w - CARD_W - 24);
-  const cardTop = Math.min(Math.max(ay - 90, 110), size.h - 260);
-  // phones in landscape: too short to sit the card beside the floor — a compact card
-  // pinned top-right instead, clear of the floor picker
+  // The card sits on the side of the building the floor is on: a floor on the left half
+  // opens it on the left, joined to the floor's left tip; on the right half, on the right.
+  const onLeft = !!floor && toScreen(floor.leftTip)[0] + toScreen(floor.anchor)[0] < size.w;
+  const [ax, ay] = floor ? toScreen(onLeft ? floor.leftTip : floor.anchor) : [0, 0];
+  const CARD_W = 320;
+  const CARD_H = 330; // about its height, to keep it on screen
+  const GAP = 48;
+  const cardLeft = onLeft ? Math.max(24, ax - GAP - CARD_W) : Math.min(ax + GAP, size.w - CARD_W - 24);
+  const cardTop = Math.min(Math.max(ay - CARD_H / 2, 100), size.h - CARD_H - 96);
+  // the connector runs from the floor's tip to the card's near edge
+  const line = onLeft ? { left: cardLeft + CARD_W, width: Math.max(ax - cardLeft - CARD_W, 0) } : { left: ax, width: Math.max(cardLeft - ax, 0) };
+  // phones in landscape: too short to sit the card beside the floor — a compact card pinned
+  // to the top corner away from the floor, clear of the floor picker
   const short = size.h > 0 && size.h <= 500;
   const cardStyle = short
-    ? { right: 16, top: 80, width: 260 }
+    ? { [onLeft ? "right" : "left"]: 16, top: 80, width: 270 }
     : size.w >= 768
       ? { left: cardLeft, top: cardTop }
       : undefined;
+  // where the floor sits in its tower, for the card's height gauge
+  const level = floor ? (floor.n <= Math.round(TOP / 3) ? "Lower floors" : floor.n <= Math.round((2 * TOP) / 3) ? "Mid floors" : "Upper floors") : "";
 
   return (
     <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-navy-950">
@@ -278,13 +287,14 @@ export default function FloorPlans({ onBack, onOpen360 }) {
         )}
       </div>
 
-      {/* Floor card: connector from the floor's tip, then the card (bottom sheet on phones) */}
+      {/* Floor card: a connector from the floor's tip, then the card, on the floor's side of
+          the building (a sheet on phones) */}
       {floor && (
         <>
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute z-10 h-px origin-left bg-white/70 max-md:hidden short:hidden"
-            style={{ left: ax, top: ay, width: Math.max(cardLeft - ax, 0) }}
+            className="pointer-events-none absolute z-10 h-px bg-white/70 max-md:hidden short:hidden"
+            style={{ ...line, top: ay }}
           />
           <span
             aria-hidden="true"
@@ -297,50 +307,125 @@ export default function FloorPlans({ onBack, onOpen360 }) {
             aria-label={`Tower ${floor.b}, floor ${floor.n}`}
             onClick={(e) => e.stopPropagation()}
             // on phones: a sheet at the top when the floor is low on screen, else at the bottom
-            className={`jp-caption-in absolute z-20 rounded-2xl border border-white/20 bg-navy-950/70 p-5 text-white shadow-premium backdrop-blur-xl short:p-3.5 ${
-              short ? "" : `max-md:inset-x-4 md:w-[300px] ${ay > size.h / 2 ? "max-md:top-24" : "max-md:bottom-24"}`
+            className={`jp-caption-in absolute z-20 overflow-hidden rounded-2xl border border-white/15 bg-navy-950/80 text-white shadow-premium backdrop-blur-xl ${
+              short ? "" : `max-md:inset-x-4 md:w-[320px] ${ay > size.h / 2 ? "max-md:top-24" : "max-md:bottom-24"}`
             }`}
             style={cardStyle}
           >
-            <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70">
-              <span className="h-px w-6 bg-red-600" />
-              Tower {floor.b} · Floor
-            </span>
-            <div className="mt-1 flex items-end justify-between">
-              <span className="font-display text-7xl leading-none short:text-5xl">{pad(floor.n)}</span>
-              <span className="mb-2 text-[10px] font-semibold tracking-widest text-white/45">/ {TOP}</span>
-            </div>
-            <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70">
-              {floor.n === TOP ? "Top Floor" : "Typical Floor"}
-            </span>
-            <div className="mt-4 grid grid-cols-2 gap-2 short:mt-3">
-              <button
-                type="button"
-                onClick={() => setStudio("plan")}
-                style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-                className="btn-fill flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-red-500/50 px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-transform active:scale-95"
-              >
-                Floor Plan <IconArrow />
-              </button>
-              {FLOOR_360_READY ? (
+            {/* brand-red hairline along the top */}
+            <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-red-600" />
+            <div className="p-5 short:p-3.5">
+              {/* the tower, and close */}
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/75">
+                  <span className="h-px w-6 bg-red-600" />
+                  Tower {floor.b}
+                </span>
                 <button
                   type="button"
-                  onClick={onOpen360}
-                  style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-                  className="btn-fill flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/25 px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-transform active:scale-95"
+                  onClick={() => choose(null)}
+                  aria-label="Close"
+                  className="-mr-1.5 grid h-7 w-7 place-items-center rounded-full text-white/60 transition-colors hover:bg-white/10 hover:text-white"
                 >
-                  360° View <IconArrow />
+                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  title="Coming soon"
-                  className="flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40"
-                >
-                  360° View <IconLock />
-                </button>
-              )}
+              </div>
+
+              {/* the floor: its number, where it sits in the tower, and steps up and down */}
+              <div className="mt-1 flex items-stretch gap-4">
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/45">Floor</span>
+                  <div className="flex items-end gap-2">
+                    <span className="font-display text-[5.25rem] leading-[0.85] short:text-6xl">{pad(floor.n)}</span>
+                    <span className="mb-1 text-xs font-semibold tracking-widest text-white/40">/ {TOP}</span>
+                  </div>
+                  <span className="mt-2 block text-[10px] font-bold uppercase tracking-[0.25em] text-red-500 short:mt-1">{level}</span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5">
+                  <button
+                    type="button"
+                    aria-label="Floor above"
+                    onClick={() => step(1)}
+                    disabled={floor.n === TOP}
+                    className="grid h-7 w-7 place-items-center rounded-full border border-white/20 transition-colors hover:bg-white/10 disabled:opacity-30"
+                  >
+                    <IconArrow dir="up" className="h-3.5 w-3.5" />
+                  </button>
+                  {/* height gauge: the tower, ground to top, with this floor marked */}
+                  <span className="relative min-h-10 w-1 flex-1 rounded-full bg-white/15" aria-hidden="true">
+                    <span className="absolute inset-x-0 bottom-0 rounded-full bg-red-600/70" style={{ height: `${(floor.n / TOP) * 100}%` }} />
+                    <span
+                      className="absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-white bg-red-600"
+                      style={{ bottom: `${(floor.n / TOP) * 100}%` }}
+                    />
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Floor below"
+                    onClick={() => step(-1)}
+                    disabled={floor.n === 1}
+                    className="grid h-7 w-7 place-items-center rounded-full border border-white/20 transition-colors hover:bg-white/10 disabled:opacity-30"
+                  >
+                    <IconArrow dir="down" className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* what's on the floor */}
+              <dl className="mt-4 grid grid-cols-2 border-y border-white/10 short:hidden">
+                <div className="py-2.5 pr-3">
+                  <dt className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/45">Wings</dt>
+                  <dd className="mt-0.5 text-sm font-semibold">{floor.b === PLANS_TOWER ? "A1 · A2" : "—"}</dd>
+                </div>
+                <div className="border-l border-white/10 py-2.5 pl-3">
+                  <dt className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/45">Plan</dt>
+                  <dd className="mt-0.5 text-sm font-semibold">{floor.b === PLANS_TOWER ? `As on Floor ${pad(PLAN_FLOOR)}` : "Coming soon"}</dd>
+                </div>
+              </dl>
+
+              {/* where to go from here */}
+              <div className="mt-4 grid grid-cols-[1.2fr_1fr] gap-2 short:mt-2.5">
+                {floor.b === PLANS_TOWER ? (
+                  <button
+                    type="button"
+                    onClick={() => setStudio("plan")}
+                    style={{ "--btn-fill-color": "#0a1f36" }}
+                    className="btn-fill flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-red-600 px-2 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_8px_22px_-10px_rgba(238,49,52,0.9)] transition-transform active:scale-95 short:py-2"
+                  >
+                    Floor Plan <IconArrow />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    title="Coming soon"
+                    className="flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 px-2 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 short:py-2"
+                  >
+                    Floor Plan <IconLock />
+                  </button>
+                )}
+                {FLOOR_360_READY ? (
+                  <button
+                    type="button"
+                    onClick={onOpen360}
+                    style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+                    className="btn-fill flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/25 px-2 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] transition-transform active:scale-95 short:py-2"
+                  >
+                    360° View <IconArrow />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    title="Coming soon"
+                    className="flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 px-2 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 short:py-2"
+                  >
+                    360° View <IconLock />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </>
@@ -414,12 +499,7 @@ export default function FloorPlans({ onBack, onOpen360 }) {
 
       {/* Floor Plan screen: the plan, unit filtering and the comparisons */}
       {studio && (
-        <FloorPlanStudio
-          start={floor ? { b: floor.b, n: floor.n } : { b: ORDER[0], n: 1 }}
-          startTab={studio}
-          onClose={() => setStudio(null)}
-          drawingFor={drawingFor}
-        />
+        <FloorPlanStudio startTab={studio} onClose={() => setStudio(null)} />
       )}
     </div>
   );

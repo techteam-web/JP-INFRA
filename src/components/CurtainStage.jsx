@@ -47,9 +47,11 @@ function Layer({ layerRef, fit }) {
 
 // Full-screen photo stage driven by useCurtainSlider: two clipped layers, each
 // holding a photo that drifts inside its clip, and (unless `shade` is off) the site's
-// top/bottom navy grading. Click anywhere to advance. `fit` shows photos that aren't
-// screen-shaped whole (see applyFit).
+// top/bottom navy grading. With `onNext`, a click anywhere on the photo advances; without
+// it the photo is only a picture (the page's own ‹ › move it on). `fit` shows photos that
+// aren't screen-shaped whole (see applyFit).
 export default function CurtainStage({ layerARef, layerBRef, onNext, label, shade = true, fit = false }) {
+  const Stage = onNext ? "button" : "div";
   const stageRef = useRef(null);
 
   // the screen's shape changes (a phone turned, a window resized): fit again
@@ -61,12 +63,10 @@ export default function CurtainStage({ layerARef, layerBRef, onNext, label, shad
   }, [fit]);
 
   return (
-    <button
+    <Stage
       ref={stageRef}
-      type="button"
-      onClick={onNext}
-      aria-label={label}
-      className="absolute inset-0 z-0 cursor-pointer overflow-hidden bg-navy-950"
+      {...(onNext ? { type: "button", onClick: onNext, "aria-label": label } : { role: "img", "aria-label": label })}
+      className={`absolute inset-0 z-0 overflow-hidden bg-navy-950 ${onNext ? "cursor-pointer" : ""}`}
     >
       <Layer layerRef={layerARef} fit={fit} />
       <Layer layerRef={layerBRef} fit={fit} />
@@ -79,6 +79,6 @@ export default function CurtainStage({ layerARef, layerBRef, onNext, label, shad
           }}
         />
       )}
-    </button>
+    </Stage>
   );
 }

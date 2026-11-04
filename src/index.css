@@ -304,25 +304,16 @@ html.jp-lock #home { position: fixed !important; inset: 0 !important; width: 100
 .jp-loc-map .maplibregl-ctrl-attrib-button {
   filter: invert(1);
 }
-/* About Us → Our Legacy: the attribution sits bottom right, just above the timeline */
+/* About Us → Our Legacy: the attribution sits bottom right, clear of the Brainwing credit
+   (which shows there from 1024px up) */
 .jp-legacy-map .maplibregl-ctrl-bottom-right {
   left: auto;
   right: 4px;
-  bottom: 72px;
-}
-@media (min-width: 640px) {
-  .jp-legacy-map .maplibregl-ctrl-bottom-right {
-    bottom: 88px;
-  }
+  bottom: 4px;
 }
 @media (min-width: 1024px) {
   .jp-legacy-map .maplibregl-ctrl-bottom-right {
-    bottom: clamp(84px, 9vh, 104px);
-  }
-}
-@media (max-height: 500px) {
-  .jp-legacy-map .maplibregl-ctrl-bottom-right {
-    bottom: 68px;
+    bottom: clamp(64px, 8vh, 96px);
   }
 }
 .jp-loc-map .maplibregl-ctrl-logo {
@@ -837,4 +828,40 @@ html.jp-lock #home { position: fixed !important; inset: 0 !important; width: 100
   .jp-loc-list li {
     animation: none;
   }
+}
+
+/* Floor Plans → Filter Units: the carpet-area slider — two range inputs on one track; only
+   their handles take the pointer, so either can be dragged where they overlap */
+.jp-range input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+  outline: none;
+}
+.jp-range input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: 2px solid var(--color-red-600);
+  background: var(--color-navy-950);
+  cursor: grab;
+}
+.jp-range input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 2px solid var(--color-red-600);
+  background: var(--color-navy-950);
+  cursor: grab;
+}
+.jp-range input:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(238, 49, 52, 0.35);
 }

@@ -34,9 +34,9 @@ const features = (filter) => ({
 // so every move honours it — MapLibre adds a move's own padding on top of the map's
 const padding = () => {
   const { innerWidth: w, innerHeight: h } = window;
-  if (h <= 500) return { top: 80, bottom: 80, left: Math.min(300, w * 0.45), right: 40 };
-  if (w >= 1024) return { top: 140, bottom: 150, left: 470, right: 90 };
-  return { top: 330, bottom: 210, left: 40, right: 40 };
+  if (h <= 500) return { top: 80, bottom: 40, left: Math.min(300, w * 0.45), right: 40 };
+  if (w >= 1024) return { top: 140, bottom: 100, left: 470, right: 90 };
+  return { top: 360, bottom: 150, left: 40, right: 40 };
 };
 
 const fitAll = (map, list, animate) => {
@@ -44,9 +44,42 @@ const fitAll = (map, list, animate) => {
   map.fitBounds(bounds, { padding: 24, maxZoom: 13, duration: animate && !reduceMotion() ? 1400 : 0 });
 };
 
+// The markers' glow breathes slowly: [radius, opacity] at rest and at full breath
+const GLOW = { point: [17, 0.55, 28, 0.95], cluster: [28, 0.5, 42, 0.85], seconds: 2.6 };
+function breathe(map, t) {
+  const k = (1 - Math.cos((t / GLOW.seconds) * 2 * Math.PI)) / 2; // 0 → 1 → 0
+  const at = ([r0, o0, r1, o1]) => [r0 + (r1 - r0) * k, o0 + (o1 - o0) * k];
+  const [pr, po] = at(GLOW.point);
+  const [cr, co] = at(GLOW.cluster);
+  map.setPaintProperty("jp-proj-glow", "circle-radius", pr);
+  map.setPaintProperty("jp-proj-glow", "circle-opacity", po);
+  map.setPaintProperty("jp-proj-cluster-glow", "circle-radius", cr);
+  map.setPaintProperty("jp-proj-cluster-glow", "circle-opacity", co);
+}
+
 function addProjects(map) {
   map.addSource("jp-projects", { type: "geojson", data: features("all"), cluster: true, clusterRadius: CLUSTER_RADIUS, clusterMaxZoom: CLUSTER_MAX_ZOOM });
   const cluster = ["has", "point_count"];
+  // a soft glow under every marker, in its own colour (breathing: see GLOW above)
+  map.addLayer({
+    id: "jp-proj-cluster-glow",
+    type: "circle",
+    source: "jp-projects",
+    filter: cluster,
+    paint: { "circle-color": "#19497c", "circle-radius": 30, "circle-blur": 0.7, "circle-opacity": 0.55 },
+  });
+  map.addLayer({
+    id: "jp-proj-glow",
+    type: "circle",
+    source: "jp-projects",
+    filter: ["!", cluster],
+    paint: {
+      "circle-color": ["match", ["get", "status"], "ongoing", COLOR.ongoing, COLOR.delivered],
+      "circle-radius": 18,
+      "circle-blur": 1,
+      "circle-opacity": 0.6,
+    },
+  });
   map.addLayer({
     id: "jp-proj-cluster",
     type: "circle",
@@ -109,7 +142,7 @@ function addProjects(map) {
   });
 }
 
-export default function LegacyMap({ eyebrow, initialPick = null }) {
+export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const [ready, setReady] = useState(false);
@@ -131,6 +164,7 @@ export default function LegacyMap({ eyebrow, initialPick = null }) {
     });
     map.touchZoomRotate.disableRotation();
     mapRef.current = map;
+    let glowFrame = 0;
 
     map.setPadding(padding());
     map.on("load", () => {
@@ -138,6 +172,13 @@ export default function LegacyMap({ eyebrow, initialPick = null }) {
       addProjects(map);
       fitAll(map, PROJECTS, false);
       setReady(true);
+      if (!reduceMotion()) {
+        const tick = (now) => {
+          breathe(map, now / 1000);
+          glowFrame = requestAnimationFrame(tick);
+        };
+        glowFrame = requestAnimationFrame(tick);
+      }
     });
     // A numbered circle opens straight onto all its projects, each on its own pin: the view
     // fits them all and the pins stop gathering (on a phone a wide group can't spread far
@@ -171,6 +212,7 @@ export default function LegacyMap({ eyebrow, initialPick = null }) {
     window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(glowFrame);
       map.remove();
       mapRef.current = null;
     };
@@ -211,7 +253,7 @@ export default function LegacyMap({ eyebrow, initialPick = null }) {
 
       {/* The cards: one column down the left on wide screens; on phones the title sits at
           the top and the picked project at the bottom */}
-      <div className="max-lg:contents lg:absolute lg:bottom-[clamp(112px,13vh,150px)] lg:left-10 lg:top-[clamp(104px,12vh,140px)] lg:z-10 lg:flex lg:w-[25rem] lg:flex-col lg:gap-3 3xl:left-14">
+      <div className="max-lg:contents lg:absolute lg:bottom-[clamp(64px,8vh,96px)] lg:left-10 lg:top-[clamp(104px,12vh,140px)] lg:z-10 lg:flex lg:w-[25rem] lg:flex-col lg:gap-3 3xl:left-14">
       {/* Title, the numbers, and the filter */}
       <div className="jp-caption-in absolute inset-x-4 top-[84px] z-10 shrink-0 rounded-2xl border border-white/15 bg-navy-950/80 p-4 text-white shadow-premium backdrop-blur-xl sm:inset-x-10 sm:top-[100px] sm:p-5 lg:static lg:p-6 short:inset-x-auto short:left-4 short:top-[84px] short:w-[min(18rem,44%)] short:p-3">
         <span className="flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70 sm:text-[11px] short:hidden">
@@ -252,13 +294,24 @@ export default function LegacyMap({ eyebrow, initialPick = null }) {
             </button>
           ))}
         </div>
+        {/* over to Our Projects, every project's photos */}
+        <button
+          type="button"
+          onClick={onOpenProjects}
+          className="group mt-3 flex w-full items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-white/70 transition-colors hover:text-white sm:text-[11px] lg:mt-4 short:mt-2"
+        >
+          See all projects
+          <svg viewBox="0 0 24 24" className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       </div>
 
       {/* The picked project */}
       {project && (
         <div
           key={project.id}
-          className="jp-caption-in absolute inset-x-4 bottom-[80px] z-10 flex items-center gap-3 rounded-2xl border border-white/15 bg-navy-950/85 p-2.5 text-white shadow-premium backdrop-blur-xl sm:inset-x-auto sm:bottom-[100px] sm:right-10 sm:w-[24rem] lg:relative lg:inset-auto lg:min-h-0 lg:w-auto lg:flex-col lg:items-stretch lg:p-3 short:inset-x-auto short:right-4 short:bottom-[72px] short:w-[min(20rem,48%)]"
+          className="jp-caption-in absolute inset-x-4 bottom-4 z-10 flex items-center gap-3 rounded-2xl border border-white/15 bg-navy-950/85 p-2.5 text-white shadow-premium backdrop-blur-xl sm:inset-x-auto sm:bottom-8 sm:right-10 sm:w-[24rem] lg:relative lg:inset-auto lg:min-h-0 lg:w-auto lg:flex-col lg:items-stretch lg:p-3 short:inset-x-auto short:right-4 short:bottom-4 short:w-[min(20rem,48%)]"
         >
           <img
             src={project.image}
@@ -289,12 +342,6 @@ export default function LegacyMap({ eyebrow, initialPick = null }) {
         </div>
       )}
       </div>
-
-      {!project && (
-        <p className="pointer-events-none absolute inset-x-0 bottom-[84px] z-10 text-center text-[10px] font-semibold uppercase tracking-[0.25em] text-navy-950/60 max-sm:hidden sm:bottom-[104px] lg:bottom-[clamp(116px,14vh,154px)] short:hidden">
-          Tap a pin to see the project
-        </p>
-      )}
     </div>
   );
 }

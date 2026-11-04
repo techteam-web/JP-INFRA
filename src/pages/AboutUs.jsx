@@ -170,15 +170,21 @@ export default function AboutUs({ onBack }) {
       <CurtainStage
         layerARef={layerARef}
         layerBRef={layerBRef}
-        onNext={next}
-        label="Next chapter"
+        label="About JP Infra"
         shade={false}
       />
 
-      {panel === "projects" && <ProjectsPanel eyebrow={counter(step, "Our Projects")} onShowOnMap={showOnMap} />}
+      {panel === "projects" && (
+        <ProjectsPanel eyebrow={counter(step, "Our Projects")} onShowOnMap={showOnMap} onOpenLegacy={() => showOnMap(null)} />
+      )}
       {panel === "legacy" && (
         <Suspense fallback={<div className="absolute inset-0 z-[5] bg-[#e7edf4]" />}>
-          <LegacyMap key={mapPick ?? "all"} eyebrow={counter(step, "Our Legacy")} initialPick={mapPick} />
+          <LegacyMap
+            key={mapPick ?? "all"}
+            eyebrow={counter(step, "Our Legacy")}
+            initialPick={mapPick}
+            onOpenProjects={() => setPanel("projects")}
+          />
         </Suspense>
       )}
 
@@ -216,8 +222,10 @@ export default function AboutUs({ onBack }) {
       </div>
 
       {/* Timeline */}
+      {/* (not over Our Projects / Our Legacy: those have the screen to themselves) */}
       <nav
         data-anim
+        hidden={!!panel}
         aria-label="Chapters"
         {...holdWhileOver}
         className="absolute inset-x-4 bottom-4 z-10 mx-auto flex max-w-[76rem] items-center gap-1 rounded-2xl border border-white/20 bg-navy-950/65 p-1.5 shadow-premium backdrop-blur-xl sm:inset-x-10 sm:bottom-8 lg:inset-x-[clamp(170px,14vw,220px)] lg:bottom-[clamp(28px,4vh,48px)] short:bottom-3"
@@ -226,7 +234,7 @@ export default function AboutUs({ onBack }) {
           type="button"
           onClick={prev}
           aria-label="Previous chapter"
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white transition-colors hover:bg-white/10"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white outline-none transition-colors hover:bg-white/10"
         >
           <IconChevron dir="left" />
         </button>
@@ -247,7 +255,7 @@ export default function AboutUs({ onBack }) {
                   aria-current={on ? "step" : undefined}
                   aria-label={c.short}
                   onClick={() => i !== step && goStep(i)}
-                  className="group w-full px-1.5 py-2 text-left sm:px-2.5"
+                  className="group w-full px-1.5 py-2 text-left outline-none sm:px-2.5"
                 >
                   <span className="relative block h-[2px] overflow-hidden rounded-full bg-white/20">
                     <span
@@ -278,7 +286,7 @@ export default function AboutUs({ onBack }) {
           type="button"
           onClick={next}
           aria-label="Next chapter"
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white transition-colors hover:bg-white/10"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white outline-none transition-colors hover:bg-white/10"
         >
           <IconChevron dir="right" />
         </button>
@@ -290,7 +298,8 @@ export default function AboutUs({ onBack }) {
         className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-6 pt-6 sm:px-10 sm:pt-8 3xl:px-14 3xl:pt-10 4xl:px-16 4xl:pt-12"
       >
         <div className="pointer-events-auto flex items-center gap-3">
-          <BackButton onClick={onBack} />
+          {/* from Our Projects / Our Legacy, back to the story */}
+          <BackButton onClick={panel ? () => setPanel(null) : onBack} />
           <span className="hidden items-center gap-2 rounded-full bg-navy-950/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.3em] text-white backdrop-blur sm:flex 3xl:text-xs 4xl:text-sm">
             <span className="h-px w-6 bg-white/60" />
             About Us

@@ -71,8 +71,7 @@ export default function Gallery({ onBack }) {
           <CurtainStage
             layerARef={layerARef}
             layerBRef={layerBRef}
-            onNext={() => go(1)}
-            label="Next image"
+            label="Gallery photo"
             shade={false}
             fit
           />
