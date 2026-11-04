@@ -106,6 +106,7 @@ export default function Panorama({ onBack }) {
   const rootRef = useRef(null);
   const containerRef = useRef(null);
   const scenesRef = useRef(new Map());
+  const currentSceneIdRef = useRef(null); // the panorama on screen, to carry its angle across
   const [moodId, setMoodId] = useState(MOODS[0].id);
   const mood = MOODS.find((m) => m.id === moodId);
   const [ready, setReady] = useState(false);
@@ -154,6 +155,7 @@ export default function Panorama({ onBack }) {
 
     // no fade-in from the background: the picture (its preview first) is there at once
     map.get(MOODS[0].scene.id)?.switchTo({ transitionDuration: 0 });
+    currentSceneIdRef.current = MOODS[0].scene.id;
     setReady(true);
 
     // all three panoramas open facing the same way (within a few degrees), so one sway fits all
@@ -166,13 +168,27 @@ export default function Panorama({ onBack }) {
       el.removeEventListener("pointerdown", onPointerDown);
       viewer.destroy();
       scenesRef.current = new Map();
+      currentSceneIdRef.current = null;
       setReady(false);
     };
   }, []);
 
-  // switching the time of day crossfades to that panorama
+  // Switching the time of day crossfades to that panorama, from the angle you were already
+  // looking at. Each scene carries its own view, which otherwise sits at the direction that
+  // panorama opens on, so changing the time of day used to swing the camera away. The yaw,
+  // pitch and zoom are copied over first; each view clamps them to its own limits.
   useEffect(() => {
-    if (ready && mood.scene) scenesRef.current.get(mood.scene.id)?.switchTo({ transitionDuration: 1000 });
+    if (!ready || !mood.scene) return;
+    const next = scenesRef.current.get(mood.scene.id);
+    if (!next) return;
+
+    const current = scenesRef.current.get(currentSceneIdRef.current);
+    if (current && current !== next) {
+      const { yaw, pitch, fov } = current.view().parameters();
+      next.view().setParameters({ yaw, pitch, fov });
+    }
+    currentSceneIdRef.current = mood.scene.id;
+    next.switchTo({ transitionDuration: 1000 });
   }, [mood, ready]);
 
   return (
