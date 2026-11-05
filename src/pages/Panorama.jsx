@@ -3,6 +3,7 @@ import gsap from "gsap";
 import Marzipano from "marzipano";
 import { APP_DATA } from "../data/data";
 import { panoLimiter } from "../data/panoLimits";
+import { CENTRE_VIEWS } from "../data/towerViews";
 import BackButton from "../components/BackButton";
 import Logo from "../components/Logo";
 
@@ -19,14 +20,40 @@ const TILE_URL = (sceneId) => `/assets/360pano/tiles/${sceneId}/{z}/{f}/{y}/{x}.
 // fallback level while the sharp tiles stream in, so there's never an empty frame.
 const PREVIEW_URL = (sceneId) => `/assets/360pano/tiles/${sceneId}/preview.jpg`;
 
-// Day / Evening / Twilight: each shows its own panorama. To change one, export its tiles to
-// public/assets/360pano/tiles/, put its scene in data.js and point its `scene` here.
-const sceneNamed = (id) => APP_DATA.scenes.find((s) => s.id === id) ?? null;
+// A terrace panorama from data.js, in the same shape as the floors' (data/towerViews.js).
+// `turn` 0: these are the ones the floors' `turn` is measured against.
+const terraceScene = (id) => {
+  const s = APP_DATA.scenes.find((x) => x.id === id);
+  return s
+    ? {
+        id: s.id,
+        tileUrl: TILE_URL(s.id),
+        previewUrl: PREVIEW_URL(s.id),
+        levels: s.levels,
+        faceSize: s.faceSize,
+        initialViewParameters: s.initialViewParameters,
+        turn: 0,
+      }
+    : null;
+};
+
+// Day / Evening / Twilight, from the terrace: each shows its own panorama. To change one,
+// export its tiles to public/assets/360pano/tiles/, put its scene in data.js and name it here.
 const MOODS = [
-  { id: "day", label: "Day", icon: "sun", scene: sceneNamed("0-dji_0001_terrace-150") },
-  { id: "evening", label: "Evening", icon: "sunset", scene: sceneNamed("2-dji_0071_d") },
-  { id: "twilight", label: "Twilight", icon: "moon", scene: sceneNamed("1-dji_0075_d") },
+  { id: "day", label: "Day", icon: "sun", scene: terraceScene("0-dji_0001_terrace-150") },
+  { id: "evening", label: "Evening", icon: "sunset", scene: terraceScene("2-dji_0071_d") },
+  { id: "twilight", label: "Twilight", icon: "moon", scene: terraceScene("1-dji_0075_d") },
 ];
+
+// Where to look from, top down: the terrace (at any time of day), then every floor shot from
+// the middle of the building (by day)
+const FLOORS = [
+  { key: "T", label: "Terrace" },
+  ...CENTRE_VIEWS.filter((v) => v.floor)
+    .reverse()
+    .map((v) => ({ key: v.key, label: v.label, scene: v.scene })),
+];
+const TERRACE = FLOORS[0].key;
 
 function MoodIcon({ name }) {
   const common = {
@@ -59,26 +86,157 @@ function MoodIcon({ name }) {
     </svg>
   );
 }
-const SCENES = MOODS.map((m) => m.scene).filter(Boolean);
 
-// Warm each panorama's preview as soon as this page is fetched (App prefetches it in the
-// background), so opening the 360° view or switching shows the picture instantly.
-if (typeof window !== "undefined") {
-  for (const scene of SCENES) {
-    const img = new Image();
-    img.src = PREVIEW_URL(scene.id);
-  }
+// Warm the terrace panoramas' previews as soon as this page is fetched (App prefetches it in
+// the background), so opening the 360° view or switching shows the picture instantly. The
+// floors' previews are warmed when the floor list is opened.
+const warmed = new Set();
+const warm = (scene) => {
+  if (!scene || warmed.has(scene.previewUrl) || typeof window === "undefined") return;
+  warmed.add(scene.previewUrl);
+  const img = new Image();
+  img.src = scene.previewUrl;
+};
+for (const m of MOODS) warm(m.scene);
+
+function IconBuilding() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 shrink-0 3xl:h-5 3xl:w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M5 21V5l7-2v18M12 7l7 2v12M3 21h18M8 8h1M8 12h1M8 16h1M15 12h1M15 16h1" />
+    </svg>
+  );
+}
+
+// The floor to look from: a button showing the one on screen, opening the list of floors
+// upwards. Up / down move through the list; Esc or a click outside closes it.
+function FloorMenu({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const buttonRef = useRef(null);
+  const listRef = useRef(null);
+  const current = FLOORS.find((f) => f.key === value) ?? FLOORS[0];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    for (const f of FLOORS) warm(f.scene);
+    listRef.current?.querySelector('[aria-checked="true"]')?.focus();
+    const onDown = (e) => {
+      if (!rootRef.current?.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      buttonRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const onListKey = (e) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const items = [...listRef.current.querySelectorAll('[role="menuitemradio"]')];
+    const i = items.indexOf(document.activeElement);
+    items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
+  };
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`View from: ${current.label}`}
+        onClick={() => setOpen((o) => !o)}
+        style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+        className="btn-fill flex items-center gap-3 rounded-xl py-2 pl-3.5 pr-3 text-white transition-transform active:scale-95 short:py-1.5 3xl:py-2.5 3xl:pl-4"
+      >
+        <span className="text-red-500">
+          <IconBuilding />
+        </span>
+        <span className="flex min-w-[6.5rem] flex-col items-start text-left leading-none 3xl:min-w-[8rem]">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.26em] text-white/55 3xl:text-[10px]">View from</span>
+          <span className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] sm:text-xs 3xl:text-sm">{current.label}</span>
+        </span>
+        <svg viewBox="0 0 24 24" className={`h-4 w-4 transition-transform duration-200 ${open ? "" : "rotate-180"}`} aria-hidden="true">
+          <path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className={`absolute left-0 top-full mt-2 ${OPENS_UP}`}>
+          <div
+            ref={listRef}
+            role="menu"
+            aria-label="View from"
+            onKeyDown={onListKey}
+            className="jp-caption-in grid w-max gap-0.5 rounded-2xl border border-white/20 bg-navy-950/90 p-1.5 shadow-premium backdrop-blur-xl [animation-duration:0.35s] [@media(min-height:501px)_and_(max-height:720px)]:grid-cols-2 short:grid-cols-3"
+          >
+            <span className="col-span-full flex items-center gap-2 px-3 pb-1.5 pt-1 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/50">
+              <span className="h-px w-5 bg-red-600" />
+              View from the
+            </span>
+            {FLOORS.map((f) => {
+              const on = f.key === value;
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={on}
+                  onClick={() => {
+                    onChange(f.key);
+                    setOpen(false);
+                    buttonRef.current?.focus();
+                  }}
+                  className={`flex min-w-[9.5rem] items-center justify-between gap-4 rounded-xl px-3.5 py-2 text-left text-[11px] font-bold uppercase tracking-[0.16em] outline-none transition-colors [@media(max-height:720px)]:min-w-[7.5rem] short:py-1.5 ${
+                    on
+                      ? "bg-red-600 text-white"
+                      : "text-white/80 hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
+                  }`}
+                >
+                  {f.label}
+                  {f.key === TERRACE && (
+                    <span className={`text-[8px] tracking-[0.18em] [@media(max-height:720px)]:hidden ${on ? "text-white/75" : "text-white/40"}`}>Day to Twilight</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Panorama({ onBack }) {
   const rootRef = useRef(null);
   const containerRef = useRef(null);
-  const scenesRef = useRef(new Map());
-  const currentSceneIdRef = useRef(null); // the panorama on screen, to carry its angle across
+  const viewerRef = useRef(null);
+  const scenesRef = useRef(new Map()); // the Marzipano scenes made so far, by id
+  const currentRef = useRef(null); // the panorama on screen ({ data, scene }), to carry its angle across
   const [moodId, setMoodId] = useState(MOODS[0].id);
-  const mood = MOODS.find((m) => m.id === moodId);
+  const [floorKey, setFloorKey] = useState(TERRACE);
   const [ready, setReady] = useState(false);
   const [interacted, setInteracted] = useState(false);
+  const atTerrace = floorKey === TERRACE;
+  const mood = MOODS.find((m) => m.id === moodId);
+  // the terrace shows its time of day; the floors were shot by day
+  const shown = atTerrace ? mood.scene : FLOORS.find((f) => f.key === floorKey).scene;
 
   useEffect(() => {
     const els = rootRef.current?.querySelectorAll("[data-anim]");
@@ -97,24 +255,10 @@ export default function Panorama({ onBack }) {
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el || SCENES.length === 0) return undefined;
+    if (!el) return undefined;
 
     const viewer = new Marzipano.Viewer(el, { controls: { mouseViewMode: "drag" } });
-
-    const map = new Map();
-    for (const scene of SCENES) {
-      const view = new Marzipano.RectilinearView(scene.initialViewParameters, panoLimiter(scene));
-      const source = Marzipano.ImageUrlSource.fromString(TILE_URL(scene.id), {
-        cubeMapPreviewUrl: PREVIEW_URL(scene.id),
-      });
-      const geometry = new Marzipano.CubeGeometry(scene.levels);
-      map.set(scene.id, viewer.createScene({ source, geometry, view, pinFirstLevel: true }));
-    }
-    scenesRef.current = map;
-
-    // no fade-in from the background: the picture (its preview first) is there at once
-    map.get(MOODS[0].scene.id)?.switchTo({ transitionDuration: 0 });
-    currentSceneIdRef.current = MOODS[0].scene.id;
+    viewerRef.current = viewer;
     setReady(true);
 
     // left idle, the view turns slowly on and on
@@ -126,29 +270,37 @@ export default function Panorama({ onBack }) {
     return () => {
       el.removeEventListener("pointerdown", onPointerDown);
       viewer.destroy();
+      viewerRef.current = null;
       scenesRef.current = new Map();
-      currentSceneIdRef.current = null;
+      currentRef.current = null;
       setReady(false);
     };
   }, []);
 
-  // Switching the time of day crossfades to that panorama, from the angle you were already
-  // looking at. Each scene carries its own view, which otherwise sits at the direction that
-  // panorama opens on, so changing the time of day used to swing the camera away. The yaw,
-  // pitch and zoom are copied over first; each view clamps them to its own limits.
+  // Switching the floor or the time of day crossfades to that panorama, from the angle you
+  // were already looking at: the yaw, pitch and zoom are copied over first (each view clamps
+  // them to its own limits), the yaw turned by the two panoramas' `turn` so the same
+  // direction stays in front. Each panorama is set up the first time it's shown.
   useEffect(() => {
-    if (!ready || !mood.scene) return;
-    const next = scenesRef.current.get(mood.scene.id);
-    if (!next) return;
-
-    const current = scenesRef.current.get(currentSceneIdRef.current);
-    if (current && current !== next) {
-      const { yaw, pitch, fov } = current.view().parameters();
-      next.view().setParameters({ yaw, pitch, fov });
+    const viewer = viewerRef.current;
+    if (!ready || !viewer || !shown) return;
+    let next = scenesRef.current.get(shown.id);
+    if (!next) {
+      const view = new Marzipano.RectilinearView(shown.initialViewParameters, panoLimiter(shown));
+      const source = Marzipano.ImageUrlSource.fromString(shown.tileUrl, { cubeMapPreviewUrl: shown.previewUrl });
+      next = viewer.createScene({ source, geometry: new Marzipano.CubeGeometry(shown.levels), view, pinFirstLevel: true });
+      scenesRef.current.set(shown.id, next);
     }
-    currentSceneIdRef.current = mood.scene.id;
-    next.switchTo({ transitionDuration: 1000 });
-  }, [mood, ready]);
+    const current = currentRef.current;
+    if (current?.scene === next) return;
+    if (current) {
+      const { yaw, pitch, fov } = current.scene.view().parameters();
+      next.view().setParameters({ yaw: yaw - current.data.turn + shown.turn, pitch, fov });
+    }
+    currentRef.current = { data: shown, scene: next };
+    // no fade-in from the background at first: the picture (its preview first) is there at once
+    next.switchTo({ transitionDuration: current ? 1000 : 0 });
+  }, [shown, ready]);
 
   return (
     <div ref={rootRef} className="relative h-[100svh] w-full overflow-hidden bg-[#0a0908]">
@@ -177,36 +329,59 @@ export default function Panorama({ onBack }) {
         </span>
       </div>
 
+      {/* The floor to look from: bottom left on large screens, its list opening upwards; on
+          phones and tablets, top left under the back button (beside it on phones turned
+          sideways), its list opening downwards, clear of the time of day */}
+      <div className={`absolute left-6 top-[5.5rem] z-20 sm:left-10 sm:top-[6.75rem] short:left-[6.25rem] short:top-8 ${AT_BOTTOM_LEFT}`} data-anim>
+        <div className="rounded-2xl border border-white/20 bg-navy-950/80 p-1.5 shadow-premium backdrop-blur-xl short:p-1 3xl:p-2">
+          <FloorMenu value={floorKey} onChange={setFloorKey} />
+        </div>
+      </div>
+
       {/* Time of day */}
-      <div className="absolute inset-x-0 bottom-6 z-10 flex justify-center px-4 sm:bottom-10 3xl:bottom-12 4xl:bottom-14" data-anim>
-        <div
-          role="group"
-          aria-label="Time of day"
-          className="flex max-w-full items-center gap-1 rounded-2xl border border-white/20 bg-navy-950/80 p-1.5 shadow-premium backdrop-blur-xl 3xl:gap-2 3xl:p-2"
-        >
-          {MOODS.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              aria-pressed={m.id === moodId}
-              disabled={!m.scene}
-              title={m.scene ? undefined : "Coming soon"}
-              onClick={() => setMoodId(m.id)}
-              style={m.id === moodId || !m.scene ? undefined : { "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-              className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.16em] transition-[color,background-color,transform] duration-200 sm:px-5 sm:text-xs 3xl:px-6 3xl:py-3 3xl:text-sm 4xl:text-base ${
-                m.id === moodId
-                  ? "bg-red-600 text-white shadow-[0_6px_18px_-6px_rgba(238,49,52,0.7)] active:scale-95"
-                  : m.scene
-                    ? "btn-fill text-white active:scale-95"
-                    : "cursor-not-allowed text-white/40"
-              }`}
-            >
-              <MoodIcon name={m.icon} />
-              {m.label}
-            </button>
-          ))}
+      <div className="absolute inset-x-0 bottom-6 z-10 flex justify-center px-4 sm:bottom-10 short:bottom-3 3xl:bottom-12 4xl:bottom-14" data-anim>
+        <div>
+          <div
+            role="group"
+            aria-label="Time of day"
+            className="flex max-w-full items-center gap-1 rounded-2xl border border-white/20 bg-navy-950/80 p-1.5 shadow-premium backdrop-blur-xl short:p-1 3xl:gap-2 3xl:p-2"
+          >
+            {MOODS.map((m) => {
+              const on = atTerrace ? m.id === moodId : m.id === "day";
+              // away from the terrace there is only the day's view
+              const usable = !!m.scene && (atTerrace || m.id === "day");
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-pressed={on}
+                  disabled={!usable}
+                  title={!m.scene ? "Coming soon" : usable ? undefined : "From the terrace only"}
+                  onClick={() => setMoodId(m.id)}
+                  style={on || !usable ? undefined : { "--btn-fill-color": "rgba(255,255,255,0.14)" }}
+                  className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.16em] transition-[color,background-color,transform] duration-200 sm:px-5 sm:text-xs short:px-3 short:py-2 3xl:px-6 3xl:py-3 3xl:text-sm 4xl:text-base ${
+                    on
+                      ? "bg-red-600 text-white shadow-[0_6px_18px_-6px_rgba(238,49,52,0.7)] active:scale-95"
+                      : usable
+                        ? "btn-fill text-white active:scale-95"
+                        : "cursor-not-allowed text-white/35"
+                  }`}
+                >
+                  <MoodIcon name={m.icon} />
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+// Large screens (lg and wider, and taller than a phone turned sideways): the floor picker sits
+// bottom left, level with the time of day, and its list opens upwards.
+const AT_BOTTOM_LEFT =
+  "[@media(min-width:1024px)_and_(min-height:501px)]:top-auto [@media(min-width:1024px)_and_(min-height:501px)]:bottom-10 3xl:bottom-12 3xl:left-14 4xl:bottom-14 4xl:left-16";
+const OPENS_UP =
+  "[@media(min-width:1024px)_and_(min-height:501px)]:top-auto [@media(min-width:1024px)_and_(min-height:501px)]:bottom-full [@media(min-width:1024px)_and_(min-height:501px)]:mt-0 [@media(min-width:1024px)_and_(min-height:501px)]:mb-3";

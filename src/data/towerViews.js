@@ -80,6 +80,45 @@ export const TOWER_VIEWS = Object.fromEntries(
   ]),
 );
 
+// The view from the middle of the building (the 360° View page): the same heights, shot from
+// the centre, in public/pano/building center/tiles/. They face the opposite way from the 360°
+// page's terrace panoramas (data/data.js), so `turn` (half a turn) is the yaw in these that
+// looks the same way as yaw 0 does in those: the page adds it to carry the angle across.
+const CENTRE_SHOTS = [
+  [8, "0-dji_0042_gr-8th-floor_399m"],
+  [11, "13-dji_0041_11th-floor_486m"],
+  [14, "12-dji_0040_14th-floor_573m"],
+  [17, "11-dji_0039_17th-floor_66m"],
+  [20, "10-dji_0038_20th-floor_747m"],
+  [23, "9-dji_0037_23rd-floor_834m"],
+  [26, "8-dji_0036_26th-floor_921m"],
+  [29, "7-dji_0035_29th-floor_1008m"],
+  [32, "6-dji_0034_32nd-floor-1095m"],
+  [35, "5-dji_0033_35th-floor_1182m"],
+  [38, "4-dji_0032_38th-floor_1269m"],
+  [41, "3-dji_0031_41st-floor_1356m"],
+  [44, "2-dji_0030_44th-floor_1443m"],
+  [0, "1-dji_0029_terrace-1501m"],
+];
+const CENTRE_DIR = encodeURI("/pano/building center/tiles");
+export const CENTRE_TURN = Math.PI;
+
+// From the lowest: { key, floor, label, scene } (the scene as in TOWER_VIEWS, plus `turn`)
+export const CENTRE_VIEWS = CENTRE_SHOTS.map(([floor, id]) => ({
+  key: `C-${floor || "T"}`,
+  floor,
+  label: floor ? `${ordinal(floor)} floor` : "Terrace",
+  scene: {
+    id: `centre/${id}`,
+    tileUrl: `${CENTRE_DIR}/${id}/{z}/{f}/{y}/{x}.jpg`,
+    previewUrl: `${CENTRE_DIR}/${id}/preview.jpg`,
+    levels: LEVELS,
+    faceSize: 4096,
+    initialViewParameters: OPEN,
+    turn: CENTRE_TURN,
+  },
+}));
+
 // The view to show for a floor: the nearest one captured at or below it (the 8th floor's
 // for anything lower)
 export function viewFor(wing, floor) {
