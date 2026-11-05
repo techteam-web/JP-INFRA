@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Marzipano from "marzipano";
 import { APP_DATA } from "../data/data";
-import { panoLimiter, yawRange } from "../data/panoLimits";
+import { panoLimiter } from "../data/panoLimits";
 import BackButton from "../components/BackButton";
 import Logo from "../components/Logo";
 
@@ -11,25 +11,9 @@ const AUTOROTATE_YAW_SPEED = 0.05;
 // How far the view turns (left / right, up / down) is set in data/panoLimits.js, shared with
 // the Floor Plans' Compare Views.
 
-// Idle drift: the view sways slowly from side to side within the turning range, easing off
-// and turning back at each end.
-const sway = (min, max) => () => {
-  let last = null;
-  let dir = 1;
-  let speed = 0;
-  return (params, now) => {
-    const dt = last === null ? 0 : (now - last) / 1000;
-    last = now;
-    speed = Math.min(speed + dt * 0.01, AUTOROTATE_YAW_SPEED);
-    params.yaw += dir * speed * dt;
-    if ((dir > 0 && params.yaw >= max) || (dir < 0 && params.yaw <= min)) {
-      params.yaw = dir > 0 ? max : min;
-      dir = -dir;
-      speed = 0;
-    }
-    return params;
-  };
-};
+// Idle drift: with nothing stopping the view left or right, it simply keeps turning.
+const drift = Marzipano.autorotate({ yawSpeed: AUTOROTATE_YAW_SPEED, targetPitch: 0, targetFov: null });
+
 const TILE_URL = (sceneId) => `/assets/360pano/tiles/${sceneId}/{z}/{f}/{y}/{x}.jpg`;
 // Low-res cube strip the tiler exports per scene: the viewer shows it at once as the
 // fallback level while the sharp tiles stream in, so there's never an empty frame.
@@ -133,8 +117,8 @@ export default function Panorama({ onBack }) {
     currentSceneIdRef.current = MOODS[0].scene.id;
     setReady(true);
 
-    // all three panoramas open facing the same way (within a few degrees), so one sway fits all
-    viewer.setIdleMovement(IDLE_MS, sway(...yawRange(MOODS[0].scene)));
+    // left idle, the view turns slowly on and on
+    viewer.setIdleMovement(IDLE_MS, drift);
 
     const onPointerDown = () => setInteracted(true);
     el.addEventListener("pointerdown", onPointerDown);

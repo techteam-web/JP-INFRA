@@ -4,9 +4,8 @@ import Marzipano from "marzipano";
 
 const DEG = Math.PI / 180;
 
-// Left and right: how far the view turns in all, half to each side of the direction each
-// panorama opens on (360 = all the way round).
-export const YAW_RANGE = 360 * DEG;
+// Left and right: not limited at all. The view turns the whole way round and keeps going,
+// wrapping past the direction it opened on rather than stopping dead against a wall.
 // Up and down: the top and bottom of the picture never pass these, so the view can't tip
 // up into the empty sky or down to the spot under the camera.
 export const TOP_EDGE = 80 * DEG;
@@ -18,18 +17,12 @@ const limitEdges = (params) => {
   return params;
 };
 
-// the range a panorama may turn within, around the direction it opens on
-export const yawRange = (scene) => {
-  const mid = scene.initialViewParameters.yaw;
-  return [mid - YAW_RANGE / 2, mid + YAW_RANGE / 2];
-};
-
 // A scene's view limiter: its tiles' resolution, zoom (fully out, the picture spans exactly
-// top edge to bottom edge), the turning range, and the top and bottom edges.
+// top edge to bottom edge), and the top and bottom edges. Nothing limits the yaw, so turning
+// left or right never hits a stop.
 export const panoLimiter = (scene) =>
   Marzipano.util.compose(
     Marzipano.RectilinearView.limit.resolution(scene.faceSize),
     Marzipano.RectilinearView.limit.vfov(24 * DEG, TOP_EDGE - BOTTOM_EDGE),
-    Marzipano.RectilinearView.limit.yaw(...yawRange(scene)),
     limitEdges,
   );

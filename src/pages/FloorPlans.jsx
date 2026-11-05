@@ -3,72 +3,93 @@ import gsap from "gsap";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
 import FloorPlanStudio from "../components/FloorPlanStudio";
-import renderImg from "../assets/building svg/CAM_01.png";
 import { PLAN_FLOOR } from "../data/units";
-import floorsSvg from "../assets/jp_infra_SVG/Asset 1.svg?raw";
+import { ALL, BUILDINGS, OFFSET, PLANS_TOWER, TOP, VIEW_H, VIEW_W, towerImg as renderImg } from "../data/tower";
 
-// The render and its floor outlines share one 1672 × 941 space.
-const VIEW_W = 1672;
-const VIEW_H = 941;
-
-// The outlines were drawn on their own sheet; this puts them back over the render.
-const OFFSET = [552.03, 119.63];
-
-// Every floor of the two towers, from the SVG. Each tower is drawn in three sections (groups
-// B, B1, B2 and A2, A1, A); a floor is its outline in every section, so choosing one lights
-// the same floor across all three. `anchor` is the floor's right-hand tip, where the card
-// points to. The SVG's group letters are the other way round from the towers' real names,
-// so TOWER_OF swaps them: the "B" groups are Tower A and the "A" groups Tower B.
-const TOWER_OF = { A: "B", B: "A" };
-const BUILDINGS = (() => {
-  const doc = new DOMParser().parseFromString(floorsSvg, "image/svg+xml");
-  const sections = {};
-  for (const poly of doc.querySelectorAll("polygon")) {
-    const points = poly.getAttribute("points").trim();
-    const v = points.split(/[\s,]+/).map(Number);
-    const xy = [];
-    for (let i = 0; i < v.length; i += 2) xy.push([v[i] + OFFSET[0], v[i + 1] + OFFSET[1]]);
-    const y = xy.reduce((t, [, py]) => t + py, 0) / xy.length;
-    (sections[poly.parentElement.id] ??= []).push({ n: Number(poly.getAttribute("data-name")) || 0, points, xy, y });
-  }
-  const out = {};
-  for (const [id, list] of Object.entries(sections)) {
-    // sections A and A1 come without floor numbers: they're numbered from the ground up
-    if (list.some((o) => !o.n)) list.sort((p, q) => q.y - p.y).forEach((o, i) => (o.n = i + 1));
-    const b = TOWER_OF[id[0]] ?? id[0];
-    for (const { n, points, xy } of list) {
-      const floor = ((out[b] ??= [])[n - 1] ??= { b, n, pieces: [], xy: [] });
-      floor.pieces.push(points);
-      floor.xy.push(...xy);
-    }
-  }
-  // each floor's tips, where its card's connector starts: `anchor` on the right, `leftTip`
-  // on the left (the card sits on the side of the building the floor is on)
-  const tipAt = (xy, x) => {
-    const tip = xy.filter(([px]) => Math.abs(px - x) < 1);
-    return [x, tip.reduce((t, [, y]) => t + y, 0) / tip.length];
-  };
-  for (const floors of Object.values(out)) {
-    for (const f of floors) {
-      f.anchor = tipAt(f.xy, Math.max(...f.xy.map(([x]) => x)));
-      f.leftTip = tipAt(f.xy, Math.min(...f.xy.map(([x]) => x)));
-    }
-  }
-  return out;
-})();
-const ORDER = Object.keys(BUILDINGS).sort(); // A, B
-const ALL = ORDER.flatMap((b) => BUILDINGS[b]);
-const TOP = BUILDINGS[ORDER[0]].length;
 const same = (x, y) => !!x && !!y && x.b === y.b && x.n === y.n;
 
-// The floor plans (the Floor Plan screen, data/units.js) are Tower A's: wings A1 and A2,
-// as drawn for the 8th floor. Tower B's plans aren't in yet: its Floor Plan button shows locked.
-const PLANS_TOWER = "A";
+// Tower B's plans aren't in yet: its Floor Plan button shows locked.
 // The floors' 360° views aren't uploaded yet: until then the card's 360° button shows locked.
 const FLOOR_360_READY = false;
 
 const pad = (n) => String(n).padStart(2, "0");
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// The height gauge beside the floor number, which is also how you pick a floor: the tower
+// ground to top, ticked every ten floors, with this floor marked. Drag the marker or press
+// anywhere on the rail to go to that floor; arrow keys step, Home and End reach the ends.
+// It reports every floor it passes through as a drag (`onDrag`) and the one it is let go on
+// as a drop (`onDrop`), so the card can stay put while the finger is down.
+function FloorRail({ n, onDrag, onDrop }) {
+  const railRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const floorAt = (clientY) => {
+    const r = railRef.current.getBoundingClientRect();
+    const up = 1 - (clientY - r.top) / r.height; // the rail runs bottom (floor 1) to top
+    return Math.round(1 + Math.min(1, Math.max(0, up)) * (TOP - 1));
+  };
+  const onKeyDown = (e) => {
+    const to =
+      e.key === "ArrowUp" || e.key === "ArrowRight" ? n + 1
+      : e.key === "ArrowDown" || e.key === "ArrowLeft" ? n - 1
+      : e.key === "PageUp" ? n + 10
+      : e.key === "PageDown" ? n - 10
+      : e.key === "Home" ? 1
+      : e.key === "End" ? TOP
+      : null;
+    if (to === null) return;
+    e.preventDefault();
+    e.stopPropagation(); // the page's own arrow keys would otherwise move the floor twice
+    onDrop(to);
+  };
+  const pct = ((n - 1) / (TOP - 1)) * 100;
+
+  return (
+    <div
+      ref={railRef}
+      role="slider"
+      tabIndex={0}
+      aria-label="Floor"
+      aria-valuemin={1}
+      aria-valuemax={TOP}
+      aria-valuenow={n}
+      aria-valuetext={`Floor ${pad(n)}`}
+      aria-orientation="vertical"
+      onKeyDown={onKeyDown}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setDragging(true);
+        onDrag(floorAt(e.clientY));
+      }}
+      onPointerMove={(e) => dragging && onDrag(floorAt(e.clientY))}
+      onPointerUp={(e) => {
+        setDragging(false);
+        onDrop(floorAt(e.clientY));
+      }}
+      onPointerCancel={() => setDragging(false)}
+      className={`group relative -mx-2 min-h-[6.5rem] w-7 flex-1 touch-none select-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-red-500/70 short:min-h-[3.5rem] ${
+        dragging ? "cursor-grabbing" : "cursor-grab"
+      }`}
+    >
+      {/* the track, the floors below this one, the ten-floor ticks and the marker */}
+      <span aria-hidden="true" className="absolute inset-y-1 left-1/2 w-1.5 -translate-x-1/2 rounded-full bg-white/12">
+        {Array.from({ length: Math.floor(TOP / 10) }, (_, i) => (
+          <span key={i} className="absolute -left-1 w-3.5 border-t border-white/20" style={{ bottom: `${(((i + 1) * 10) / TOP) * 100}%` }} />
+        ))}
+        <span
+          className="absolute inset-x-0 bottom-0 rounded-full bg-gradient-to-t from-red-600/40 to-red-600 shadow-[0_0_12px_-2px_rgba(238,49,52,0.8)]"
+          style={{ height: `${pct}%` }}
+        />
+        <span
+          className={`absolute left-1/2 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-white bg-red-600 shadow-[0_0_10px_-1px_rgba(238,49,52,0.9)] transition-[height,width] ${
+            dragging ? "h-4 w-4" : "h-3 w-3 group-hover:h-4 group-hover:w-4"
+          }`}
+          style={{ bottom: `${pct}%` }}
+        />
+      </span>
+    </div>
+  );
+}
 
 function IconLock({ className = "h-3 w-3" }) {
   return (
@@ -96,9 +117,15 @@ export default function FloorPlans({ onBack, onOpen360 }) {
   const stageRef = useRef(null);
   const lightsRef = useRef(null);
   const sweepRef = useRef(null);
+  // the latest `step`, so the arrow keys move floors exactly as the card's buttons do
+  const stepRef = useRef(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState(null);
   const [selected, setSelected] = useState(null);
+  // The floor the open card's position is measured from. Stepping floors leaves it alone, so
+  // the card holds still and its step buttons stay under the pointer; it used to re-centre on
+  // every floor, which slid the buttons away and made all but the first click miss.
+  const [anchorN, setAnchorN] = useState(null);
   // the Floor Plan screen (plan, filters, comparisons): null, or the tab it opens on
   const [studio, setStudio] = useState(null);
   const studioOpen = useRef(false);
@@ -148,9 +175,9 @@ export default function FloorPlans({ onBack, onOpen360 }) {
   const choose = (f) => {
     sweepRef.current?.progress(1); // a choice made while it's still climbing ends it at once
     setSelected(f ? { b: f.b, n: f.n } : null);
+    setAnchorN(f ? f.n : null); // a floor chosen on the building always re-places the card
     setStudio(null);
   };
-  const step = (by) => choose({ b: selected.b, n: Math.min(TOP, Math.max(1, selected.n + by)) });
 
   // Up / down move between floors (not while the Floor Plan screen is open); Esc closes
   // that screen, then the selection
@@ -159,10 +186,10 @@ export default function FloorPlans({ onBack, onOpen360 }) {
       if (studioOpen.current && e.key !== "Escape") return;
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelected((s) => s && { b: s.b, n: Math.min(TOP, s.n + 1) });
+        stepRef.current?.(1);
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelected((s) => s && { b: s.b, n: Math.max(1, s.n - 1) });
+        stepRef.current?.(-1);
       } else if (e.key === "Escape") {
         if (studioOpen.current) setStudio(null);
         else setSelected(null);
@@ -185,7 +212,26 @@ export default function FloorPlans({ onBack, onOpen360 }) {
   const CARD_H = 330; // about its height, to keep it on screen
   const GAP = 48;
   const cardLeft = onLeft ? Math.max(24, ax - GAP - CARD_W) : Math.min(ax + GAP, size.w - CARD_W - 24);
-  const cardTop = Math.min(Math.max(ay - CARD_H / 2, 100), size.h - CARD_H - 96);
+  // the card is placed from its anchor floor, not the floor showing, so stepping holds it still
+  const tipY = (n) => {
+    const f = BUILDINGS[selected.b][n - 1];
+    return toScreen(onLeft ? f.leftTip : f.anchor)[1];
+  };
+  const cardTop = Math.min(Math.max((selected && anchorN ? tipY(anchorN) : ay) - CARD_H / 2, 100), size.h - CARD_H - 96);
+  // Moving the floor moves the floor, not the card — until the floor has climbed past the
+  // card's edge, when the card follows it and takes a new anchor. `hold` keeps the card
+  // still no matter what, for while the rail is being dragged: the card must not slide out
+  // from under the finger mid-drag.
+  const setFloor = (n, hold = false) => {
+    if (!selected) return;
+    const next = Math.min(TOP, Math.max(1, n));
+    setSelected({ b: selected.b, n: next });
+    if (!hold && (!anchorN || Math.abs(tipY(next) - tipY(anchorN)) > CARD_H / 2 - 48)) setAnchorN(next);
+  };
+  const step = (by) => selected && setFloor(selected.n + by);
+  useEffect(() => {
+    stepRef.current = step;
+  });
   // the connector runs from the floor's tip to the card's near edge
   const line = onLeft ? { left: cardLeft + CARD_W, width: Math.max(ax - cardLeft - CARD_W, 0) } : { left: ax, width: Math.max(cardLeft - ax, 0) };
   // phones in landscape: too short to sit the card beside the floor — a compact card pinned
@@ -293,28 +339,36 @@ export default function FloorPlans({ onBack, onOpen360 }) {
         <>
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute z-10 h-px bg-white/70 max-md:hidden short:hidden"
+            className="pointer-events-none absolute z-10 h-px bg-white/70 transition-[top,left,width] duration-300 ease-out max-md:hidden motion-reduce:transition-none short:hidden"
             style={{ ...line, top: ay }}
           />
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute z-10 -ml-1 -mt-1 h-2 w-2 rounded-full bg-white shadow-[0_0_12px_3px_rgba(255,232,194,0.8)] max-md:hidden short:hidden"
+            className="pointer-events-none absolute z-10 -ml-1 -mt-1 h-2 w-2 rounded-full bg-white shadow-[0_0_12px_3px_rgba(255,232,194,0.8)] transition-[top,left] duration-300 ease-out max-md:hidden motion-reduce:transition-none short:hidden"
             style={{ left: ax, top: ay }}
           />
           <div
-            key={`${floor.b}${floor.n}`}
+            // keyed on the tower, not the floor: stepping up and down used to rebuild the card,
+            // which replayed its entrance animation and slid the step buttons out from under the
+            // pointer, so a second click within that 0.7s landed on nothing. Now it stays put and
+            // glides to the new floor's height instead.
+            key={floor.b}
             role="dialog"
             aria-label={`Tower ${floor.b}, floor ${floor.n}`}
             onClick={(e) => e.stopPropagation()}
             // on phones: a sheet at the top when the floor is low on screen, else at the bottom
-            className={`jp-caption-in absolute z-20 overflow-hidden rounded-2xl border border-white/15 bg-navy-950/80 text-white shadow-premium backdrop-blur-xl ${
+            className={`jp-caption-in absolute z-20 overflow-hidden rounded-2xl border border-white/15 bg-navy-950/80 text-white shadow-premium backdrop-blur-xl transition-[top,left,right] duration-300 ease-out motion-reduce:transition-none ${
               short ? "" : `max-md:inset-x-4 md:w-[320px] ${ay > size.h / 2 ? "max-md:top-24" : "max-md:bottom-24"}`
             }`}
             style={cardStyle}
           >
-            {/* brand-red hairline along the top */}
-            <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-red-600" />
-            <div className="p-5 short:p-3.5">
+            {/* the card's own light: a red edge that fades at the ends, a sheen off the top-left
+                corner and a soft red bloom above it, so it reads as lit rather than boxed in */}
+            <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-red-600/40 via-red-600 to-red-600/40" />
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.07] via-transparent to-transparent" />
+            <span aria-hidden="true" className="pointer-events-none absolute -top-20 left-1/2 h-32 w-56 -translate-x-1/2 rounded-full bg-red-600/25 blur-3xl" />
+
+            <div className="relative p-5 short:p-3.5">
               {/* the tower, and close */}
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/75">
@@ -334,59 +388,55 @@ export default function FloorPlans({ onBack, onOpen360 }) {
               </div>
 
               {/* the floor: its number, where it sits in the tower, and steps up and down */}
-              <div className="mt-1 flex items-stretch gap-4">
+              <div className="mt-2 flex items-stretch gap-4 short:mt-1">
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/45">Floor</span>
                   <div className="flex items-end gap-2">
-                    <span className="font-display text-[5.25rem] leading-[0.85] short:text-6xl">{pad(floor.n)}</span>
-                    <span className="mb-1 text-xs font-semibold tracking-widest text-white/40">/ {TOP}</span>
+                    <span className="font-display text-[5.25rem] leading-[0.82] short:text-6xl">{pad(floor.n)}</span>
+                    <span className="mb-1.5 text-xs font-semibold tracking-widest text-white/40">/ {TOP}</span>
                   </div>
-                  <span className="mt-2 block text-[10px] font-bold uppercase tracking-[0.25em] text-red-500 short:mt-1">{level}</span>
+                  <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-600/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.22em] text-red-500 short:mt-1">
+                    <span className="h-1 w-1 rounded-full bg-red-600" />
+                    {level}
+                  </span>
                 </div>
-                <div className="flex flex-col items-center gap-1.5">
+                <div className="flex flex-col items-center gap-2">
                   <button
                     type="button"
                     aria-label="Floor above"
                     onClick={() => step(1)}
                     disabled={floor.n === TOP}
-                    className="grid h-7 w-7 place-items-center rounded-full border border-white/20 transition-colors hover:bg-white/10 disabled:opacity-30"
+                    className="grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-white/[0.04] transition-colors hover:border-white/45 hover:bg-white/10 disabled:opacity-25"
                   >
                     <IconArrow dir="up" className="h-3.5 w-3.5" />
                   </button>
-                  {/* height gauge: the tower, ground to top, with this floor marked */}
-                  <span className="relative min-h-10 w-1 flex-1 rounded-full bg-white/15" aria-hidden="true">
-                    <span className="absolute inset-x-0 bottom-0 rounded-full bg-red-600/70" style={{ height: `${(floor.n / TOP) * 100}%` }} />
-                    <span
-                      className="absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-white bg-red-600"
-                      style={{ bottom: `${(floor.n / TOP) * 100}%` }}
-                    />
-                  </span>
+                  <FloorRail n={floor.n} onDrag={(n) => setFloor(n, true)} onDrop={(n) => setFloor(n)} />
                   <button
                     type="button"
                     aria-label="Floor below"
                     onClick={() => step(-1)}
                     disabled={floor.n === 1}
-                    className="grid h-7 w-7 place-items-center rounded-full border border-white/20 transition-colors hover:bg-white/10 disabled:opacity-30"
+                    className="grid h-8 w-8 place-items-center rounded-full border border-white/20 bg-white/[0.04] transition-colors hover:border-white/45 hover:bg-white/10 disabled:opacity-25"
                   >
                     <IconArrow dir="down" className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
 
-              {/* what's on the floor */}
-              <dl className="mt-4 grid grid-cols-2 border-y border-white/10 short:hidden">
-                <div className="py-2.5 pr-3">
+              {/* what's on the floor, as two tiles split by a hairline */}
+              <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10 short:hidden">
+                <div className="bg-navy-950/85 px-3 py-2.5">
                   <dt className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/45">Wings</dt>
-                  <dd className="mt-0.5 text-sm font-semibold">{floor.b === PLANS_TOWER ? "A1 · A2" : "—"}</dd>
+                  <dd className="mt-1 text-sm font-semibold">{floor.b === PLANS_TOWER ? "A1 · A2" : "—"}</dd>
                 </div>
-                <div className="border-l border-white/10 py-2.5 pl-3">
+                <div className="bg-navy-950/85 px-3 py-2.5">
                   <dt className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/45">Plan</dt>
-                  <dd className="mt-0.5 text-sm font-semibold">{floor.b === PLANS_TOWER ? `As on Floor ${pad(PLAN_FLOOR)}` : "Coming soon"}</dd>
+                  <dd className="mt-1 text-sm font-semibold">{floor.b === PLANS_TOWER ? `As on Floor ${pad(PLAN_FLOOR)}` : "Coming soon"}</dd>
                 </div>
               </dl>
 
               {/* where to go from here */}
-              <div className="mt-4 grid grid-cols-[1.2fr_1fr] gap-2 short:mt-2.5">
+              <div className="mt-3.5 grid grid-cols-[1.2fr_1fr] gap-2 short:mt-2.5">
                 {floor.b === PLANS_TOWER ? (
                   <button
                     type="button"
@@ -401,7 +451,7 @@ export default function FloorPlans({ onBack, onOpen360 }) {
                     type="button"
                     disabled
                     title="Coming soon"
-                    className="flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 px-2 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 short:py-2"
+                    className="flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.02] px-2 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 short:py-2"
                   >
                     Floor Plan <IconLock />
                   </button>
@@ -420,7 +470,7 @@ export default function FloorPlans({ onBack, onOpen360 }) {
                     type="button"
                     disabled
                     title="Coming soon"
-                    className="flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 px-2 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 short:py-2"
+                    className="flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.02] px-2 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 short:py-2"
                   >
                     360° View <IconLock />
                   </button>

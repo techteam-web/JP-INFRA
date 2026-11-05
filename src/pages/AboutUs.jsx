@@ -136,8 +136,8 @@ export default function AboutUs({ onBack }) {
   const counter = (at, label) => (
     <>
       <span className="font-bold text-red-500">
-        {pad(at)}
-        <span className="text-white/35"> / {pad(STEPS.length - 1)}</span>
+        {pad(at + 1)}
+        <span className="text-white/35"> / {pad(STEPS.length)}</span>
       </span>
       <span className="h-px w-8 bg-red-600" />
       {label}
@@ -268,7 +268,7 @@ export default function AboutUs({ onBack }) {
                     />
                   </span>
                   <span className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                    <span className={`shrink-0 ${on ? "text-red-500" : "text-white/45"}`}>{pad(i)}</span>
+                    <span className={`shrink-0 ${on ? "text-red-500" : "text-white/45"}`}>{pad(i + 1)}</span>
                     <span
                       className={`min-w-0 truncate transition-colors max-sm:hidden ${
                         on ? "text-white" : "hidden text-white/55 group-hover:text-white @min-[8.5rem]:block"

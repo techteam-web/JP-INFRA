@@ -3,25 +3,28 @@ import Marzipano from "marzipano";
 import { useSize } from "../hooks/useSize";
 import { APP_DATA } from "../data/data";
 import { panoLimiter } from "../data/panoLimits";
+import { ALL, OFFSET, PLANS_TOWER, VIEW_H, VIEW_W, towerImg } from "../data/tower";
 import { SAMPLE_DATA, PLAN_FLOOR, PLAN_W, PLAN_H, WINGS, WING_BY_ID, TYPES, UNITS, UNIT_BY_ID, unitsIn, viewFor } from "../data/units";
 
-// The Floor Plan screen (Explore Units), over the Floor Plans page: five tabs, all reading
+// The Floor Plan screen (Explore Units), over the Floor Plans page: three tabs, all reading
 // the homes in data/units.js (the 8th floor of wings A1 and A2) —
-//   Floor Plan      the wing's real plan: pick a home on it for its details and its own plan
-//   Filter Units    narrow the homes down by wing, type, size and availability
-//   Compare Units   up to three homes side by side
-//   Compare Wings   A1 and A2 side by side
-//   Compare Views   the view at two times of day side by side, turning together
+//   Visual Selection  the wing's real plan: pick a home on it for its details and its own plan
+//   Search by Unit    narrow the homes down by wing, type, size and availability
+//   Compare Units     up to three homes side by side, with their views on a second panel
+// Comparing the view at two times of day belongs to Compare Units — it is a way of telling
+// two homes apart, so it sits with them rather than standing on its own.
 // Nothing on it scrolls: every tab is laid out to fit the screen (results come in pages).
 const TABS = [
-  { id: "plan", label: "Floor Plan", short: "Plan", title: ["Floor", "Plan"] },
-  { id: "filter", label: "Filter Units", short: "Filter", title: ["Find Your", "Home"] },
-  { id: "units", label: "Compare Units", short: "Units", title: ["Compare", "Units"] },
-  { id: "wings", label: "Compare Wings", short: "Wings", title: ["Compare", "Wings"] },
-  { id: "views", label: "Compare Views", short: "Views", title: ["Compare", "Views"] },
+  { id: "plan", label: "Visual Selection", short: "Visual", title: ["Visual", "Selection"] },
+  { id: "filter", label: "Search by Unit", short: "Search", title: ["Search", "by Unit"] },
+  { id: "units", label: "Compare Units", short: "Compare", title: ["Compare", "Units"] },
 ];
+// Compare Units has no tab of its own: it is reached from "Compare now" and "See the view".
+const NAV_TABS = TABS.filter((t) => t.id !== "units");
 const MAX_COMPARE = 3;
 const WING_IDS = WINGS.map((w) => w.id);
+// the two panels of Compare Units: the homes' plans, then the view out of them
+const PANELS = ["Plans", "Views"];
 
 const pad = (n) => String(n).padStart(2, "0");
 const sqft = (n) => `${n.toLocaleString("en-IN")} sq ft`;
@@ -67,7 +70,6 @@ const ICONS = {
   check: "M5 12.5l4.5 4.5L19 7.5",
   arrow: "M5 12h14M13 6l6 6-6 6",
   filter: "M4 6h16M7 12h10M10 18h4",
-  expand: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
 };
 
 const LABEL = "text-[9px] font-semibold uppercase tracking-[0.2em] text-white/55 sm:text-[10px] sm:tracking-[0.25em]";
@@ -310,75 +312,99 @@ function Legend() {
 
 // ---- Floor Plan ------------------------------------------------------------------------------
 
-function UnitDetails({ unit, inCompare, compareFull, onCompare, onViews, onHomePlan }) {
-  if (!unit) {
-    return <p className="text-xs leading-relaxed text-white/60 sm:text-sm">Select a home on the plan to see its details and its own plan.</p>;
-  }
-  const specs = [
-    ["Type", typeName(unit)],
-    ["Bedrooms", unit.bed],
-    ["Carpet", sqft(unit.carpet)],
-  ];
-  const btn =
-    "btn-fill flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] transition-transform active:scale-95 disabled:opacity-40 sm:tracking-[0.16em] lg:py-2.5 lg:text-[11px]";
+// The tower, as the Floor Plans page draws it, filling the panel beside the plan: every floor
+// is an outline you can hover, and the one whose homes are on the plan (Tower A, floor 8) is
+// lit in red and clicks back to the whole floor. The other floors have no plans in yet, so
+// they only light on hover. This panel replaced the home's specs and its buttons: the home is
+// named under the plan itself, so the panel's whole job is to place it in the building.
+function TowerPanel({ wing, floorActive, onFloor }) {
+  const boxRef = useRef(null);
+  const { w, h } = useSize(boxRef);
+  const [hover, setHover] = useState(null);
+  // the render is cropped to fill the panel, so the outlines are placed the same way
+  const scale = Math.max(w / VIEW_W, h / VIEW_H) || 1;
+  const dx = (w - VIEW_W * scale) / 2;
+  const dy = (h - VIEW_H * scale) / 2;
+  const live = (f) => f.b === PLANS_TOWER && f.n === PLAN_FLOOR;
+
   return (
-    <div key={unit.id} className="jp-caption-in flex h-full min-h-0 flex-col">
-      <span className={LABEL}>
-        Wing {unit.wing} · Floor {pad(unit.floor)}
-      </span>
-      <div className="mt-1 flex items-center justify-between gap-3">
-        <span className="font-display text-3xl leading-none lg:text-5xl short:text-2xl">{unit.id}</span>
-        <StatusBadge status={unit.status} />
-      </div>
-      <dl className="mt-2.5 grid grid-cols-3 gap-x-3 lg:mt-4 short:mt-1.5 short:gap-x-2">
-        {specs.map(([k, v]) => (
-          <div key={k} className="border-t border-white/10 pt-1 lg:pt-2 short:pt-0.5">
-            <dt className={`${LABEL} short:tracking-[0.1em]`}>{k}</dt>
-            <dd className="text-xs font-semibold lg:mt-0.5 lg:text-sm short:text-[10px]">{v}</dd>
-          </div>
-        ))}
-      </dl>
-      {/* the home's own plan: opens large in the plan area */}
-      <button
-        type="button"
-        onClick={onHomePlan}
-        aria-label={`${unit.id}: open its plan`}
-        className="group relative mt-3 min-h-0 flex-1 overflow-hidden rounded-xl bg-white max-lg:hidden lg:mt-4"
-      >
-        <img src={unit.image} alt="" className="absolute inset-0 h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-[1.03]" />
-        <span className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full bg-navy-950/85 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-white">
-          <Icon d={ICONS.expand} className="h-3 w-3" /> Home plan
-        </span>
-      </button>
-      <div className="mt-3 grid shrink-0 grid-cols-2 gap-2 lg:mt-4 lg:grid-cols-1 short:mt-2 short:grid-cols-1 short:gap-1.5 short:[&>button]:py-1.5">
-        <button
-          type="button"
-          onClick={onCompare}
-          disabled={!inCompare && compareFull}
-          title={!inCompare && compareFull ? `Compare holds up to ${MAX_COMPARE} units` : undefined}
-          style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-          className={`${btn} ${inCompare ? "border-red-600 bg-red-600/20" : "border-red-500/60"}`}
+    <div ref={boxRef} className="relative h-full min-h-0 w-full overflow-hidden rounded-2xl border border-white/10 bg-navy-950">
+      <img src={towerImg} alt="JP Infra tower" draggable={false} className="absolute inset-0 h-full w-full object-cover object-center" />
+      {w > 0 && (
+        <svg
+          viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+          preserveAspectRatio="none"
+          style={{ position: "absolute", left: dx, top: dy, width: VIEW_W * scale, height: VIEW_H * scale }}
+          role="group"
+          aria-label="The tower, floor by floor"
         >
-          <Icon d={inCompare ? ICONS.check : ICONS.plus} className="h-3 w-3" />
-          {inCompare ? "In Compare" : compareFull ? "Compare Full" : "Add to Compare"}
-        </button>
-        <button type="button" onClick={onViews} style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }} className={`${btn} border-white/25`}>
-          <span className="lg:hidden">The View</span>
-          <span className="max-lg:hidden">See the View</span>
-          <Icon d={ICONS.arrow} className="h-3 w-3" />
-        </button>
+          {ALL.map((f) => {
+            const on = live(f);
+            const lit = on ? floorActive : hover && hover.b === f.b && hover.n === f.n;
+            return f.pieces.map((points, i) => (
+              <polygon
+                key={`${f.b}-${f.n}-${i}`}
+                points={points}
+                transform={`translate(${OFFSET})`}
+                className={on ? "cursor-pointer" : "cursor-default"}
+                fill={on ? (floorActive ? "rgba(220,38,38,0.55)" : "rgba(220,38,38,0.3)") : lit ? "rgba(255,255,255,0.22)" : "transparent"}
+                stroke={on ? "rgba(248,113,113,0.95)" : lit ? "rgba(255,255,255,0.6)" : "transparent"}
+                strokeWidth={1.5 / scale}
+                onPointerEnter={() => setHover({ b: f.b, n: f.n })}
+                onPointerLeave={() => setHover(null)}
+                onClick={on ? onFloor : undefined}
+              >
+                <title>{`Tower ${f.b} · Floor ${pad(f.n)}${on ? " — the plans on screen" : ""}`}</title>
+              </polygon>
+            ));
+          })}
+        </svg>
+      )}
+      {/* which floor the plan beside it is, over the foot of the render */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy-950 via-navy-950/85 to-transparent px-4 pb-3.5 pt-12">
+        <span className={LABEL}>Tower {PLANS_TOWER} · Wing {wing}</span>
+        <p className="font-display text-2xl leading-none lg:text-3xl">Floor {pad(PLAN_FLOOR)}</p>
       </div>
     </div>
   );
 }
 
+// A drawing's own width and height, so its white sheet can be cut to it
+function useImageRatio(src) {
+  // kept with the src it was measured from, so a new drawing reads as unknown until it loads
+  const [seen, setSeen] = useState({ src: null, ratio: null });
+  useEffect(() => {
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => setSeen({ src, ratio: img.naturalWidth / img.naturalHeight });
+    img.src = src;
+    return () => {
+      img.onload = null;
+    };
+  }, [src]);
+  return seen.src === src ? seen.ratio : null;
+}
+
+// The largest box of that shape that fits in w × h: the white sheet is cut to the drawing
+// rather than filling the area, so no white margin is left down its sides.
+const fitBox = (w, h, r) => {
+  if (!w || !h) return null;
+  if (!r) return { width: w, height: h };
+  const width = Math.min(w, h * r);
+  return { width, height: width / r };
+};
+
 // The Floor Plan tab: the wing's plan to pick homes on, or the chosen home's own plan
-function PlanTab({ wing, setWing, view, setView, selectedId, setSelectedId, compareIds, toggleCompare, filters, clearFilters, openViews }) {
+function PlanTab({ wing, setWing, view, setView, selectedId, setSelectedId, compareIds, filters, clearFilters }) {
   const unit = selectedId ? UNIT_BY_ID.get(selectedId) : null;
   const filtered = !isDefault(filters);
   const showHome = view === "Home" && !!unit;
+  const planRef = useRef(null);
+  const area = useSize(planRef);
+  const homeRatio = useImageRatio(showHome ? unit.image : null);
+  const box = fitBox(area.w, area.h, showHome ? homeRatio : PLAN_W / PLAN_H);
   return (
-    <div className="grid h-full grid-rows-[minmax(0,1fr)_auto] gap-3 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-1 lg:gap-10 short:grid-cols-[minmax(0,1fr)_250px] short:grid-rows-1 short:gap-4">
+    <div className="grid h-full grid-rows-[minmax(0,1fr)_auto] gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,33%)] lg:grid-rows-1 lg:gap-8 short:grid-cols-[minmax(0,1fr)_minmax(240px,32%)] short:grid-rows-1 short:gap-4">
       <div className="flex min-h-0 flex-col">
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -408,22 +434,31 @@ function PlanTab({ wing, setWing, view, setView, selectedId, setSelectedId, comp
             <Segmented value={showHome ? "Home" : "Floor"} options={["Floor", "Home"]} onChange={setView} disabled={unit ? [] : ["Home"]} label="Floor or home plan" />
           </div>
         </div>
-        {/* the plan fills whatever height is left */}
-        <div className="relative mt-3 min-h-0 flex-1 short:mt-2">
-          {showHome ? (
-            <ZoomBox key={unit.id} label={`${unit.id} plan`}>
-              <img src={unit.image} alt={`Home ${unit.id} plan`} draggable={false} className="absolute inset-0 h-full w-full object-contain" />
-            </ZoomBox>
-          ) : (
-            <ZoomBox key={wing} label={`Wing ${wing} floor plan`}>
-              <WingPlan
-                wing={wing}
-                selectedId={selectedId}
-                compareIds={compareIds}
-                match={filtered ? matcher(filters) : null}
-                onPick={(id) => setSelectedId(id === selectedId ? null : id)}
-              />
-            </ZoomBox>
+        {/* the plan takes whatever height is left, its sheet cut to the drawing's own shape */}
+        <div ref={planRef} className="relative mt-3 flex min-h-0 flex-1 items-center justify-center short:mt-2">
+          {box && (
+            <div className="relative" style={{ width: box.width, height: box.height }}>
+              {showHome ? (
+                <ZoomBox key={unit.id} label={`${unit.id} plan`}>
+                  <img src={unit.image} alt={`Home ${unit.id} plan`} draggable={false} className="absolute inset-0 h-full w-full object-contain" />
+                </ZoomBox>
+              ) : (
+                <ZoomBox key={wing} label={`Wing ${wing} floor plan`}>
+                  <WingPlan
+                    wing={wing}
+                    selectedId={selectedId}
+                    compareIds={compareIds}
+                    match={filtered ? matcher(filters) : null}
+                    onPick={(id) => {
+                      // picking a home opens its own plan over the floor; "Floor" goes back
+                      const next = id === selectedId ? null : id;
+                      setSelectedId(next);
+                      setView(next ? "Home" : "Floor");
+                    }}
+                  />
+                </ZoomBox>
+              )}
+            </div>
           )}
         </div>
         <div className="mt-2.5 shrink-0 short:hidden">
@@ -436,15 +471,9 @@ function PlanTab({ wing, setWing, view, setView, selectedId, setSelectedId, comp
           )}
         </div>
       </div>
-      <aside className="min-h-0 overflow-hidden rounded-2xl border border-white/15 bg-navy-950/60 p-3.5 shadow-premium sm:p-5 short:self-stretch short:p-3">
-        <UnitDetails
-          unit={unit}
-          inCompare={!!unit && compareIds.includes(unit.id)}
-          compareFull={compareIds.length >= MAX_COMPARE}
-          onCompare={() => toggleCompare(unit.id)}
-          onViews={openViews}
-          onHomePlan={() => setView("Home")}
-        />
+      {/* below lg the tower sits under the plan, so it is given a height of its own there */}
+      <aside className="h-44 min-h-0 overflow-hidden rounded-2xl shadow-premium sm:h-56 lg:h-auto short:h-auto short:self-stretch">
+        <TowerPanel wing={wing} floorActive={!showHome} onFloor={() => setView("Floor")} />
       </aside>
     </div>
   );
@@ -454,22 +483,25 @@ function PlanTab({ wing, setWing, view, setView, selectedId, setSelectedId, comp
 
 // Every home as a card with its own plan, as many as fit (in pages, never a scroll): tick a
 // card's box to add it to the comparison; the card itself opens the home on the floor plan.
-const CARD_MIN_W = 150; // a card's narrowest
-const PLAN_MIN_H = 100; // the plan in it never gets shorter than this
-const CARD_TEXT_H = 58; // its name and size, under the plan
-const GRID_GAP = 12;
+const CARD_MIN_W = 240; // a card's narrowest
+const PLAN_MIN_H = 170; // the plan in it never gets shorter than this
+const CARD_TEXT_H = 64; // its name and size, under the plan
+const GRID_GAP = 14;
 
 // How n results fill w × h: the columns and rows that show the most homes per page with
 // every plan still readable, and among those, the one with the largest plans.
 function cardGrid(w, h, n) {
-  let best = { cols: 1, rows: 1, planH: Math.max(PLAN_MIN_H, h - CARD_TEXT_H) };
+  // on a short or narrow area the cards give way rather than spill out of it
+  const minH = Math.min(PLAN_MIN_H, Math.max(90, h - CARD_TEXT_H));
+  const minW = Math.min(CARD_MIN_W, w);
+  let best = { cols: 1, rows: 1, planH: Math.max(minH, h - CARD_TEXT_H) };
   let bestShown = 0;
   for (let cols = 1; cols <= Math.max(1, n); cols++) {
     const cardW = (w - GRID_GAP * (cols - 1)) / cols;
-    if (cols > 1 && cardW < CARD_MIN_W) break;
+    if (cols > 1 && cardW < minW) break;
     for (let rows = 1; (rows - 1) * cols < n; rows++) {
-      const planH = Math.min(cardW * 0.7, (h - GRID_GAP * (rows - 1)) / rows - CARD_TEXT_H);
-      if (planH < PLAN_MIN_H) break;
+      const planH = Math.min(cardW * 0.8, (h - GRID_GAP * (rows - 1)) / rows - CARD_TEXT_H);
+      if (planH < minH) break;
       const shown = Math.min(cols * rows, n);
       if (shown > bestShown || (shown === bestShown && planH > best.planH)) {
         best = { cols, rows, planH };
@@ -516,7 +548,65 @@ function AreaRange({ min, max, onChange }) {
   );
 }
 
-function FilterPanel({ filters, set, count, sort, setSort, onDone }) {
+// The homes picked for comparison, kept under the filters: each one a chip you can drop,
+// and the way through to the comparison itself. Without it the only sign that a home had
+// been picked was a count in the corner, so a visitor three homes in had nothing to read
+// back. Holds its height when empty so the filters above don't jump as homes go in and out.
+function ComparePicks({ compareIds, toggleCompare, clearCompare, onCompare }) {
+  const picked = compareIds.map((id) => UNIT_BY_ID.get(id)).filter(Boolean);
+  return (
+    <div className="border-t border-white/10 pt-[min(12px,1.6vh)] short:pt-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <p className={LABEL}>
+          Compare ({picked.length}/{MAX_COMPARE})
+        </p>
+        <button
+          type="button"
+          onClick={clearCompare}
+          disabled={!picked.length}
+          className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50 transition-colors hover:text-white disabled:opacity-30"
+        >
+          Clear
+        </button>
+      </div>
+
+      <div className="mt-1.5 flex min-h-[26px] flex-wrap gap-1.5">
+        {picked.length === 0 ? (
+          <p className="text-[10px] leading-[26px] text-white/35">Tick up to {MAX_COMPARE} homes to compare them.</p>
+        ) : (
+          picked.map((u) => (
+            <span
+              key={u.id}
+              className="flex items-center gap-1.5 rounded-full border border-red-500/60 bg-red-600/15 py-1 pl-2.5 pr-1.5 text-[10px] font-semibold tracking-[0.08em] text-white"
+            >
+              {u.id} <span className="text-white/40">—</span> {u.type}
+              <button
+                type="button"
+                onClick={() => toggleCompare(u.id)}
+                aria-label={`Remove ${u.id} from compare`}
+                className="grid h-4 w-4 place-items-center rounded-full text-white/60 transition-colors hover:bg-red-600 hover:text-white"
+              >
+                <Icon d={ICONS.close} className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          ))
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onCompare}
+        disabled={picked.length < 2}
+        title={picked.length < 2 ? "Pick at least two homes to compare" : undefined}
+        className="mt-2.5 w-full rounded-lg bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
+      >
+        Compare now
+      </button>
+    </div>
+  );
+}
+
+function FilterPanel({ filters, set, count, sort, setSort, onDone, compareIds, toggleCompare, clearCompare, onCompare }) {
   const group = (title, children) => (
     <div className="border-t border-white/10 pt-[min(12px,1.6vh)] short:pt-1.5">
       <p className={LABEL}>{title}</p>
@@ -586,6 +676,9 @@ function FilterPanel({ filters, set, count, sort, setSort, onDone }) {
           )}
         </div>
       </div>
+      <div className="short:col-span-2">
+        <ComparePicks compareIds={compareIds} toggleCompare={toggleCompare} clearCompare={clearCompare} onCompare={onCompare} />
+      </div>
     </div>
   );
 }
@@ -639,7 +732,7 @@ function UnitCard({ u, planH, inCompare, compareFull, toggleCompare, showOnPlan 
   );
 }
 
-function FilterTab({ filters, setFilters, compareIds, toggleCompare, showOnPlan, goTo }) {
+function FilterTab({ filters, setFilters, compareIds, toggleCompare, clearCompare, showOnPlan, goTo }) {
   const [page, setPage] = useState(0);
   const [sort, setSort] = useState("wing");
   const [panelOpen, setPanelOpen] = useState(false); // below lg the filters open over the results
@@ -677,15 +770,25 @@ function FilterTab({ filters, setFilters, compareIds, toggleCompare, showOnPlan,
             setPage(0);
           }}
           onDone={() => setPanelOpen(false)}
+          compareIds={compareIds}
+          toggleCompare={toggleCompare}
+          clearCompare={clearCompare}
+          onCompare={() => goTo("units")}
         />
       </div>
 
       <div className="flex min-h-0 flex-col">
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-white/70 sm:text-sm" aria-live="polite">
-            <span className="font-display text-2xl text-white sm:text-3xl">{results.length}</span> homes match
-            <span className="text-white/45"> · {available} available</span>
-          </p>
+          <div aria-live="polite">
+            <span className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/55 sm:text-[10px] short:hidden">
+              <span className="h-px w-5 bg-red-600" />
+              Search by unit
+            </span>
+            <p className="mt-1 font-display text-3xl uppercase leading-none text-white sm:text-4xl short:mt-0 short:text-2xl">
+              {results.length} {results.length === 1 ? "residence" : "residences"}
+            </p>
+            <p className="mt-1 text-[11px] text-white/45">{available} available</p>
+          </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -762,13 +865,16 @@ function FilterTab({ filters, setFilters, compareIds, toggleCompare, showOnPlan,
 
 // ---- Comparisons -----------------------------------------------------------------------------
 
-// A comparison table: a header per column, then one row per fact; rows whose values differ
-// are marked so the differences stand out, and the largest number in such a row is red.
+// A comparison table: a card per home across the top, then one row per fact underneath.
+// Rows whose values differ carry a red dot so the differences stand out, and the largest
+// number in such a row is red. The cards hold the plans; the rows hold the facts.
 function CompareTable({ columns, rows, head }) {
-  const cols = `minmax(76px,0.7fr) repeat(${columns.length}, minmax(0,1fr))`;
+  // the label column is kept narrow and the rows tight: every pixel they give up is a pixel
+  // the plans above them grow by, and the plans are what the comparison is really about
+  const cols = `minmax(78px,0.4fr) repeat(${columns.length}, minmax(0,1fr))`;
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="grid min-h-0 flex-1 gap-2 sm:gap-3" style={{ gridTemplateColumns: cols }}>
+      <div className="grid min-h-0 flex-1 gap-2.5 sm:gap-3" style={{ gridTemplateColumns: cols }}>
         <div />
         {columns.map((c, i) => (
           <div key={i} className="flex min-h-0 min-w-0 flex-col">
@@ -776,25 +882,27 @@ function CompareTable({ columns, rows, head }) {
           </div>
         ))}
       </div>
-      <div className="mt-1 shrink-0">
-        {rows.map(([label, get, best]) => {
+      <div className="mt-2 shrink-0 overflow-hidden rounded-xl border border-white/12 bg-white/[0.02] short:mt-1.5">
+        {rows.map(([label, get, best], r) => {
           const values = columns.map(get);
           const differs = new Set(values.map(String)).size > 1;
           const bestValue = best && differs ? Math.max(...columns.map(best)) : null;
           return (
             <div
               key={label}
-              className="grid items-center gap-2 border-t border-white/10 py-[min(9px,1.1vh)] sm:gap-3 short:py-[3px]"
+              className={`grid items-center gap-2.5 px-3 py-[min(4px,0.55vh)] sm:gap-3 short:py-[2px] ${
+                r % 2 ? "bg-white/[0.025]" : ""
+              }`}
               style={{ gridTemplateColumns: cols }}
             >
-              <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/55 sm:text-[10px] sm:tracking-[0.22em]">
-                {differs && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-600" title="Differs" />}
+              <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/50 sm:text-[10px] sm:tracking-[0.2em]">
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${differs ? "bg-red-600" : "bg-white/15"}`} title={differs ? "Differs" : undefined} />
                 {label}
               </span>
               {columns.map((c, i) => (
                 <span
                   key={i}
-                  className={`min-w-0 text-[11px] font-semibold sm:text-sm short:text-[11px] ${
+                  className={`min-w-0 truncate text-[11px] font-semibold leading-snug tabular-nums sm:text-[13px] short:text-[11px] ${
                     bestValue !== null && best(c) === bestValue ? "text-red-500" : "text-white/90"
                   }`}
                 >
@@ -805,35 +913,61 @@ function CompareTable({ columns, rows, head }) {
           );
         })}
       </div>
-      <p className="mt-2 flex shrink-0 items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/45 sm:text-[10px]">
+      <p className="mt-1.5 flex shrink-0 items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/40 short:hidden">
         <span className="h-1.5 w-1.5 rounded-full bg-red-600" /> Differs
-        <span className="ml-3 text-red-500">Red</span> Largest
+        <span className="ml-2.5 text-red-500">Red</span> Largest
       </p>
     </div>
   );
 }
 
-// a column's head: its name and a plan, filling the room above the table
-function CompareHead({ title, action, image, imageAlt, onImage }) {
+// A home's card above the table: its name, what it is, and its plan on a white sheet cut to
+// the drawing's own shape — the plans used to be stretched across the column, wide and flat.
+function CompareHead({ unit, action, onImage }) {
+  const boxRef = useRef(null);
+  const { w, h } = useSize(boxRef);
+  const ratio = useImageRatio(unit.image);
+  const box = fitBox(w, h, ratio);
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-xl border border-white/12 bg-white/[0.03] p-2 sm:p-3 short:p-1.5">
-      <div className="flex shrink-0 items-start justify-between gap-1">
-        <span className="whitespace-nowrap font-display text-lg leading-none sm:text-3xl short:text-lg">{title}</span>
-        {action}
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/12 bg-white/[0.03] transition-colors hover:border-white/30">
+      {/* the name and the status share one line, so the plan below keeps the height */}
+      <div className="flex shrink-0 items-center justify-between gap-2 px-2.5 pt-2.5 short:px-2 short:pt-2">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <p className="truncate font-display text-lg leading-none sm:text-2xl short:text-base">{unit.id}</p>
+          <span className="truncate text-[10px] text-white/50">{typeName(unit)}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="short:hidden">
+            <StatusBadge status={unit.status} />
+          </span>
+          {action}
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={onImage}
-        aria-label={imageAlt}
-        className="relative mt-2 min-h-[60px] flex-1 overflow-hidden rounded-lg bg-white short:hidden"
-      >
-        <img src={image} alt="" className="absolute inset-0 h-full w-full object-contain p-1.5" />
-      </button>
+      {/* the plan: measured padding-free, so the sheet fits the room exactly */}
+      <div className="min-h-0 flex-1 px-2.5 pb-2.5 pt-1.5 short:hidden">
+        <div ref={boxRef} className="flex h-full w-full items-center justify-center">
+          {box && (
+            <button
+              type="button"
+              onClick={onImage}
+              aria-label={`${unit.id}: open it on the floor plan`}
+              className="group relative overflow-hidden rounded-xl bg-white shadow-premium"
+              style={{ width: box.width, height: box.height }}
+            >
+              <img src={unit.image} alt="" className="absolute inset-0 h-full w-full object-contain p-1 transition-transform duration-500 group-hover:scale-[1.03]" />
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan }) {
+// Comparing homes has two panels: the plans themselves, and the view out of them at two
+// times of day. The view belongs here because it is one more way of telling two homes
+// apart — it used to be a tab of its own, which offered it everywhere, including where
+// nothing was being compared.
+function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan, panel, setPanel, pair, setPair }) {
   const units = compareIds.map((id) => UNIT_BY_ID.get(id)).filter(Boolean);
   if (!units.length) {
     return (
@@ -842,81 +976,71 @@ function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan }) {
           Add up to {MAX_COMPARE} homes to compare them side by side: pick them on the floor plan or from the filter results.
         </p>
         <div className="mt-5 flex justify-center gap-2">
-          <Chip onClick={() => goTo("plan")}>Floor Plan</Chip>
-          <Chip onClick={() => goTo("filter")}>Filter Units</Chip>
+          <Chip onClick={() => goTo("plan")}>Visual Selection</Chip>
+          <Chip onClick={() => goTo("filter")}>Search by Unit</Chip>
         </div>
       </div>
     );
   }
+  const panels = (
+    <div className="mb-2 flex shrink-0 justify-center short:mb-1.5">
+      <Segmented label="What to compare" value={panel} onChange={setPanel} options={PANELS} />
+    </div>
+  );
+  if (panel === "Views") {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        {panels}
+        <div className="min-h-0 flex-1">
+          <ViewsTab pair={pair} setPair={setPair} />
+        </div>
+      </div>
+    );
+  }
+  // the largest home in the comparison, for the row that reads each one against it
+  const largest = Math.max(...units.map((u) => u.carpet));
+  const sqm = (n) => `${(n * 0.092903).toFixed(1)} sq m`;
   const rows = [
     ["Wing", (u) => u.wing],
-    ["Type", (u) => typeName(u)],
+    ["Floor", (u) => pad(u.floor)],
+    ["Configuration", (u) => u.type],
+    ["Plan type", (u) => u.code ?? "—"],
     ["Bedrooms", (u) => u.bed, (u) => u.bed],
     ["Carpet area", (u) => sqft(u.carpet), (u) => u.carpet],
+    ["Carpet (metric)", (u) => sqm(u.carpet), (u) => u.carpet],
+    ["Per bedroom", (u) => sqft(Math.round(u.carpet / u.bed)), (u) => Math.round(u.carpet / u.bed)],
+    ["Against largest", (u) => (u.carpet === largest ? "Largest" : `−${sqft(largest - u.carpet)}`), (u) => u.carpet],
     ["Status", (u) => u.status],
   ];
   return (
-    <CompareTable
-      columns={units}
-      rows={rows}
-      head={(u) => (
-        <CompareHead
-          title={u.id}
-          image={u.image}
-          imageAlt={`${u.id}: open it on the floor plan`}
-          onImage={() => showOnPlan(u, "Home")}
-          action={
-            <button
-              type="button"
-              aria-label={`Remove ${u.id} from compare`}
-              onClick={() => toggleCompare(u.id)}
-              className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-white/25 transition-colors hover:bg-white/10 sm:h-6 sm:w-6"
-            >
-              <Icon d={ICONS.close} className="h-3 w-3" />
-            </button>
-          }
+    <div className="flex h-full min-h-0 flex-col">
+      {panels}
+      <div className="min-h-0 flex-1">
+        <CompareTable
+          columns={units}
+          rows={rows}
+          head={(u) => (
+            <CompareHead
+              unit={u}
+              onImage={() => showOnPlan(u, "Home")}
+              action={
+                <button
+                  type="button"
+                  aria-label={`Remove ${u.id} from compare`}
+                  onClick={() => toggleCompare(u.id)}
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-white/25 transition-colors hover:border-red-500 hover:bg-red-600/20 sm:h-7 sm:w-7"
+                >
+                  <Icon d={ICONS.close} className="h-3 w-3" />
+                </button>
+              }
+            />
+          )}
         />
-      )}
-    />
+      </div>
+    </div>
   );
 }
 
-function wingFacts(id) {
-  const us = unitsIn(id);
-  return {
-    homes: us.length,
-    byType: Object.fromEntries(TYPES.map((t) => [t, us.filter((u) => u.type === t).length])),
-    available: us.filter((u) => u.status === "Available").length,
-    carpet: us.reduce((s, u) => s + u.carpet, 0),
-    largest: Math.max(...us.map((u) => u.carpet)),
-  };
-}
-
-function WingsTab({ openWing }) {
-  const cols = WINGS.map((w) => ({ ...w, facts: wingFacts(w.id) }));
-  const rows = [
-    ["Homes", (c) => c.facts.homes, (c) => c.facts.homes],
-    ...TYPES.map((t) => [t, (c) => c.facts.byType[t] || "—"]),
-    ["Available", (c) => c.facts.available, (c) => c.facts.available],
-    ["Largest home", (c) => sqft(c.facts.largest), (c) => c.facts.largest],
-    ["Total carpet", (c) => sqft(c.facts.carpet), (c) => c.facts.carpet],
-  ];
-  return (
-    <CompareTable
-      columns={cols}
-      rows={rows}
-      head={(c) => (
-        <CompareHead
-          title={`Wing ${c.id}`}
-          image={c.plan}
-          imageAlt={`Wing ${c.id}: open its floor plan`}
-          onImage={() => openWing(c.id)}
-          action={<span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/50 sm:text-[10px]">Floor {pad(PLAN_FLOOR)}</span>}
-        />
-      )}
-    />
-  );
-}
 
 // ---- Compare Views: two 360° views that turn together ---------------------------------------
 
@@ -1029,6 +1153,8 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
   const [compareIds, setCompareIds] = useState([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [viewPair, setViewPair] = useState([{ time: "Day" }, { time: "Evening" }]);
+  // which panel of Compare Units is showing: the homes, or the view out of them
+  const [comparePanel, setComparePanel] = useState(PANELS[0]);
   const active = TABS.find((t) => t.id === tab);
 
   const toggleCompare = (id) =>
@@ -1037,12 +1163,6 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
     setWing(u.wing);
     setSelectedId(u.id);
     setPlanView(view);
-    setTab("plan");
-  };
-  const openWing = (w) => {
-    setWing(w);
-    if (UNIT_BY_ID.get(selectedId)?.wing !== w) setSelectedId(null);
-    setPlanView("Floor");
     setTab("plan");
   };
 
@@ -1087,16 +1207,15 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
 
       {/* Tabs: short labels on phones, so they fit on one line */}
       <div role="tablist" aria-label="Floor plan tools" className="mt-3 flex shrink-0 gap-1.5 px-5 sm:mt-4 sm:px-10 lg:px-14 short:mt-2">
-        {TABS.map((t) => {
+        {NAV_TABS.map((t) => {
           const on = t.id === tab;
-          const count = t.id === "units" ? compareIds.length : 0;
           return (
             <button
               key={t.id}
               type="button"
               role="tab"
               aria-selected={on}
-              aria-label={count ? `${t.label} (${count})` : t.label}
+              aria-label={t.label}
               onClick={() => setTab(t.id)}
               className={`flex min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-1 py-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] transition-colors max-sm:flex-1 sm:px-3.5 sm:py-2 sm:text-[11px] sm:tracking-[0.16em] short:flex-1 short:px-2 short:py-1 ${
                 on ? "border-red-600 bg-red-600 text-white" : "border-white/15 text-white/70 hover:border-white/40 hover:text-white"
@@ -1105,11 +1224,6 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
               {/* short labels on phones and on short (landscape) screens */}
               <span className="sm:hidden short:!inline">{t.short}</span>
               <span className="max-sm:hidden short:!hidden">{t.label}</span>
-              {count > 0 && (
-                <span className={`grid h-4 min-w-4 place-items-center rounded-full px-1 text-[9px] font-bold ${on ? "bg-white text-red-600" : "bg-red-600 text-white"}`}>
-                  {count}
-                </span>
-              )}
             </button>
           );
         })}
@@ -1129,18 +1243,35 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
             selectedId={selectedId}
             setSelectedId={setSelectedId}
             compareIds={compareIds}
-            toggleCompare={toggleCompare}
             filters={filters}
             clearFilters={() => setFilters(DEFAULT_FILTERS)}
-            openViews={() => setTab("views")}
           />
         )}
         {tab === "filter" && (
-          <FilterTab filters={filters} setFilters={setFilters} compareIds={compareIds} toggleCompare={toggleCompare} showOnPlan={showOnPlan} goTo={setTab} />
+          <FilterTab
+            filters={filters}
+            setFilters={setFilters}
+            compareIds={compareIds}
+            toggleCompare={toggleCompare}
+            clearCompare={() => setCompareIds([])}
+            showOnPlan={showOnPlan}
+            goTo={setTab}
+          />
         )}
-        {tab === "units" && <UnitsTab compareIds={compareIds} toggleCompare={toggleCompare} goTo={setTab} showOnPlan={showOnPlan} />}
-        {tab === "wings" && <WingsTab openWing={openWing} />}
-        {tab === "views" && <ViewsTab pair={viewPair} setPair={setViewPair} />}
+        {tab === "units" && (
+          <UnitsTab
+            compareIds={compareIds}
+            toggleCompare={toggleCompare}
+            goTo={setTab}
+            showOnPlan={showOnPlan}
+            panel={comparePanel}
+            setPanel={setComparePanel}
+            pair={viewPair}
+            setPair={setViewPair}
+          />
+        )}
+
+
       </div>
     </div>
   );

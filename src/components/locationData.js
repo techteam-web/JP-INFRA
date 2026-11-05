@@ -103,7 +103,7 @@ export const BANDS = [
     label: '30 Min',
     places: [
       { name: 'Hindu Hrudayasamrat Shri Balasaheb Thackeray Dream Park', category: 'Garden', lngLat: [72.868910, 19.218540] },
-      { name: 'The Byke Delotel', category: 'Restaurant', lngLat: [72.854190, 19.231420] },
+      { name: 'The Byke Select', category: 'Restaurant', lngLat: [72.968088, 19.265267] },
       { name: 'Sanjay Gandhi National Park', category: 'Garden', lngLat: [72.864120, 19.228810] },
       { name: 'Metro Wholesale Mall', category: 'Shopping', lngLat: [72.863850, 19.225920] },
       { name: 'Oberoi Mall', category: 'Shopping', lngLat: [72.860650, 19.173820] },
