@@ -53,7 +53,7 @@ function outlines(svg) {
 }
 
 // the middle of an outline (for marks placed on a home), measured by the browser
-function centreOf(d) {
+function boxOf(d) {
   const ns = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(ns, "svg");
   svg.setAttribute("style", "position:absolute;width:0;height:0;visibility:hidden");
@@ -63,7 +63,22 @@ function centreOf(d) {
   document.body.appendChild(svg);
   const b = path.getBBox();
   svg.remove();
-  return [b.x + b.width / 2, b.y + b.height / 2];
+  return b;
+}
+
+// Where a home's eye sits: out in the sheet's margin beside that home's type label, on
+// whichever edge the home faces, rather than over the rooms themselves. Worked out from the
+// home's own outline, unless `at` on the home below names a spot by hand.
+const EDGE = 22;
+function markerOf(b) {
+  const cx = b.x + b.width / 2;
+  const cy = b.y + b.height / 2;
+  const dx = (cx - PLAN_W / 2) / (PLAN_W / 2); // how far out it sits, left to right
+  const dy = (cy - PLAN_H / 2) / (PLAN_H / 2); // and top to bottom
+  const keep = (v, max) => Math.min(max - EDGE, Math.max(EDGE, v));
+  return Math.abs(dy) >= Math.abs(dx)
+    ? [keep(cx, PLAN_W), dy < 0 ? EDGE : PLAN_H - EDGE]
+    : [dx < 0 ? EDGE : PLAN_W - EDGE, keep(cy, PLAN_H)];
 }
 
 export const WINGS = [
@@ -75,9 +90,11 @@ export const WING_BY_ID = Object.fromEntries(WINGS.map((w) => [w.id, w]));
 // The homes, as labelled on the plans (A2-06 on the A2 plan is the refuge area, not a home).
 // `code` is the plan's type code; `carpet` (sq ft) is sample.
 const HOMES = [
-  { id: "A1-01", type: "4 BHK", code: "R1", bed: 4, carpet: 1480, image: a101 },
+  // the two side eyes are placed by hand, down in the clear margin level with the terraces,
+  // rather than up beside the rooms where the worked-out spot put them
+  { id: "A1-01", type: "4 BHK", code: "R1", bed: 4, carpet: 1480, image: a101, at: [74, 318] },
   { id: "A1-02", type: "3 BHK", code: "R2", bed: 3, carpet: 1105, image: a102 },
-  { id: "A1-03", type: "3 BHK", code: "R3", bed: 3, carpet: 1110, image: a103 },
+  { id: "A1-03", type: "3 BHK", code: "R3", bed: 3, carpet: 1110, image: a103, at: [1097, 324] },
   { id: "A1-04", type: "3 BHK", code: "R4", bed: 3, carpet: 1110, image: a104 },
   { id: "A1-05", type: "3 BHK", code: "R5", bed: 3, carpet: 1095, image: a105 },
   { id: "A1-06", type: "4 BHK", code: "R6", bed: 4, carpet: 1475, image: a106 },
@@ -93,7 +110,16 @@ const SAMPLE_STATUS = { "A1-02": "Sold", "A1-05": "On Hold", "A2-02": "Sold", "A
 
 export const UNITS = HOMES.map((h) => {
   const shape = WING_BY_ID[h.id.slice(0, 2)].shapes[h.id];
-  return { ...h, wing: h.id.slice(0, 2), floor: PLAN_FLOOR, status: SAMPLE_STATUS[h.id] ?? "Available", shape, centre: centreOf(shape) };
+  const box = boxOf(shape);
+  return {
+    ...h,
+    wing: h.id.slice(0, 2),
+    floor: PLAN_FLOOR,
+    status: SAMPLE_STATUS[h.id] ?? "Available",
+    shape,
+    centre: [box.x + box.width / 2, box.y + box.height / 2],
+    marker: h.at ?? markerOf(box),
+  };
 });
 export const UNIT_BY_ID = new Map(UNITS.map((u) => [u.id, u]));
 export const unitsIn = (wing) => UNITS.filter((u) => u.wing === wing);

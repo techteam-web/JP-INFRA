@@ -221,11 +221,10 @@ export default function AboutUs({ onBack }) {
         </div>
       </div>
 
-      {/* Timeline */}
-      {/* (not over Our Projects / Our Legacy: those have the screen to themselves) */}
+      {/* Timeline: over the panels too, so Our Projects and Our Legacy can be stepped away
+          from the same way as the chapters. Both panels leave room for it at their foot. */}
       <nav
         data-anim
-        hidden={!!panel}
         aria-label="Chapters"
         {...holdWhileOver}
         className="absolute inset-x-4 bottom-4 z-10 mx-auto flex max-w-[76rem] items-center gap-1 rounded-2xl border border-white/20 bg-navy-950/65 p-1.5 shadow-premium backdrop-blur-xl sm:inset-x-10 sm:bottom-8 lg:inset-x-[clamp(170px,14vw,220px)] lg:bottom-[clamp(28px,4vh,48px)] short:bottom-3"

@@ -178,7 +178,7 @@ function FloorMenu({ value, onChange }) {
       </button>
 
       {open && (
-        <div className={`absolute left-0 top-full mt-2 ${OPENS_UP}`}>
+        <div className="absolute left-0 top-full mt-2">
           <div
             ref={listRef}
             role="menu"
@@ -329,10 +329,9 @@ export default function Panorama({ onBack }) {
         </span>
       </div>
 
-      {/* The floor to look from: bottom left on large screens, its list opening upwards; on
-          phones and tablets, top left under the back button (beside it on phones turned
-          sideways), its list opening downwards, clear of the time of day */}
-      <div className={`absolute left-6 top-[5.5rem] z-20 sm:left-10 sm:top-[6.75rem] short:left-[6.25rem] short:top-8 ${AT_BOTTOM_LEFT}`} data-anim>
+      {/* The floor to look from: top left under the back button on every screen (beside it on
+          phones turned sideways), its list opening downwards */}
+      <div className="absolute left-6 top-[5.5rem] z-20 sm:left-10 sm:top-[6.75rem] 3xl:left-14 4xl:left-16 short:left-[6.25rem] short:top-8" data-anim>
         <div className="rounded-2xl border border-white/20 bg-navy-950/80 p-1.5 shadow-premium backdrop-blur-xl short:p-1 3xl:p-2">
           <FloorMenu value={floorKey} onChange={setFloorKey} />
         </div>
@@ -378,10 +377,3 @@ export default function Panorama({ onBack }) {
     </div>
   );
 }
-
-// Large screens (lg and wider, and taller than a phone turned sideways): the floor picker sits
-// bottom left, level with the time of day, and its list opens upwards.
-const AT_BOTTOM_LEFT =
-  "[@media(min-width:1024px)_and_(min-height:501px)]:top-auto [@media(min-width:1024px)_and_(min-height:501px)]:bottom-10 3xl:bottom-12 3xl:left-14 4xl:bottom-14 4xl:left-16";
-const OPENS_UP =
-  "[@media(min-width:1024px)_and_(min-height:501px)]:top-auto [@media(min-width:1024px)_and_(min-height:501px)]:bottom-full [@media(min-width:1024px)_and_(min-height:501px)]:mt-0 [@media(min-width:1024px)_and_(min-height:501px)]:mb-3";

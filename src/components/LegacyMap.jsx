@@ -253,7 +253,8 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
 
       {/* The cards: one column down the left on wide screens; on phones the title sits at
           the top and the picked project at the bottom */}
-      <div className="max-lg:contents lg:absolute lg:bottom-[clamp(64px,8vh,96px)] lg:left-10 lg:top-[clamp(104px,12vh,140px)] lg:z-10 lg:flex lg:w-[25rem] lg:flex-col lg:gap-3 3xl:left-14">
+      {/* the foot clears the chapter timeline, which sits over this panel */}
+      <div className="max-lg:contents lg:absolute lg:bottom-[clamp(100px,12vh,128px)] lg:left-10 lg:top-[clamp(104px,12vh,140px)] lg:z-10 lg:flex lg:w-[25rem] lg:flex-col lg:gap-3 3xl:left-14">
       {/* Title, the numbers, and the filter */}
       <div className="jp-caption-in absolute inset-x-4 top-[84px] z-10 shrink-0 rounded-2xl border border-white/15 bg-navy-950/80 p-4 text-white shadow-premium backdrop-blur-xl sm:inset-x-10 sm:top-[100px] sm:p-5 lg:static lg:p-6 short:inset-x-auto short:left-4 short:top-[84px] short:w-[min(18rem,44%)] short:p-3">
         <span className="flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70 sm:text-[11px] short:hidden">
@@ -311,7 +312,7 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
       {project && (
         <div
           key={project.id}
-          className="jp-caption-in absolute inset-x-4 bottom-4 z-10 flex items-center gap-3 rounded-2xl border border-white/15 bg-navy-950/85 p-2.5 text-white shadow-premium backdrop-blur-xl sm:inset-x-auto sm:bottom-8 sm:right-10 sm:w-[24rem] lg:relative lg:inset-auto lg:min-h-0 lg:w-auto lg:flex-col lg:items-stretch lg:p-3 short:inset-x-auto short:right-4 short:bottom-4 short:w-[min(20rem,48%)]"
+          className="jp-caption-in absolute inset-x-4 bottom-[76px] z-10 flex items-center gap-3 rounded-2xl border border-white/15 bg-navy-950/85 p-2.5 text-white shadow-premium backdrop-blur-xl sm:inset-x-auto sm:bottom-[96px] sm:right-10 sm:w-[24rem] lg:relative lg:inset-auto lg:min-h-0 lg:w-auto lg:flex-col lg:items-stretch lg:p-3 short:inset-x-auto short:right-4 short:bottom-[68px] short:w-[min(20rem,48%)]"
         >
           <img
             src={project.image}

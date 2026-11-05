@@ -327,7 +327,8 @@ export default function ProjectsPanel({ eyebrow, onShowOnMap, onOpenLegacy }) {
 
   return (
     <div className="absolute inset-0 z-[5] bg-navy-950/85 backdrop-blur-md">
-      <div className="absolute inset-x-4 top-[84px] bottom-5 flex flex-col sm:inset-x-10 sm:top-[100px] sm:bottom-8 lg:top-[clamp(104px,12vh,140px)] lg:bottom-[clamp(64px,8vh,96px)] 3xl:inset-x-14 short:top-[90px] short:bottom-4">
+      {/* the foot clears the chapter timeline, which sits over this panel */}
+      <div className="absolute inset-x-4 top-[84px] bottom-[76px] flex flex-col sm:inset-x-10 sm:top-[100px] sm:bottom-[96px] lg:top-[clamp(104px,12vh,140px)] lg:bottom-[clamp(100px,12vh,128px)] 3xl:inset-x-14 short:top-[90px] short:bottom-[68px]">
         {/* Heading, Ongoing / Delivered, pages */}
         <div className="jp-caption-in flex flex-wrap items-end justify-between gap-x-6 gap-y-3 short:gap-y-1">
           <div>

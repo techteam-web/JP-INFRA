@@ -437,7 +437,7 @@ export default function FloorPlans({ onBack }) {
                 </div>
                 <div className="bg-navy-950/85 px-3 py-2.5">
                   <dt className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/45">Plan</dt>
-                  <dd className="mt-1 text-sm font-semibold">{floor.b === PLANS_TOWER ? "Typical floor" : "Coming soon"}</dd>
+                  <dd className="mt-1 text-sm font-semibold">{floor.b === PLANS_TOWER ? `Only Floor ${pad(PLAN_FLOOR)} plan available` : "Coming soon"}</dd>
                 </div>
               </dl>
 
