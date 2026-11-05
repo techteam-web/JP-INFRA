@@ -3,14 +3,16 @@ import gsap from "gsap";
 import Logo from "../components/Logo";
 import BackButton from "../components/BackButton";
 import FloorPlanStudio from "../components/FloorPlanStudio";
+import TowerView from "../components/TowerView";
 import { PLAN_FLOOR } from "../data/units";
 import { ALL, BUILDINGS, OFFSET, PLANS_TOWER, TOP, VIEW_H, VIEW_W, towerImg as renderImg } from "../data/tower";
 
 const same = (x, y) => !!x && !!y && x.b === y.b && x.n === y.n;
 
 // Tower B's plans aren't in yet: its Floor Plan button shows locked.
-// The floors' 360° views aren't uploaded yet: until then the card's 360° button shows locked.
-const FLOOR_360_READY = false;
+// The views from the floors (data/towerViews.js) are Tower A's: its card's 360° View opens
+// the view from that floor (TowerView); Tower B's shows locked until its views are in.
+const VIEWS_TOWER = "A";
 
 const pad = (n) => String(n).padStart(2, "0");
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -112,7 +114,7 @@ function IconArrow({ dir = "right", className = "h-3 w-3" }) {
 // The building render with every floor selectable. On arrival a band of light climbs the
 // building floor by floor; hovering a floor lights it, and choosing one lights that floor
 // and opens its card — Floor Plan or the 360° view.
-export default function FloorPlans({ onBack, onOpen360 }) {
+export default function FloorPlans({ onBack }) {
   const rootRef = useRef(null);
   const stageRef = useRef(null);
   const lightsRef = useRef(null);
@@ -128,10 +130,12 @@ export default function FloorPlans({ onBack, onOpen360 }) {
   const [anchorN, setAnchorN] = useState(null);
   // the Floor Plan screen (plan, filters, comparisons): null, or the tab it opens on
   const [studio, setStudio] = useState(null);
-  const studioOpen = useRef(false);
+  // the view from a floor, full screen: null, or the floor it's from
+  const [viewing, setViewing] = useState(null);
+  const studioOpen = useRef(false); // either of those over the page
   useEffect(() => {
-    studioOpen.current = !!studio;
-  }, [studio]);
+    studioOpen.current = !!studio || !!viewing;
+  }, [studio, viewing]);
 
   // Page chrome eases in
   useLayoutEffect(() => {
@@ -179,8 +183,8 @@ export default function FloorPlans({ onBack, onOpen360 }) {
     setStudio(null);
   };
 
-  // Up / down move between floors (not while the Floor Plan screen is open); Esc closes
-  // that screen, then the selection
+  // Up / down move between floors (not while the Floor Plan screen or a floor's view is
+  // open); Esc closes those, then the selection
   useEffect(() => {
     const onKey = (e) => {
       if (studioOpen.current && e.key !== "Escape") return;
@@ -191,8 +195,10 @@ export default function FloorPlans({ onBack, onOpen360 }) {
         e.preventDefault();
         stepRef.current?.(-1);
       } else if (e.key === "Escape") {
-        if (studioOpen.current) setStudio(null);
-        else setSelected(null);
+        if (studioOpen.current) {
+          setStudio(null);
+          setViewing(null);
+        } else setSelected(null);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -431,7 +437,7 @@ export default function FloorPlans({ onBack, onOpen360 }) {
                 </div>
                 <div className="bg-navy-950/85 px-3 py-2.5">
                   <dt className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/45">Plan</dt>
-                  <dd className="mt-1 text-sm font-semibold">{floor.b === PLANS_TOWER ? `As on Floor ${pad(PLAN_FLOOR)}` : "Coming soon"}</dd>
+                  <dd className="mt-1 text-sm font-semibold">{floor.b === PLANS_TOWER ? "Typical floor" : "Coming soon"}</dd>
                 </div>
               </dl>
 
@@ -456,10 +462,10 @@ export default function FloorPlans({ onBack, onOpen360 }) {
                     Floor Plan <IconLock />
                   </button>
                 )}
-                {FLOOR_360_READY ? (
+                {floor.b === VIEWS_TOWER ? (
                   <button
                     type="button"
-                    onClick={onOpen360}
+                    onClick={() => setViewing(floor.n)}
                     style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
                     className="btn-fill flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/25 px-2 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] transition-transform active:scale-95 short:py-2"
                   >
@@ -549,8 +555,19 @@ export default function FloorPlans({ onBack, onOpen360 }) {
 
       {/* Floor Plan screen: the plan, unit filtering and the comparisons */}
       {studio && (
-        <FloorPlanStudio startTab={studio} onClose={() => setStudio(null)} />
+        <FloorPlanStudio
+          startTab={studio}
+          startFloor={selected?.b === PLANS_TOWER ? selected.n : PLAN_FLOOR}
+          onClose={() => setStudio(null)}
+        />
+      )}
+
+      {/* The view from the chosen floor of Tower A */}
+      {viewing && (
+        <TowerView floor={viewing} onClose={() => setViewing(null)} />
       )}
     </div>
   );
 }
+
+

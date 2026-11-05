@@ -99,16 +99,5 @@ export const UNIT_BY_ID = new Map(UNITS.map((u) => [u.id, u]));
 export const unitsIn = (wing) => UNITS.filter((u) => u.wing === wing);
 export const TYPES = [...new Set(UNITS.map((u) => u.type))].sort();
 
-// View Comparison: which 360° panorama shows the view from a floor. Only the terrace has been
-// captured so far (in three lights), so every floor uses it for now; add an entry per
-// height as drone panoramas are shot, e.g. { from: 1, to: 12, label: "Floors 1–12", scenes: {...} }.
-// `scenes` are scene ids from data.js by time of day.
-export const VIEW_HEIGHTS = [
-  {
-    from: 1,
-    to: FLOORS,
-    label: "Terrace",
-    scenes: { Day: "0-dji_0001_terrace-150", Evening: "2-dji_0071_d", Twilight: "1-dji_0075_d" },
-  },
-];
-export const viewFor = (floor) => VIEW_HEIGHTS.find((v) => floor >= v.from && floor <= v.to) ?? VIEW_HEIGHTS[0];
+// The views from the floors (Compare Views, and the Floor Plans page's floor cards) are in
+// data/towerViews.js.

@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import Marzipano from "marzipano";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useSize } from "../hooks/useSize";
-import { APP_DATA } from "../data/data";
-import { panoLimiter } from "../data/panoLimits";
 import { ALL, OFFSET, PLANS_TOWER, VIEW_H, VIEW_W, towerImg } from "../data/tower";
-import { SAMPLE_DATA, PLAN_FLOOR, PLAN_W, PLAN_H, WINGS, WING_BY_ID, TYPES, UNITS, UNIT_BY_ID, unitsIn, viewFor } from "../data/units";
+import { TOWER_VIEWS, VIEW_WINGS, viewFor } from "../data/towerViews";
+import PanoPane from "./PanoPane";
+import { SAMPLE_DATA, PLAN_FLOOR, PLAN_W, PLAN_H, WINGS, WING_BY_ID, TYPES, UNITS, UNIT_BY_ID, unitsIn } from "../data/units";
 
 // The Floor Plan screen (Explore Units), over the Floor Plans page: three tabs, all reading
 // the homes in data/units.js (the 8th floor of wings A1 and A2) —
 //   Visual Selection  the wing's real plan: pick a home on it for its details and its own plan
 //   Search by Unit    narrow the homes down by wing, type, size and availability
 //   Compare Units     up to three homes side by side, with their views on a second panel
-// Comparing the view at two times of day belongs to Compare Units — it is a way of telling
-// two homes apart, so it sits with them rather than standing on its own.
+// Comparing the views (Tower A's wings and heights, data/towerViews.js) belongs to Compare
+// Units — it is a way of telling two homes apart, so it sits with them rather than on its own.
 // Nothing on it scrolls: every tab is laid out to fit the screen (results come in pages).
 const TABS = [
   { id: "plan", label: "Visual Selection", short: "Visual", title: ["Visual", "Selection"] },
@@ -27,6 +26,9 @@ const WING_IDS = WINGS.map((w) => w.id);
 const PANELS = ["Plans", "Views"];
 
 const pad = (n) => String(n).padStart(2, "0");
+// The Tower A floor on screen: the one picked on the Floor Plans page, or on the tower panel.
+// Every floor's homes are laid out as on the 8th floor's plan, so only the floor changes.
+const FloorCtx = createContext({ floor: PLAN_FLOOR, setFloor: () => {} });
 const sqft = (n) => `${n.toLocaleString("en-IN")} sq ft`;
 const typeName = (u) => (u.code ? `${u.type} · ${u.code}` : u.type);
 
@@ -64,12 +66,15 @@ function Icon({ d, className = "h-4 w-4" }) {
 }
 const ICONS = {
   close: "M6 6l12 12M18 6L6 18",
+  up: "M6 15l6-6 6 6",
+  down: "M6 9l6 6 6-6",
   left: "M15 6l-6 6 6 6",
   right: "M9 6l6 6-6 6",
   plus: "M12 5v14M5 12h14",
   check: "M5 12.5l4.5 4.5L19 7.5",
   arrow: "M5 12h14M13 6l6 6-6 6",
   filter: "M4 6h16M7 12h10M10 18h4",
+  lock: "M7.5 11V8a4.5 4.5 0 019 0v3M5.5 11h13v9.5h-13z",
 };
 
 const LABEL = "text-[9px] font-semibold uppercase tracking-[0.2em] text-white/55 sm:text-[10px] sm:tracking-[0.25em]";
@@ -237,13 +242,15 @@ function ZoomBox({ children, label }) {
 function WingPlan({ wing, selectedId, compareIds = [], match, onPick }) {
   const w = WING_BY_ID[wing];
   const units = unitsIn(wing);
+  const { floor } = useContext(FloorCtx);
 
   return (
     <>
-      <img src={w.plan} alt={`Wing ${wing}, floor ${PLAN_FLOOR} plan`} draggable={false} className="absolute inset-0 h-full w-full object-contain" />
+      <img src={w.plan} alt={`Wing ${wing}, floor ${floor} plan`} draggable={false} className="absolute inset-0 h-full w-full object-contain" />
       <svg viewBox={`0 0 ${PLAN_W} ${PLAN_H}`} className="absolute inset-0 h-full w-full" role="group" aria-label={`Wing ${wing}: homes`}>
         {units.map((u) => {
           const on = u.id === selectedId;
+          const compared = compareIds.includes(u.id);
           const dim = match && !match(u);
           const sold = u.status === "Sold";
           const hold = u.status === "On Hold";
@@ -259,11 +266,13 @@ function WingPlan({ wing, selectedId, compareIds = [], match, onPick }) {
               aria-pressed={on}
               onClick={pick}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick())}
-              strokeDasharray={hold && !on ? "8 6" : undefined}
+              strokeDasharray={hold && !on && !compared ? "8 6" : undefined}
               className={`cursor-pointer outline-none transition-[fill,stroke] duration-200 ${
                 on
                   ? "fill-red-600/30 stroke-red-600 [stroke-width:3]"
-                  : dim
+                  : compared
+                    ? "fill-red-600/25 stroke-red-600 [stroke-width:2.5] hover:fill-red-600/35"
+                    : dim
                     ? "fill-white/75 stroke-transparent"
                     : sold
                       ? "fill-navy-950/35 stroke-navy-950/40 [stroke-width:1.2] hover:fill-navy-950/45"
@@ -321,11 +330,21 @@ function TowerPanel({ wing, floorActive, onFloor }) {
   const boxRef = useRef(null);
   const { w, h } = useSize(boxRef);
   const [hover, setHover] = useState(null);
+  const { floor, setFloor } = useContext(FloorCtx);
   // the render is cropped to fill the panel, so the outlines are placed the same way
   const scale = Math.max(w / VIEW_W, h / VIEW_H) || 1;
   const dx = (w - VIEW_W * scale) / 2;
   const dy = (h - VIEW_H * scale) / 2;
-  const live = (f) => f.b === PLANS_TOWER && f.n === PLAN_FLOOR;
+  const live = (f) => f.b === PLANS_TOWER && f.n === floor;
+  const pickable = (f) => f.b === PLANS_TOWER;
+  // a floor of the other tower, clicked: its plans aren't in yet, so a note says so for a
+  // moment (`at` lets a second click on the same floor show it again)
+  const [soon, setSoon] = useState(null);
+  useEffect(() => {
+    if (!soon) return;
+    const t = setTimeout(() => setSoon(null), 2600);
+    return () => clearTimeout(t);
+  }, [soon]);
 
   return (
     <div ref={boxRef} className="relative h-full min-h-0 w-full overflow-hidden rounded-2xl border border-white/10 bg-navy-950">
@@ -340,30 +359,57 @@ function TowerPanel({ wing, floorActive, onFloor }) {
         >
           {ALL.map((f) => {
             const on = live(f);
-            const lit = on ? floorActive : hover && hover.b === f.b && hover.n === f.n;
+            const lit = on
+              ? floorActive
+              : (hover && hover.b === f.b && hover.n === f.n) || (soon && soon.b === f.b && soon.n === f.n);
             return f.pieces.map((points, i) => (
               <polygon
                 key={`${f.b}-${f.n}-${i}`}
                 points={points}
                 transform={`translate(${OFFSET})`}
-                className={on ? "cursor-pointer" : "cursor-default"}
+                className="cursor-pointer"
                 fill={on ? (floorActive ? "rgba(220,38,38,0.55)" : "rgba(220,38,38,0.3)") : lit ? "rgba(255,255,255,0.22)" : "transparent"}
                 stroke={on ? "rgba(248,113,113,0.95)" : lit ? "rgba(255,255,255,0.6)" : "transparent"}
                 strokeWidth={1.5 / scale}
                 onPointerEnter={() => setHover({ b: f.b, n: f.n })}
                 onPointerLeave={() => setHover(null)}
-                onClick={on ? onFloor : undefined}
+                onClick={on ? onFloor : pickable(f) ? () => setFloor(f.n) : () => setSoon({ b: f.b, n: f.n, at: Date.now() })}
               >
-                <title>{`Tower ${f.b} · Floor ${pad(f.n)}${on ? " — the plans on screen" : ""}`}</title>
+                <title>{`Tower ${f.b} · Floor ${pad(f.n)}${on ? " — the plans on screen" : pickable(f) ? "" : " — plans coming soon"}`}</title>
               </polygon>
             ));
           })}
         </svg>
       )}
+      {/* the other tower's floors: coming soon */}
+      {soon && (
+        // below lg the panel is a short strip under the plan: the note sits at its top, clear of
+        // the floor's name at its foot
+        <div className="pointer-events-none absolute inset-0 grid items-start justify-items-center p-3 lg:items-center lg:p-4 short:items-center">
+          <div
+            key={soon.at}
+            role="status"
+            className="jp-caption-in flex items-center gap-3.5 overflow-hidden rounded-2xl border border-white/15 bg-navy-950/85 py-3 pl-3 pr-5 shadow-premium backdrop-blur-xl short:gap-2.5 short:py-2 short:pr-4"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-red-500/50 bg-red-600/15 text-red-500 short:h-8 short:w-8">
+              <Icon d={ICONS.lock} className="h-4 w-4" />
+            </span>
+            <div>
+              <span className={`${LABEL} whitespace-nowrap`}>
+                Tower {soon.b} · Floor {pad(soon.n)}
+              </span>
+              <p className="mt-0.5 font-display text-2xl uppercase leading-none tracking-[0.04em] short:text-xl">
+                Coming <span className="text-red-600">Soon</span>
+              </p>
+              <p className="mt-1 text-[10px] text-white/55 sm:text-[11px] max-sm:hidden short:hidden">Its floor plans will be added shortly.</p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* which floor the plan beside it is, over the foot of the render */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy-950 via-navy-950/85 to-transparent px-4 pb-3.5 pt-12">
         <span className={LABEL}>Tower {PLANS_TOWER} · Wing {wing}</span>
-        <p className="font-display text-2xl leading-none lg:text-3xl">Floor {pad(PLAN_FLOOR)}</p>
+        <p className="font-display text-2xl leading-none lg:text-3xl">Floor {pad(floor)}</p>
       </div>
     </div>
   );
@@ -396,6 +442,7 @@ const fitBox = (w, h, r) => {
 
 // The Floor Plan tab: the wing's plan to pick homes on, or the chosen home's own plan
 function PlanTab({ wing, setWing, view, setView, selectedId, setSelectedId, compareIds, filters, clearFilters }) {
+  const { floor } = useContext(FloorCtx);
   const unit = selectedId ? UNIT_BY_ID.get(selectedId) : null;
   const filtered = !isDefault(filters);
   const showHome = view === "Home" && !!unit;
@@ -418,7 +465,7 @@ function PlanTab({ wing, setWing, view, setView, selectedId, setSelectedId, comp
               }}
               label="Wing"
             />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60 sm:text-[11px]">Floor {pad(PLAN_FLOOR)}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60 sm:text-[11px]">Floor {pad(floor)}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {filtered && !showHome && (
@@ -685,6 +732,7 @@ function FilterPanel({ filters, set, count, sort, setSort, onDone, compareIds, t
 
 // A home in the results: its plan, a tick box to compare it, its status, its name and size
 function UnitCard({ u, planH, inCompare, compareFull, toggleCompare, showOnPlan }) {
+  const { floor } = useContext(FloorCtx);
   const locked = !inCompare && compareFull;
   return (
     <li className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/12 bg-white/[0.03] transition-colors hover:border-white/35">
@@ -724,7 +772,7 @@ function UnitCard({ u, planH, inCompare, compareFull, toggleCompare, showOnPlan 
           {u.id} <span className="text-white/35">—</span> {u.type}
         </p>
         <p className="mt-1 truncate text-[11px] text-white/60">
-          <span className="font-semibold text-white/85">{sqft(u.carpet)}</span> carpet · Wing {u.wing} · Floor {pad(u.floor)}
+          <span className="font-semibold text-white/85">{sqft(u.carpet)}</span> carpet · Wing {u.wing} · Floor {pad(floor)}
           {u.code ? ` · ${u.code}` : ""}
         </p>
       </div>
@@ -963,11 +1011,12 @@ function CompareHead({ unit, action, onImage }) {
   );
 }
 
-// Comparing homes has two panels: the plans themselves, and the view out of them at two
-// times of day. The view belongs here because it is one more way of telling two homes
+// Comparing homes has two panels: the plans themselves, and the views from Tower A (either
+// wing, any height). The view belongs here because it is one more way of telling two homes
 // apart — it used to be a tab of its own, which offered it everywhere, including where
 // nothing was being compared.
 function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan, panel, setPanel, pair, setPair }) {
+  const { floor } = useContext(FloorCtx);
   const units = compareIds.map((id) => UNIT_BY_ID.get(id)).filter(Boolean);
   if (!units.length) {
     return (
@@ -1002,7 +1051,7 @@ function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan, panel, setPanel
   const sqm = (n) => `${(n * 0.092903).toFixed(1)} sq m`;
   const rows = [
     ["Wing", (u) => u.wing],
-    ["Floor", (u) => pad(u.floor)],
+    ["Floor", () => pad(floor)],
     ["Configuration", (u) => u.type],
     ["Plan type", (u) => u.code ?? "—"],
     ["Bedrooms", (u) => u.bed, (u) => u.bed],
@@ -1042,51 +1091,48 @@ function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan, panel, setPanel
 }
 
 
-// ---- Compare Views: two 360° views that turn together ---------------------------------------
+// ---- Compare Views: two views from Tower A that turn together -------------------------------
 
-// the same tiles as the 360° page (public/assets/360pano/tiles/), turning within the same
-// limits (data/panoLimits.js)
-const TILE_URL = (id) => `/assets/360pano/tiles/${id}/{z}/{f}/{y}/{x}.jpg`;
-const PREVIEW_URL = (id) => `/assets/360pano/tiles/${id}/preview.jpg`;
-const SCENE_BY_ID = new Map(APP_DATA.scenes.map((s) => [s.id, s]));
+const VIEW_BY_KEY = new Map(VIEW_WINGS.flatMap((w) => TOWER_VIEWS[w]).map((v) => [v.key, v]));
+// a pane's view for a home's floor (or the plan's): the nearest captured at or below it
+const paneFor = (wing, floor) => ({ wing, key: viewFor(wing, floor).key });
 
-// One 360° view. It tells its pair which view it's showing (`register`) and when it turns
-// (`onTurn`), so the pair can turn the other one with it.
-function PanoPane({ sceneId, side, register, onTurn }) {
-  const elRef = useRef(null);
-  const ctx = useRef(null);
-
-  useEffect(() => {
-    const viewer = new Marzipano.Viewer(elRef.current, { controls: { mouseViewMode: "drag" } });
-    ctx.current = { viewer, scenes: new Map(), current: null };
-    return () => {
-      viewer.destroy();
-      ctx.current = null;
-      register(side, null);
-    };
-  }, [register, side]);
-
-  useEffect(() => {
-    const c = ctx.current;
-    const data = SCENE_BY_ID.get(sceneId);
-    if (!c || !data) return;
-    let entry = c.scenes.get(sceneId);
-    if (!entry) {
-      const view = new Marzipano.RectilinearView(data.initialViewParameters, panoLimiter(data));
-      const source = Marzipano.ImageUrlSource.fromString(TILE_URL(sceneId), { cubeMapPreviewUrl: PREVIEW_URL(sceneId) });
-      const scene = c.viewer.createScene({ source, geometry: new Marzipano.CubeGeometry(data.levels), view, pinFirstLevel: true });
-      view.addEventListener("change", () => onTurn(side, view));
-      entry = { scene, view };
-      c.scenes.set(sceneId, entry);
-    }
-    const prev = c.current;
-    if (prev && prev !== entry) entry.view.setParameters({ yaw: prev.view.yaw(), pitch: prev.view.pitch(), fov: prev.view.fov() });
-    entry.scene.switchTo({ transitionDuration: prev ? 600 : 0 });
-    c.current = entry;
-    register(side, entry.view);
-  }, [sceneId, side, register, onTurn]);
-
-  return <div ref={elRef} className="absolute inset-0" />;
+// A pane's wing and height: the wing toggle, then the height with steps either side
+function ViewPicker({ value, onChange, label }) {
+  const views = TOWER_VIEWS[value.wing];
+  const at = Math.max(0, views.findIndex((v) => v.key === value.key));
+  const go = (i) => onChange({ ...value, key: views[Math.min(views.length - 1, Math.max(0, i))].key });
+  const step = "grid h-7 w-7 place-items-center transition-colors hover:bg-white/10 disabled:opacity-30";
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Segmented
+        value={value.wing}
+        options={VIEW_WINGS}
+        onChange={(w) => onChange({ wing: w, key: (TOWER_VIEWS[w].find((v) => v.floor === views[at].floor) ?? TOWER_VIEWS[w][0]).key })}
+        label={`${label}: wing`}
+      />
+      <div className="flex items-center rounded-lg border border-white/20">
+        <button type="button" aria-label="Lower" onClick={() => go(at - 1)} disabled={at === 0} className={`${step} rounded-l-lg`}>
+          <Icon d={ICONS.down} className="h-3.5 w-3.5" />
+        </button>
+        <select
+          aria-label={`${label}: height`}
+          value={value.key}
+          onChange={(e) => onChange({ ...value, key: e.target.value })}
+          className="h-7 appearance-none bg-transparent px-1 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-white outline-none sm:text-[11px]"
+        >
+          {views.map((v) => (
+            <option key={v.key} value={v.key} className="bg-navy-950">
+              {v.label}
+            </option>
+          ))}
+        </select>
+        <button type="button" aria-label="Higher" onClick={() => go(at + 1)} disabled={at === views.length - 1} className={`${step} rounded-r-lg`}>
+          <Icon d={ICONS.up} className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function ViewsTab({ pair, setPair }) {
@@ -1107,12 +1153,10 @@ function ViewsTab({ pair, setPair }) {
     other.setParameters({ yaw: view.yaw(), pitch: view.pitch(), fov: view.fov() });
     l.lock = false;
   }, []);
-  const view = viewFor(PLAN_FLOOR);
-  const times = Object.keys(view.scenes);
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-white/65 sm:text-sm">Drag either view to look around.</p>
+        <p className="text-xs text-white/65 sm:text-sm">Pick a wing and a height for each view, then drag either one to look around.</p>
         <label className="flex cursor-pointer items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80 sm:text-[11px]">
           <input type="checkbox" checked={together} onChange={(e) => setTogether(e.target.checked)} className="h-4 w-4 accent-red-600" />
           Turn together
@@ -1121,17 +1165,17 @@ function ViewsTab({ pair, setPair }) {
       {/* two views: stacked on phones, side by side from md (and on phones turned sideways) */}
       <div className="mt-3 grid min-h-0 flex-1 grid-rows-2 gap-3 md:grid-cols-2 md:grid-rows-1 short:mt-2 short:grid-cols-2 short:grid-rows-1">
         {pair.map((p, i) => {
-          const time = times.includes(p.time) ? p.time : times[0];
+          const v = VIEW_BY_KEY.get(p.key);
           return (
             <div key={i} className="flex min-h-0 flex-col rounded-2xl border border-white/12 bg-white/[0.03] p-2.5 sm:p-3 short:p-2">
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70 sm:text-[11px]">View {i + 1}</span>
-                <Segmented value={time} options={times} onChange={(t) => setPair((all) => all.map((x, j) => (j === i ? { time: t } : x)))} label="Time of day" />
+                <ViewPicker value={p} onChange={(next) => setPair((all) => all.map((x, j) => (j === i ? next : x)))} label={`View ${i + 1}`} />
               </div>
               <div className="relative mt-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-navy-950">
-                <PanoPane sceneId={view.scenes[time]} side={i === 0 ? "a" : "b"} register={register} onTurn={onTurn} />
-                <span className="pointer-events-none absolute bottom-2 left-2 rounded-md bg-navy-950/75 px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-white/70 backdrop-blur sm:text-[9px]">
-                  Captured at: {view.label} · {time}
+                <PanoPane scene={v.scene} side={i === 0 ? "a" : "b"} register={register} onTurn={onTurn} />
+                <span className="pointer-events-none absolute left-2 top-2 rounded-md bg-navy-950/75 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] backdrop-blur sm:text-[10px]">
+                  Wing {p.wing} · {v.label}
                 </span>
               </div>
             </div>
@@ -1144,7 +1188,8 @@ function ViewsTab({ pair, setPair }) {
 
 // ---- The screen ------------------------------------------------------------------------------
 
-export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "plan", onClose }) {
+export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "plan", startFloor = PLAN_FLOOR, onClose }) {
+  const [floor, setFloor] = useState(startFloor);
   const [tab, setTab] = useState(startTab);
   const [wing, setWing] = useState(startWing);
   const [selectedId, setSelectedId] = useState(null);
@@ -1152,7 +1197,8 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
   const [planView, setPlanView] = useState("Floor");
   const [compareIds, setCompareIds] = useState([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const [viewPair, setViewPair] = useState([{ time: "Day" }, { time: "Evening" }]);
+  // Compare Units' views: Tower A's two wings, from the plan's floor to start with
+  const [viewPair, setViewPair] = useState(() => [paneFor("A1", startFloor), paneFor("A2", startFloor)]);
   // which panel of Compare Units is showing: the homes, or the view out of them
   const [comparePanel, setComparePanel] = useState(PANELS[0]);
   const active = TABS.find((t) => t.id === tab);
@@ -1167,6 +1213,7 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
   };
 
   return (
+    <FloorCtx.Provider value={{ floor, setFloor }}>
     <div
       role="dialog"
       aria-modal="true"
@@ -1274,5 +1321,6 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
 
       </div>
     </div>
+    </FloorCtx.Provider>
   );
 }
