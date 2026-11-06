@@ -90,14 +90,14 @@ export const WING_BY_ID = Object.fromEntries(WINGS.map((w) => [w.id, w]));
 // The homes, as labelled on the plans (A2-06 on the A2 plan is the refuge area, not a home).
 // `code` is the plan's type code; `carpet` (sq ft) is sample.
 const HOMES = [
-  // the two side eyes are placed by hand, down in the clear margin level with the terraces,
-  // rather than up beside the rooms where the worked-out spot put them
-  { id: "A1-01", type: "4 BHK", code: "R1", bed: 4, carpet: 1480, image: a101, at: [74, 318] },
-  { id: "A1-02", type: "3 BHK", code: "R2", bed: 3, carpet: 1105, image: a102 },
-  { id: "A1-03", type: "3 BHK", code: "R3", bed: 3, carpet: 1110, image: a103, at: [1097, 324] },
-  { id: "A1-04", type: "3 BHK", code: "R4", bed: 3, carpet: 1110, image: a104 },
-  { id: "A1-05", type: "3 BHK", code: "R5", bed: 3, carpet: 1095, image: a105 },
-  { id: "A1-06", type: "4 BHK", code: "R6", bed: 4, carpet: 1475, image: a106 },
+  // Wing A1's eyes are placed by hand: three along the top and three along the bottom, each
+  // just to the right of its home's type label ("4BHK_TYPE - R1" …), clear of the text
+  { id: "A1-01", type: "4 BHK", code: "R1", bed: 4, carpet: 1480, image: a101, at: [334, 40] },
+  { id: "A1-02", type: "3 BHK", code: "R2", bed: 3, carpet: 1105, image: a102, at: [618, 40] },
+  { id: "A1-03", type: "3 BHK", code: "R3", bed: 3, carpet: 1110, image: a103, at: [917, 40] },
+  { id: "A1-04", type: "3 BHK", code: "R4", bed: 3, carpet: 1110, image: a104, at: [923, 626] },
+  { id: "A1-05", type: "3 BHK", code: "R5", bed: 3, carpet: 1095, image: a105, at: [589, 626] },
+  { id: "A1-06", type: "4 BHK", code: "R6", bed: 4, carpet: 1475, image: a106, at: [324, 626] },
   { id: "A2-01", type: "2 BHK", code: null, bed: 2, carpet: 760, image: a201 },
   { id: "A2-02", type: "2 BHK", code: null, bed: 2, carpet: 745, image: a202 },
   { id: "A2-03", type: "2 BHK", code: null, bed: 2, carpet: 745, image: a203 },

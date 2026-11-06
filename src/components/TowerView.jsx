@@ -16,7 +16,9 @@ function Arrow({ dir }) {
   );
 }
 
-export default function TowerView({ floor, startWing = VIEW_WINGS[0], onClose }) {
+// `home`: when opened from a home's eye on the plan, that home, named in the caption (while its
+// own wing is on screen)
+export default function TowerView({ floor, startWing = VIEW_WINGS[0], home = null, onClose }) {
   const [wing, setWing] = useState(startWing);
   const [key, setKey] = useState(() => viewFor(startWing, floor).key);
   const [stepped, setStepped] = useState(false); // a height picked here, rather than the floor's own
@@ -47,7 +49,15 @@ export default function TowerView({ floor, startWing = VIEW_WINGS[0], onClose })
           <span className="w-[3px] shrink-0 bg-red-600" aria-hidden="true" />
           <div className="py-2.5 pl-4 pr-6 short:py-1.5 short:pl-3 short:pr-5">
             <span className="block text-[9px] font-semibold uppercase tracking-[0.3em] text-white/60 sm:text-[10px]">
-              Tower A <span className="px-0.5 text-red-500">·</span> Wing {wing}
+              {home && home.wing === wing ? (
+                <>
+                  Home {home.id} <span className="px-0.5 text-red-500">·</span> {home.type}
+                </>
+              ) : (
+                <>
+                  Tower A <span className="px-0.5 text-red-500">·</span> Wing {wing}
+                </>
+              )}
             </span>
             <p className="mt-1 font-display text-[26px] uppercase leading-none tracking-[0.04em] sm:text-[30px] short:text-[22px]">{view.label}</p>
             {nearest && (

@@ -3,6 +3,7 @@ import { useSize } from "../hooks/useSize";
 import { ALL, OFFSET, PLANS_TOWER, VIEW_H, VIEW_W, towerImg } from "../data/tower";
 import { TOWER_VIEWS, VIEW_WINGS, viewFor } from "../data/towerViews";
 import PanoPane from "./PanoPane";
+import TowerView from "./TowerView";
 import { SAMPLE_DATA, PLAN_FLOOR, PLAN_W, PLAN_H, WINGS, WING_BY_ID, TYPES, UNITS, UNIT_BY_ID, unitsIn } from "../data/units";
 
 // The Floor Plan screen (Explore Units), over the Floor Plans page: three tabs, all reading
@@ -28,7 +29,8 @@ const PANELS = ["Plans", "Views"];
 const pad = (n) => String(n).padStart(2, "0");
 // The Tower A floor on screen: the one picked on the Floor Plans page, or on the tower panel.
 // Every floor's homes are laid out as on the 8th floor's plan, so only the floor changes.
-const FloorCtx = createContext({ floor: PLAN_FLOOR, setFloor: () => {} });
+// `showView` opens the view from a home (its eye on the plan).
+const FloorCtx = createContext({ floor: PLAN_FLOOR, setFloor: () => {}, showView: () => {} });
 const sqft = (n) => `${n.toLocaleString("en-IN")} sq ft`;
 const typeName = (u) => (u.code ? `${u.type} · ${u.code}` : u.type);
 
@@ -239,66 +241,11 @@ function ZoomBox({ children, label }) {
 // The wing's plan with every home's outline over it, in the plan's own drawing space. A home
 // lights on hover; the chosen one is red; sold ones are shaded and on-hold ones dashed;
 // homes outside the filter fade back. Homes in compare carry a red tick.
-// The card an eye opens, drawn in the plan's own space so it zooms and pans with it. It hangs
-// off that home's eye, below one in the sheet's top half and above one in the bottom half, and
-// is held inside the sheet either way.
-function UnitCallout({ unit, onClose }) {
-  const W = 300;
-  const H = 150;
-  const [mx, my] = unit.marker;
-  const x = Math.min(PLAN_W - W - 8, Math.max(8, mx - W / 2));
-  const y = my < PLAN_H / 2 ? Math.min(PLAN_H - H - 8, my + 26) : Math.max(8, my - 26 - H);
-  const rows = [
-    ["Bedrooms", String(unit.bed)],
-    ["Carpet", sqft(unit.carpet)],
-    ["Status", unit.status],
-  ];
-  return (
-    <g transform={`translate(${x} ${y})`} className="jp-caption-in">
-      <rect width={W} height={H} rx="16" className="fill-navy-950/95 stroke-white/25" strokeWidth="1.5" />
-      {/* the brand hairline, inset so it does not overrun the rounded corners */}
-      <rect x="18" width={W - 36} height="3" rx="1.5" className="fill-red-600" />
-      <text x="18" y="38" className="fill-white font-display" fontSize="30">
-        {unit.id}
-      </text>
-      <text x="18" y="60" className="fill-white/60" fontSize="16">
-        {typeName(unit)}
-      </text>
-      {rows.map(([k, v], i) => (
-        <g key={k} transform={`translate(18 ${84 + i * 21})`}>
-          <text className="fill-white/45" fontSize="14" letterSpacing="1.4">
-            {k.toUpperCase()}
-          </text>
-          <text x={W - 36} textAnchor="end" className="fill-white" fontSize="15" fontWeight="600">
-            {v}
-          </text>
-        </g>
-      ))}
-      <g
-        role="button"
-        tabIndex={0}
-        aria-label={`Close ${unit.id} details`}
-        transform={`translate(${W - 22} 24)`}
-        className="cursor-pointer outline-none"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onClose())}
-      >
-        <circle r="12" className="fill-white/10 hover:fill-white/25" />
-        <path d="M-4.5-4.5l9 9M4.5-4.5l-9 9" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
-      </g>
-    </g>
-  );
-}
-
+// Every home also carries an eye, out in the sheet's margin: it opens the view from that home.
 function WingPlan({ wing, selectedId, compareIds = [], match, onPick }) {
   const w = WING_BY_ID[wing];
   const units = unitsIn(wing);
-  const { floor } = useContext(FloorCtx);
-  const [info, setInfo] = useState(null);
-  const shown = info ? units.find((u) => u.id === info) : null;
+  const { floor, showView } = useContext(FloorCtx);
 
   return (
     <>
@@ -347,36 +294,38 @@ function WingPlan({ wing, selectedId, compareIds = [], match, onPick }) {
             </g>
           ))}
 
-        {/* an eye on every home, out in the margin by its type label: its facts without
-            leaving the floor, and without a mark sitting over the rooms */}
+        {/* an eye on every home, out in the margin by its type label (not over the rooms): it
+            opens the view from that home, full screen */}
         {units.map((u) => (
           <g
             key={`eye-${u.id}`}
             transform={`translate(${u.marker[0]} ${u.marker[1]})`}
             role="button"
             tabIndex={0}
-            aria-label={`${u.id}: its details`}
-            aria-expanded={info === u.id}
-            className="cursor-pointer outline-none"
+            aria-label={`The view from ${u.id}`}
+            className="group cursor-pointer outline-none"
             onClick={(e) => {
               e.stopPropagation();
-              setInfo((cur) => (cur === u.id ? null : u.id));
+              showView(u);
             }}
             onKeyDown={(e) => {
               if (e.key !== "Enter" && e.key !== " ") return;
               e.preventDefault();
-              setInfo((cur) => (cur === u.id ? null : u.id));
+              showView(u);
             }}
           >
-            <circle r="17" className={info === u.id ? "fill-red-600 stroke-white" : "fill-navy-950/85 stroke-white/70 hover:fill-red-600"} strokeWidth="1.6" />
+            <title>{`The view from ${u.id}`}</title>
+            <circle
+              r="17"
+              className="fill-navy-950/85 stroke-white/70 transition-colors group-hover:fill-red-600 group-focus-visible:fill-red-600"
+              strokeWidth="1.6"
+            />
             <g className="pointer-events-none" stroke="#fff" fill="none" strokeWidth="1.8" strokeLinejoin="round">
               <path d="M-10 0C-6.5-6 6.5-6 10 0 6.5 6-6.5 6-10 0Z" />
               <circle r="3.1" fill="#fff" stroke="none" />
             </g>
           </g>
         ))}
-
-        {shown && <UnitCallout unit={shown} onClose={() => setInfo(null)} />}
       </svg>
     </>
   );
@@ -1288,7 +1237,22 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
   const [viewPair, setViewPair] = useState(() => [paneFor("A1", startFloor), paneFor("A2", startFloor)]);
   // which panel of Compare Units is showing: the homes, or the view out of them
   const [comparePanel, setComparePanel] = useState(PANELS[0]);
+  // the home whose view is open (its eye on the plan), full screen over this screen
+  const [viewing, setViewing] = useState(null);
   const active = TABS.find((t) => t.id === tab);
+
+  // Esc closes that view only: caught before the Floor Plans page's own Esc, which would
+  // close this whole screen
+  useEffect(() => {
+    if (!viewing) return undefined;
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      setViewing(null);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [viewing]);
 
   const toggleCompare = (id) =>
     setCompareIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : ids.length >= MAX_COMPARE ? ids : [...ids, id]));
@@ -1300,7 +1264,7 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
   };
 
   return (
-    <FloorCtx.Provider value={{ floor, setFloor }}>
+    <FloorCtx.Provider value={{ floor, setFloor, showView: setViewing }}>
     <div
       role="dialog"
       aria-modal="true"
@@ -1404,9 +1368,10 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
             setPair={setViewPair}
           />
         )}
-
-
       </div>
+
+      {/* the view from a home, opened from its eye on the plan */}
+      {viewing && <TowerView floor={floor} startWing={viewing.wing} home={viewing} onClose={() => setViewing(null)} />}
     </div>
     </FloorCtx.Provider>
   );
