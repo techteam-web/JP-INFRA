@@ -7,11 +7,8 @@ import { TOWER_VIEWS, VIEW_WINGS, facingScene, viewFor } from "../data/towerView
 // switches A1 / A2 at the same height; ▲ ▼ step through the heights captured (8th floor to
 // the terrace); the view keeps looking the same way as it changes.
 const pad = (n) => String(n).padStart(2, "0");
-// the two sides a view can look out from (data/towerViews.js, facingScene)
-const FACINGS = [
-  ["front", "Front View"],
-  ["back", "Back View"],
-];
+// the two sides a view can look out from (data/towerViews.js, facingScene), as the caption names them
+const FACING_LABEL = { front: "Front View", back: "Back View" };
 
 function Arrow({ dir }) {
   return (
@@ -23,10 +20,10 @@ function Arrow({ dir }) {
 
 // `home`: when opened from a home's eye on the plan, that home, named in the caption (while its
 // own wing is on screen). The view faces the side of the building that home is on: the
-// mountains from the front, the opposite way from the back. Without a home, the front.
-// The Front / Back switch in the caption swaps to the other side's view at any time.
+// mountains from the front, the opposite way from the back. Without a home, the front. The
+// side is fixed: the caption names it, but a home's view can't be turned to the other side.
 export default function TowerView({ floor, startWing = VIEW_WINGS[0], home = null, onClose }) {
-  const [facing, setFacing] = useState(home?.faces ?? "front");
+  const facing = home?.faces ?? "front";
   const [wing, setWing] = useState(startWing);
   const [key, setKey] = useState(() => viewFor(startWing, floor).key);
   const [stepped, setStepped] = useState(false); // a height picked here, rather than the floor's own
@@ -69,22 +66,9 @@ export default function TowerView({ floor, startWing = VIEW_WINGS[0], home = nul
             </span>
             <p className="mt-1 font-display text-[26px] uppercase leading-none tracking-[0.04em] sm:text-[30px] short:text-[22px]">{view.label}</p>
             {/* which side of the building the view looks out from */}
-            <div role="radiogroup" aria-label="View facing" className="pointer-events-auto mt-2.5 inline-flex rounded-lg border border-white/15 bg-navy-950/40 p-0.5 short:mt-1.5">
-              {FACINGS.map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="radio"
-                  aria-checked={facing === id}
-                  onClick={() => setFacing(id)}
-                  className={`rounded-md px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.18em] transition-colors sm:text-[10px] short:py-1 ${
-                    facing === id ? "bg-red-600 text-white" : "text-white/65 hover:text-white"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <span className="mt-2.5 inline-flex rounded-md bg-red-600 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white sm:text-[10px] short:mt-1.5 short:py-1">
+              {FACING_LABEL[facing]}
+            </span>
             {nearest && (
               <p className="mt-1.5 text-[9px] font-medium uppercase tracking-[0.2em] text-white/50">Nearest to floor {pad(floor)}</p>
             )}
