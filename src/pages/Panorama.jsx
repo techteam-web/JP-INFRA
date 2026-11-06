@@ -163,28 +163,30 @@ function FloorMenu({ value, onChange }) {
         aria-label={`View from: ${current.label}`}
         onClick={() => setOpen((o) => !o)}
         style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
-        className="btn-fill flex items-center gap-3 rounded-xl py-2 pl-3.5 pr-3 text-white transition-transform active:scale-95 short:py-1.5 3xl:py-2.5 3xl:pl-4"
+        /* the button is the pill itself, so the list below lines up with its own edges */
+        className="btn-fill flex w-full items-center gap-3 rounded-2xl border border-white/20 bg-navy-950/80 py-2.5 pl-3.5 pr-3 text-white shadow-premium backdrop-blur-xl transition-transform active:scale-95 short:py-2 3xl:py-3 3xl:pl-4"
       >
-        <span className="text-red-500">
+        <span className="shrink-0 text-red-500">
           <IconBuilding />
         </span>
-        <span className="flex min-w-[6.5rem] flex-col items-start text-left leading-none 3xl:min-w-[8rem]">
+        <span className="flex min-w-0 flex-1 flex-col items-start text-left leading-none">
           <span className="text-[9px] font-semibold uppercase tracking-[0.26em] text-white/55 3xl:text-[10px]">View from</span>
-          <span className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] sm:text-xs 3xl:text-sm">{current.label}</span>
+          <span className="mt-1 max-w-full truncate text-[11px] font-bold uppercase tracking-[0.16em] sm:text-xs 3xl:text-sm">{current.label}</span>
         </span>
-        <svg viewBox="0 0 24 24" className={`h-4 w-4 transition-transform duration-200 ${open ? "" : "rotate-180"}`} aria-hidden="true">
+        <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 transition-transform duration-200 ${open ? "" : "rotate-180"}`} aria-hidden="true">
           <path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-2">
+        <div className="absolute left-0 top-full mt-2 w-full">
           <div
             ref={listRef}
             role="menu"
             aria-label="View from"
             onKeyDown={onListKey}
-            className="jp-caption-in grid w-max gap-0.5 rounded-2xl border border-white/20 bg-navy-950/90 p-1.5 shadow-premium backdrop-blur-xl [animation-duration:0.35s] [@media(min-height:501px)_and_(max-height:720px)]:grid-cols-2 short:grid-cols-3"
+            /* the same width as the button above it; only the short-screen grids run wider */
+            className="jp-caption-in grid w-full gap-0.5 rounded-2xl border border-white/20 bg-navy-950/90 p-1.5 shadow-premium backdrop-blur-xl [animation-duration:0.35s] [@media(min-height:501px)_and_(max-height:720px)]:w-max [@media(min-height:501px)_and_(max-height:720px)]:grid-cols-2 short:w-max short:grid-cols-3"
           >
             <span className="col-span-full flex items-center gap-2 px-3 pb-1.5 pt-1 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/50">
               <span className="h-px w-5 bg-red-600" />
@@ -203,7 +205,7 @@ function FloorMenu({ value, onChange }) {
                     setOpen(false);
                     buttonRef.current?.focus();
                   }}
-                  className={`flex min-w-[9.5rem] items-center justify-between gap-4 rounded-xl px-3.5 py-2 text-left text-[11px] font-bold uppercase tracking-[0.16em] outline-none transition-colors [@media(max-height:720px)]:min-w-[7.5rem] short:py-1.5 ${
+                  className={`flex items-center justify-between gap-3 rounded-xl px-3.5 py-2 text-left text-[11px] font-bold uppercase tracking-[0.16em] outline-none transition-colors [@media(max-height:720px)]:min-w-[7.5rem] short:py-1.5 ${
                     on
                       ? "bg-red-600 text-white"
                       : "text-white/80 hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
@@ -331,10 +333,11 @@ export default function Panorama({ onBack }) {
 
       {/* The floor to look from: top left under the back button on every screen (beside it on
           phones turned sideways), its list opening downwards */}
-      <div className="absolute left-6 top-[5.5rem] z-20 sm:left-10 sm:top-[6.75rem] 3xl:left-14 4xl:left-16 short:left-[6.25rem] short:top-8" data-anim>
-        <div className="rounded-2xl border border-white/20 bg-navy-950/80 p-1.5 shadow-premium backdrop-blur-xl short:p-1 3xl:p-2">
-          <FloorMenu value={floorKey} onChange={setFloorKey} />
-        </div>
+      <div
+        className="absolute left-6 top-[5.5rem] z-20 w-[13.5rem] sm:left-10 sm:top-[6.75rem] 3xl:left-14 3xl:w-[15.5rem] 4xl:left-16 short:left-[6.25rem] short:top-8"
+        data-anim
+      >
+        <FloorMenu value={floorKey} onChange={setFloorKey} />
       </div>
 
       {/* Time of day */}
