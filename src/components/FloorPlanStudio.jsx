@@ -1080,7 +1080,7 @@ function CompareHead({ unit, action, onImage }) {
 // wing, any height). The view belongs here because it is one more way of telling two homes
 // apart — it used to be a tab of its own, which offered it everywhere, including where
 // nothing was being compared.
-function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan, panel, setPanel, sides, setSides }) {
+function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan, panel, setPanel }) {
   const { floor } = useContext(FloorCtx);
   const units = compareIds.map((id) => UNIT_BY_ID.get(id)).filter(Boolean);
   if (!units.length) {
@@ -1106,7 +1106,7 @@ function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan, panel, setPanel
       <div className="flex h-full min-h-0 flex-col">
         {panels}
         <div className="min-h-0 flex-1">
-          <ViewsTab units={units} sides={sides} setSides={setSides} />
+          <ViewsTab units={units} />
         </div>
       </div>
     );
@@ -1158,8 +1158,6 @@ function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan, panel, setPanel
 
 // ---- Compare Views: the view from each home in the comparison, turning together ---------------
 
-// the side a view looks out from (data/towerViews.js, facingScene), as its switch names them
-const SIDES = ["Front", "Back"];
 // the views laid out by how many homes are compared: stacked on phones, side by side from md
 // (and on phones turned sideways)
 const VIEW_GRID = {
@@ -1170,8 +1168,8 @@ const VIEW_GRID = {
 
 // One view per home in the comparison, in the same order as Plans: the view from that home's
 // own wing and floor, looking out from its own side of the building (the front, the mountains;
-// or the back). Each can be switched to the other side (`sides` holds those choices, by home).
-function ViewsTab({ units, sides, setSides }) {
+// or the back). The side is the home's own and is fixed: its label names it.
+function ViewsTab({ units }) {
   const { floor } = useContext(FloorCtx);
   const link = useRef({ views: {}, centres: {}, on: true, lock: false });
   const [together, setTogether] = useState(true);
@@ -1198,7 +1196,7 @@ function ViewsTab({ units, sides, setSides }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-white/65 sm:text-sm">The view from each home you are comparing. Switch any to its front or back, and drag one to look around.</p>
+        <p className="text-xs text-white/65 sm:text-sm">The view from each home you are comparing, from its own side of the building. Drag one to look around.</p>
         {units.length > 1 && (
           <label className="flex cursor-pointer items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80 sm:text-[11px]">
             <input type="checkbox" checked={together} onChange={(e) => setTogether(e.target.checked)} className="h-4 w-4 accent-red-600" />
@@ -1209,7 +1207,7 @@ function ViewsTab({ units, sides, setSides }) {
       <div className={`mt-3 grid min-h-0 flex-1 gap-3 short:mt-2 ${VIEW_GRID[units.length]}`}>
         {units.map((u) => {
           const v = viewFor(u.wing, floor);
-          const facing = sides[u.id] ?? u.faces;
+          const facing = u.faces;
           return (
             <div key={u.id} className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-white/12 bg-white/[0.03] p-2.5 sm:p-3 short:p-2">
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5">
@@ -1217,17 +1215,14 @@ function ViewsTab({ units, sides, setSides }) {
                   <span className="font-display text-xl leading-none sm:text-2xl short:text-lg">{u.id}</span>
                   <span className="truncate text-[10px] text-white/55 sm:text-[11px]">{typeName(u)}</span>
                 </p>
-                <Segmented
-                  value={facing === "back" ? "Back" : "Front"}
-                  options={SIDES}
-                  onChange={(s) => setSides((all) => ({ ...all, [u.id]: s.toLowerCase() }))}
-                  label={`${u.id}: front or back view`}
-                />
+                <span className="rounded-md bg-red-600 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-white sm:text-[10px]">
+                  {facing === "back" ? "Back" : "Front"} View
+                </span>
               </div>
               <div className="relative mt-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-navy-950">
                 <PanoPane scene={facingScene(v.scene, facing)} side={u.id} register={register} onTurn={onTurn} />
                 <span className="pointer-events-none absolute left-2 top-2 rounded-md bg-navy-950/75 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] backdrop-blur sm:text-[10px]">
-                  Wing {u.wing} · {v.label} · {facing === "back" ? "Back" : "Front"} view
+                  Wing {u.wing} · {v.label}
                 </span>
               </div>
             </div>
@@ -1249,8 +1244,6 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
   const [planView, setPlanView] = useState("Floor");
   const [compareIds, setCompareIds] = useState([]);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  // Compare Units' views: the side (front or back) each compared home's view was switched to
-  const [viewSides, setViewSides] = useState({});
   // which panel of Compare Units is showing: the homes, or the view out of them
   const [comparePanel, setComparePanel] = useState(PANELS[0]);
   // the home whose view is open (its eye on the plan), full screen over this screen
@@ -1380,8 +1373,6 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
             showOnPlan={showOnPlan}
             panel={comparePanel}
             setPanel={setComparePanel}
-            sides={viewSides}
-            setSides={setViewSides}
           />
         )}
       </div>
