@@ -1370,8 +1370,9 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
         )}
       </div>
 
-      {/* the view from a home, opened from its eye on the plan */}
-      {viewing && <TowerView floor={floor} startWing={viewing.wing} home={viewing} onClose={() => setViewing(null)} />}
+      {/* The view from a home, opened from its eye on the plan: always the 8th floor's, the
+          floor these plans are drawn for, whatever floor the screen is set to. */}
+      {viewing && <TowerView floor={PLAN_FLOOR} startWing={viewing.wing} home={viewing} onClose={() => setViewing(null)} />}
     </div>
     </FloorCtx.Provider>
   );

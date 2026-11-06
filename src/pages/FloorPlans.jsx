@@ -9,7 +9,9 @@ import { ALL, BUILDINGS, OFFSET, PLANS_TOWER, TOP, VIEW_H, VIEW_W, towerImg as r
 
 const same = (x, y) => !!x && !!y && x.b === y.b && x.n === y.n;
 
-// Tower B's plans aren't in yet: its Floor Plan button shows locked.
+// Only the 8th floor of Tower A has plans drawn so far, so only that floor's card offers the
+// Floor Plan; every other floor can still be picked and read, but its card shows it locked.
+const hasPlan = (f) => !!f && f.b === PLANS_TOWER && f.n === PLAN_FLOOR;
 // The views from the floors (data/towerViews.js) are Tower A's: its card's 360° View opens
 // the view from that floor (TowerView); Tower B's shows locked until its views are in.
 const VIEWS_TOWER = "A";
@@ -437,13 +439,15 @@ export default function FloorPlans({ onBack }) {
                 </div>
                 <div className="bg-navy-950/85 px-3 py-2.5">
                   <dt className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/45">Plan</dt>
-                  <dd className="mt-1 text-sm font-semibold">{floor.b === PLANS_TOWER ? `Only Floor ${pad(PLAN_FLOOR)} plan available` : "Coming soon"}</dd>
+                  <dd className={`mt-1 text-sm font-semibold ${hasPlan(floor) ? "" : "text-white/55"}`}>
+                    {hasPlan(floor) ? `Floor ${pad(PLAN_FLOOR)} plan` : floor.b === PLANS_TOWER ? `Locked · Floor ${pad(PLAN_FLOOR)} only` : "Coming soon"}
+                  </dd>
                 </div>
               </dl>
 
               {/* where to go from here */}
               <div className="mt-3.5 grid grid-cols-[1.2fr_1fr] gap-2 short:mt-2.5">
-                {floor.b === PLANS_TOWER ? (
+                {hasPlan(floor) ? (
                   <button
                     type="button"
                     onClick={() => setStudio("plan")}
@@ -456,7 +460,7 @@ export default function FloorPlans({ onBack }) {
                   <button
                     type="button"
                     disabled
-                    title="Coming soon"
+                    title={floor.b === PLANS_TOWER ? `Locked — only Floor ${pad(PLAN_FLOOR)} has a plan` : "Coming soon"}
                     className="flex cursor-not-allowed items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.02] px-2 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40 short:py-2"
                   >
                     Floor Plan <IconLock />
@@ -557,7 +561,8 @@ export default function FloorPlans({ onBack }) {
       {studio && (
         <FloorPlanStudio
           startTab={studio}
-          startFloor={selected?.b === PLANS_TOWER ? selected.n : PLAN_FLOOR}
+          // the 8th is the only floor with plans drawn, so the screen always opens on it
+          startFloor={PLAN_FLOOR}
           onClose={() => setStudio(null)}
         />
       )}
