@@ -5,7 +5,8 @@ import { panoLimiter } from "../data/panoLimits";
 // One 360° view, filling its box, within the site's turning limits (data/panoLimits.js).
 // `scene`: { id, tileUrl, previewUrl, levels, faceSize, initialViewParameters }. Changing it
 // crossfades to the new scene, looking the same way. For a pair that turns together, it
-// tells the pair which view it shows (`register`) and when it turns (`onTurn`).
+// tells the pair which view it shows and the direction it is held about (`register`), and
+// when it turns (`onTurn`).
 export default function PanoPane({ scene, side = "a", register, onTurn }) {
   const elRef = useRef(null);
   const ctx = useRef(null);
@@ -42,7 +43,7 @@ export default function PanoPane({ scene, side = "a", register, onTurn }) {
     entry.centre = scene.limits?.centre ?? 0;
     entry.scene.switchTo({ transitionDuration: prev ? 600 : 0 });
     c.current = entry;
-    register?.(side, entry.view);
+    register?.(side, entry.view, entry.centre);
   }, [scene, side, register, onTurn]);
 
   return <div ref={elRef} className="absolute inset-0" />;
