@@ -33,7 +33,13 @@ export default function PanoPane({ scene, side = "a", register, onTurn }) {
       c.scenes.set(scene.id, entry);
     }
     const prev = c.current;
-    if (prev && prev !== entry) entry.view.setParameters({ yaw: prev.view.yaw(), pitch: prev.view.pitch(), fov: prev.view.fov() });
+    // looking the same way; or, changing to a view held about another direction (the other
+    // side of the building, data/towerViews.js facingScene), turned round by the difference
+    if (prev && prev !== entry) {
+      const turn = (scene.limits?.centre ?? 0) - (prev.centre ?? 0);
+      entry.view.setParameters({ yaw: prev.view.yaw() + turn, pitch: prev.view.pitch(), fov: prev.view.fov() });
+    }
+    entry.centre = scene.limits?.centre ?? 0;
     entry.scene.switchTo({ transitionDuration: prev ? 600 : 0 });
     c.current = entry;
     register?.(side, entry.view);

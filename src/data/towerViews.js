@@ -14,6 +14,14 @@ const LEVELS = [
   { tileSize: 512, size: 4096 },
 ];
 const OPEN = { yaw: 0, pitch: 0, fov: 1.35 };
+const DEG = Math.PI / 180;
+
+// How far the views from Tower A turn (data/panoLimits.js): they open on the mountains
+// (yaw 0, the front), and the picture's left and right edges stop `side` either way of that,
+// its top and bottom at `top` and `bottom`. A home on the back of the building sees the same
+// view turned the other way round, held within the same limits about the back (facingScene).
+// Change these to widen or narrow both.
+const TOWER_LIMITS = { side: 70 * DEG, top: 40 * DEG, bottom: -35 * DEG };
 
 // [floor, height in metres, scene folder]; floor 0 is the terrace
 const SHOTS = {
@@ -74,6 +82,7 @@ export const TOWER_VIEWS = Object.fromEntries(
           levels: LEVELS,
           faceSize: 4096,
           initialViewParameters: OPEN,
+          limits: TOWER_LIMITS,
         },
       };
     }),
@@ -118,6 +127,25 @@ export const CENTRE_VIEWS = CENTRE_SHOTS.map(([floor, id]) => ({
     turn: CENTRE_TURN,
   },
 }));
+
+// A view as a home on one side of the building sees it: "front" (the mountains) is the
+// scene as it is; "back" opens looking the opposite way and turns within the back half
+// instead. Every home on the same side sees the same view (data/units.js says which side).
+const BACKS = new Map();
+export function facingScene(scene, facing) {
+  if (facing !== "back") return scene;
+  let back = BACKS.get(scene.id);
+  if (!back) {
+    back = {
+      ...scene,
+      id: `${scene.id}#back`,
+      initialViewParameters: { ...scene.initialViewParameters, yaw: Math.PI },
+      limits: { ...scene.limits, centre: Math.PI },
+    };
+    BACKS.set(scene.id, back);
+  }
+  return back;
+}
 
 // The view to show for a floor: the nearest one captured at or below it (the 8th floor's
 // for anything lower)

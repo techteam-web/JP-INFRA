@@ -108,9 +108,15 @@ const HOMES = [
 // Sample availability: a fixed pattern (the same on every visit)
 const SAMPLE_STATUS = { "A1-02": "Sold", "A1-05": "On Hold", "A2-02": "Sold", "A2-04": "Sold" };
 
+// Which side of the building a home is on, which is the view its eye opens on: the plans'
+// bottom edge is the front (the mountains), their top edge the back. A home's eye sits on its
+// side, so it decides. A home can name one by hand with `faces`.
+const sideOf = (marker) => (marker[1] < PLAN_H / 2 ? "back" : "front");
+
 export const UNITS = HOMES.map((h) => {
   const shape = WING_BY_ID[h.id.slice(0, 2)].shapes[h.id];
   const box = boxOf(shape);
+  const marker = h.at ?? markerOf(box);
   return {
     ...h,
     wing: h.id.slice(0, 2),
@@ -118,7 +124,8 @@ export const UNITS = HOMES.map((h) => {
     status: SAMPLE_STATUS[h.id] ?? "Available",
     shape,
     centre: [box.x + box.width / 2, box.y + box.height / 2],
-    marker: h.at ?? markerOf(box),
+    marker,
+    faces: h.faces ?? sideOf(marker),
   };
 });
 export const UNIT_BY_ID = new Map(UNITS.map((u) => [u.id, u]));

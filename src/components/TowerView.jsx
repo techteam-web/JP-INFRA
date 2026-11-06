@@ -1,12 +1,17 @@
 import { useState } from "react";
 import PanoPane from "./PanoPane";
-import { TOWER_VIEWS, VIEW_WINGS, viewFor } from "../data/towerViews";
+import { TOWER_VIEWS, VIEW_WINGS, facingScene, viewFor } from "../data/towerViews";
 
 // The view from a floor of Tower A, full screen over the Floor Plans page: the drone
 // panorama captured nearest (at or below) the chosen floor, in either wing. The wing toggle
 // switches A1 / A2 at the same height; ▲ ▼ step through the heights captured (8th floor to
 // the terrace); the view keeps looking the same way as it changes.
 const pad = (n) => String(n).padStart(2, "0");
+// the two sides a view can look out from (data/towerViews.js, facingScene)
+const FACINGS = [
+  ["front", "Front View"],
+  ["back", "Back View"],
+];
 
 function Arrow({ dir }) {
   return (
@@ -17,8 +22,11 @@ function Arrow({ dir }) {
 }
 
 // `home`: when opened from a home's eye on the plan, that home, named in the caption (while its
-// own wing is on screen)
+// own wing is on screen). The view faces the side of the building that home is on: the
+// mountains from the front, the opposite way from the back. Without a home, the front.
+// The Front / Back switch in the caption swaps to the other side's view at any time.
 export default function TowerView({ floor, startWing = VIEW_WINGS[0], home = null, onClose }) {
+  const [facing, setFacing] = useState(home?.faces ?? "front");
   const [wing, setWing] = useState(startWing);
   const [key, setKey] = useState(() => viewFor(startWing, floor).key);
   const [stepped, setStepped] = useState(false); // a height picked here, rather than the floor's own
@@ -41,7 +49,7 @@ export default function TowerView({ floor, startWing = VIEW_WINGS[0], home = nul
 
   return (
     <div role="dialog" aria-modal="true" aria-label={`View from Tower A, wing ${wing}, ${view.label}`} className="jp-caption-in absolute inset-0 z-40 overflow-hidden bg-navy-950">
-      <PanoPane scene={view.scene} />
+      <PanoPane scene={facingScene(view.scene, facing)} />
 
       {/* what's on screen, and close */}
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-4 px-6 pt-6 sm:px-10 sm:pt-8 short:pt-4">
@@ -60,8 +68,25 @@ export default function TowerView({ floor, startWing = VIEW_WINGS[0], home = nul
               )}
             </span>
             <p className="mt-1 font-display text-[26px] uppercase leading-none tracking-[0.04em] sm:text-[30px] short:text-[22px]">{view.label}</p>
+            {/* which side of the building the view looks out from */}
+            <div role="radiogroup" aria-label="View facing" className="pointer-events-auto mt-2.5 inline-flex rounded-lg border border-white/15 bg-navy-950/40 p-0.5 short:mt-1.5">
+              {FACINGS.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={facing === id}
+                  onClick={() => setFacing(id)}
+                  className={`rounded-md px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.18em] transition-colors sm:text-[10px] short:py-1 ${
+                    facing === id ? "bg-red-600 text-white" : "text-white/65 hover:text-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             {nearest && (
-              <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.2em] text-white/50">Nearest to floor {pad(floor)}</p>
+              <p className="mt-1.5 text-[9px] font-medium uppercase tracking-[0.2em] text-white/50">Nearest to floor {pad(floor)}</p>
             )}
           </div>
         </div>
