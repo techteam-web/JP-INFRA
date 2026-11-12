@@ -38,14 +38,14 @@ export const STATUS = {
 
 // in the client's order
 export const PROJECTS = [
-  { id: "jp-connect", name: "JP Connect", area: "Mira Road", status: "ongoing", image: jpConnect, lngLat: [72.885728, 19.2827144] },
-  { id: "icons-71", name: "Icons 71", area: "Chembur", status: "ongoing", image: icons71, lngLat: [72.9067103, 19.046443] },
-  { id: "matunga-origins", name: "Codename Matunga Origins", area: "Matunga", status: "ongoing", image: matungaOrigins, lngLat: [72.8528739, 19.0306769] },
-  { id: "the-palace", name: "The Palace", area: "Mira Road", status: "ongoing", image: thePalace, lngLat: [72.8875264, 19.2792046] },
-  { id: "starlife", name: "Codename StarLife", area: "Mira Road", status: "ongoing", image: starLife, lngLat: [72.8864879, 19.2799624] },
+  { id: "jp-connect", name: "JP Connect", area: "Mira Road", status: "ongoing", image: jpConnect, lngLat: [72.885713, 19.282896] },
+  { id: "icons-71", name: "Icons 71", area: "Chembur", status: "ongoing", image: icons71, lngLat: [72.906086, 19.049311] },
+  { id: "matunga-origins", name: "Codename Matunga Origins", area: "Matunga", status: "ongoing", image: matungaOrigins, lngLat: [72.852761, 19.031491] },
+  { id: "the-palace", name: "The Palace", area: "Mira Road", status: "ongoing", image: thePalace, lngLat: [72.8875360, 19.2792636] },
+  { id: "starlife", name: "Codename StarLife", area: "Mira Road", status: "ongoing", image: starLife, lngLat: [72.886434, 19.280054] },
   { id: "north-west-end", name: "North West~End", area: "Bhayander", status: "ongoing", image: northWestEnd, lngLat: [72.846, 19.301] },
-  { id: "north-imperial-greens", name: "North Imperial Greens", area: "Thane", status: "ongoing", image: imperialGreens, lngLat: [72.9596872, 19.2660606] },
-  { id: "jp-parkway", name: "JP Parkway", area: "Andheri", status: "ongoing", image: parkway, lngLat: [72.8576357, 19.1349374] },
+  { id: "north-imperial-greens", name: "North Imperial Greens", area: "Thane", status: "ongoing", image: imperialGreens, lngLat: [72.959040, 19.270215] },
+  { id: "jp-parkway", name: "JP Parkway", area: "Andheri", status: "ongoing", image: parkway, lngLat: [72.858019, 19.137503] },
 
   { id: "north-barcelona", name: "North Barcelona", area: "Mira Road", status: "delivered", image: northBarcelona, lngLat: [72.8868, 19.2792], group: "ngc" },
   { id: "north-alexa", name: "North Alexa", area: "Mira Road", status: "delivered", image: northAlexa, lngLat: [72.8861, 19.2807], group: "ngc" },
