@@ -9,7 +9,7 @@ export const BANDS = [
     id: '2',
     label: '2 Min',
     places: [
-      { name: 'Shree Ganesha Temple (JP North Vinay Nagar)', category: 'Spiritual', lngLat: [72.886149, 19.281889] },
+      { name: 'Shree Ganesha Temple (JP North Vinay Nagar)', category: 'Spiritual', lngLat: [72.886212119181, 19.28196845966878] },
       { name: 'Podar International School (Mira Road)', category: 'Education', lngLat: [ 72.88778556606593,19.28329211047906] },
       { name: 'Euro Kids (Vinay Nagar)', category: 'Education', lngLat: [72.888037, 19.280292] },
       { name: 'Western Express Highway', category: 'Highway', lngLat: [72.88983321835849, 19.277428612169455] },

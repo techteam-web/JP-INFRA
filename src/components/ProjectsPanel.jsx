@@ -154,9 +154,11 @@ function FullPhotos({ list, start, onClose }) {
   );
 }
 
-// One project, large: a framed card, its photo filling one half, the project in the other
-// (photo on top on phones held upright), with the rest of the list as thumbnails to jump to.
-// The photo (or its Full size button) opens it whole, over the whole screen.
+// One project, large: a framed card, its photo a square as tall as the card (the photos are
+// all square, so it shows whole, never cropped), the project beside it in one compact block
+// — counter, name and place, the buttons, then the rest of the list as thumbnails to jump to.
+// On phones held upright the photo sits on top. Its Full size button (not the photo itself)
+// opens it whole, over the whole screen.
 function ProjectView({ list, at, onStep, onJump, onClose, onShowOnMap }) {
   const p = list[at];
   const [full, setFull] = useState(null); // full screen: the project it opened on, or null
@@ -183,25 +185,27 @@ function ProjectView({ list, at, onStep, onJump, onClose, onShowOnMap }) {
   };
 
   return (
-    <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-3xl border border-white/15 bg-navy-950/55 shadow-premium sm:grid-cols-2 sm:grid-rows-1 short:grid-cols-2 short:grid-rows-1">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-white/15 bg-navy-950/55 shadow-premium sm:flex-row short:flex-row">
       {full !== null && <FullPhotos list={list} start={full} onClose={closeFull} />}
 
-      {/* The photo, filling its half */}
-      <div className="relative min-h-0 overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setFull(at)}
-          aria-label={`${p.name}: view full size`}
-          className="absolute inset-0 cursor-zoom-in"
-        >
-          <img
-            key={p.id}
-            src={p.image}
-            alt={`${p.name}, ${p.area}`}
-            decoding="async"
-            className="jp-photo-in h-full w-full object-cover"
-          />
-        </button>
+      {/* The photo: square and as tall as the card (never more than about half its width), the
+          whole picture shown — where the square can't fit, a blurred copy fills round it rather
+          than the photo being cropped. Only its Full size button opens it full screen. */}
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-navy-950 sm:aspect-square sm:h-full sm:max-w-[56%] sm:flex-none short:aspect-square short:h-full short:max-w-[48%] short:flex-none">
+        <img
+          src={p.image}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl"
+        />
+        <img
+          key={p.id}
+          src={p.image}
+          alt={`${p.name}, ${p.area}`}
+          decoding="async"
+          className="jp-photo-in absolute inset-0 h-full w-full object-contain"
+        />
         <button
           type="button"
           onClick={() => setFull(at)}
@@ -212,47 +216,28 @@ function ProjectView({ list, at, onStep, onJump, onClose, onShowOnMap }) {
           <ExpandIcon />
           <span className="max-sm:hidden short:hidden">Full size</span>
         </button>
-        <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/25 bg-navy-950/60 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur-md sm:left-6 sm:top-6 short:left-3 short:top-3">
-          <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${p.status === "ongoing" ? "bg-red-500" : "bg-white"}`} />
-          {STATUS[p.status].label}
-        </span>
       </div>
 
-      {/* The project */}
-      <div className="flex min-h-0 flex-col justify-between gap-4 border-white/10 p-5 max-sm:border-t sm:border-l sm:p-[clamp(24px,3.2vw,56px)] short:gap-2 short:border-l short:border-t-0 short:p-4">
-        <span className="flex items-center gap-3 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70 sm:text-[11px]">
-          <span className="font-bold text-red-500">
+      {/* The project, in one block centred down its side: counter, name and place, the
+          buttons, the others. The name is sized to the screen's height as well as its width, so
+          a long one never pushes the buttons out of the card. */}
+      <div className="flex min-h-0 min-w-0 flex-col justify-center gap-[clamp(16px,3.2vh,36px)] border-white/10 p-5 max-sm:flex-none max-sm:border-t sm:flex-1 sm:border-l sm:px-[clamp(28px,4vw,72px)] sm:py-[clamp(20px,4vh,48px)] short:flex-1 short:gap-2 short:border-l short:border-t-0 short:p-4">
+        <div key={p.id} className="jp-caption-in min-h-0">
+          <span className="flex items-center gap-3 text-[10px] font-bold tracking-[0.3em] text-red-500 sm:text-[11px]">
             {pad(at + 1)}
-            <span className="text-white/35"> / {pad(list.length)}</span>
+            <span className="text-white/35">/ {pad(list.length)}</span>
+            <span className="h-px w-10 bg-red-600/70 short:w-6" aria-hidden="true" />
           </span>
-          <span className="h-px w-8 bg-red-600 short:w-5" />
-          <span className="short:hidden">{STATUS[p.status].plural}</span>
-          <span className="hidden short:inline">{STATUS[p.status].label}</span>
-        </span>
-
-        <div key={p.id} className="jp-caption-in">
-          <h3 className="font-display text-4xl uppercase leading-[0.92] text-white sm:text-[clamp(2.8rem,5vw,6.5rem)] short:text-3xl">
+          <h3 className="mt-3 font-display text-4xl uppercase leading-[0.92] text-white sm:mt-4 sm:text-[clamp(2.2rem,min(4.2vw,7.5vh),5.5rem)] short:mt-1 short:text-3xl">
             {p.name}
           </h3>
           <p className="mt-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.26em] text-white/70 sm:text-sm short:mt-1 short:text-[11px]">
             <PinIcon />
             {p.area}
           </p>
-          <dl className="mt-5 grid max-w-md grid-cols-3 gap-4 border-y border-white/10 py-4 max-sm:hidden short:hidden">
-            {[
-              ["Status", STATUS[p.status].label],
-              ["Location", p.area],
-              ["Developer", "JP Infra"],
-            ].map(([k, v]) => (
-              <div key={k} className="min-w-0">
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">{k}</dt>
-                <dd className="mt-1 truncate text-sm font-semibold text-white">{v}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
 
-        <div className="flex flex-col gap-4 short:gap-2">
+        <div className="flex shrink-0 flex-col gap-[clamp(14px,2.6vh,28px)] short:gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => onStep(-1)} aria-label="Previous project" className={roundBtn}>
               <Chevron dir="left" />
@@ -277,9 +262,9 @@ function ProjectView({ list, at, onStep, onJump, onClose, onShowOnMap }) {
             </button>
           </div>
           {/* the rest of the list, to jump to */}
-          <ol className="flex gap-1.5 max-sm:hidden short:hidden" aria-label={STATUS[p.status].plural}>
+          <ol className="flex gap-2 border-t border-white/10 pt-[clamp(14px,2.6vh,28px)] max-sm:hidden short:hidden" aria-label={STATUS[p.status].plural}>
             {list.map((q, i) => (
-              <li key={q.id} className="min-w-0 max-w-14 flex-1">
+              <li key={q.id} className="min-w-0 max-w-[clamp(3.5rem,12vh,7rem)] flex-1">
                 <button
                   type="button"
                   onClick={() => onJump(i)}
@@ -336,20 +321,20 @@ export default function ProjectsPanel({ eyebrow, onShowOnMap, onOpenLegacy }) {
               {eyebrow}
             </span>
             <h2 className="mt-2 font-display text-4xl uppercase leading-none text-white sm:text-5xl lg:text-[clamp(2.8rem,6vh,5rem)] short:mt-0 short:text-2xl">
-              Our <span className="text-red-600">Projects</span>
+              Our <span className="text-red-600">Portfolio</span>
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            {/* over to Our Legacy, the map of every project */}
+            {/* over to Our Presence, the map of every project */}
             <button
               type="button"
               onClick={onOpenLegacy}
-              aria-label="Our Legacy: every project on the map"
+              aria-label="Our Presence: every project on the map"
               className="btn-fill flex h-[42px] items-center gap-2 rounded-full border border-white/20 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white sm:px-4 sm:text-[11px] short:h-[34px]"
               style={{ "--btn-fill-color": "rgba(255,255,255,0.14)" }}
             >
               <PinIcon />
-              <span className="max-sm:hidden short:hidden">Our Legacy</span>
+              <span className="max-sm:hidden short:hidden">Our Presence</span>
             </button>
             <div role="radiogroup" aria-label="Projects" className="flex rounded-full border border-white/20 p-1">
               {Object.keys(STATUS).map((s) => (

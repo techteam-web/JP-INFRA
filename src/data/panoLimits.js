@@ -36,14 +36,21 @@ const limitEdges = ({ top, bottom, side, centre }) => (params) => {
   return params;
 };
 
-// A scene's view limiter: its tiles' resolution, zoom (fully out, the picture spans exactly
-// top edge to bottom edge), and the top and bottom edges. Unless the scene sets `side`,
+// How far out the view can zoom: no wider than a natural wide-angle shot, up and down and
+// across. Wider than this a flat screen can't show a panorama without bending it into a
+// stretched, fish-eye blur, so zooming out stops here (about the width it opens at).
+const MAX_VFOV = 90 * DEG;
+const MAX_HFOV = 120 * DEG;
+
+// A scene's view limiter: its tiles' resolution, zoom (fully out, no wider than the above, nor
+// than top edge to bottom edge), and the top and bottom edges. Unless the scene sets `side`,
 // nothing limits the yaw, so turning left or right never hits a stop.
 export const panoLimiter = (scene) => {
   const limits = { ...DEFAULTS, ...scene.limits };
   return Marzipano.util.compose(
     Marzipano.RectilinearView.limit.resolution(scene.faceSize),
-    Marzipano.RectilinearView.limit.vfov(24 * DEG, limits.top - limits.bottom),
+    Marzipano.RectilinearView.limit.vfov(24 * DEG, Math.min(MAX_VFOV, limits.top - limits.bottom)),
+    Marzipano.RectilinearView.limit.hfov(10 * DEG, MAX_HFOV),
     limitEdges(limits),
   );
 };

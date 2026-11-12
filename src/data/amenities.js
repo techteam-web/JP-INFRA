@@ -10,7 +10,11 @@ const modules = import.meta.glob("../assets/Amenities final webp/*.webp", {
   import: "default",
 });
 
+// Photos kept in the folder but not shown (the amenity was taken off the list)
+const HIDDEN = new Set(["Skating Rink"]);
+
 export const AMENITIES = Object.keys(modules)
+  .filter((key) => !HIDDEN.has(key.split("/").pop().replace(/\.[^.]+$/, "")))
   .map((key) => {
     const file = key.split("/").pop().replace(/\.[^.]+$/, "");
     // `id` keeps the raw filename so two photos of the same room (e.g.

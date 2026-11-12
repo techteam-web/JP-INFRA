@@ -3,11 +3,12 @@
 // import elevation from "../assets/jpinfra hero.png";
 import clubMarvel from "../assets/gallery/CLUB-MARVEL.jpg";
 import clubNorth from "../assets/gallery/Club North.webp";
-// a WebP copy (2400 × 2400) of Elevation Render.png, which is 17 MB
-import ElevationREnder from "../assets/gallery/Elevation Render.webp";
+// the building's elevation: the Home page's own wide render (1928 × 1085), so it fills the
+// screen. (The square Elevation Render.webp is still in assets/gallery/, unused.)
+import elevation from "../assets/home-hero.webp";
 
 export const GALLERY_IMAGES = [
-  { id: "elevation-render", name: "Elevation Render", image: ElevationREnder },
+  { id: "elevation", name: "Elevation", image: elevation },
   { id: "club-marvel", name: "Club Marvel", image: clubMarvel },
   { id: "club-north", name: "Club North", image: clubNorth },
 ];

@@ -212,14 +212,9 @@ function AmenityList({ onPick }) {
         {/* Title row */}
         <div className="flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-white/10 pb-[2.2vh]">
           <div>
-            <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70 short:hidden 3xl:text-xs">
-              <span className="h-px w-6 bg-red-600" />
-              <span className="sm:hidden">Tap a highlighted name</span>
-              <span className="max-sm:hidden">Select a highlighted amenity to see its photo</span>
-            </span>
             <h1
               id="amenity-list-title"
-              className="mt-2 whitespace-nowrap font-display text-[clamp(2rem,5.2vh,4.75rem)] uppercase leading-none text-white short:mt-0 short:text-3xl"
+              className="whitespace-nowrap font-display text-[clamp(2rem,5.2vh,4.75rem)] uppercase leading-none text-white short:text-3xl"
             >
               All <span className="text-red-600">Amenities</span>
             </h1>
@@ -316,7 +311,7 @@ function ViewAllPhotos({ onPick }) {
       className="btn-fill flex items-center gap-2.5 whitespace-nowrap rounded-xl border border-red-500/60 bg-navy-950/40 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-premium transition-transform duration-200 active:scale-95 sm:text-[11px] sm:tracking-[0.2em] short:py-2 xl:px-5 xl:py-3 3xl:text-xs"
     >
       <IconGrid />
-      View All Photos
+      View All
       <span className="font-bold text-red-500">{String(AMENITIES.length).padStart(2, "0")}</span>
     </button>
   );

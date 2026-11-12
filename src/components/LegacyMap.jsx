@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLE, theme } from "./mapTheme";
-import { PROJECTS, STATUS } from "../data/projects";
+import { MAP_PLACES, STATUS, placeOf } from "../data/projects";
 
-// About Us → Our Legacy: every JP Infra project as a pin on the Mumbai map, in the
+// About Us → Our Presence: every JP Infra project as a pin on the Mumbai map, in the
 // Location page's map style. Red pins are ongoing, navy pins delivered; pins close together
 // gather into a numbered circle that opens up on a click. A pin shows its project's card.
+// North Garden City is one pin (data/projects.js), its card listing the residences there.
 
 const COLOR = { ongoing: "#ee3134", delivered: "#19497c" };
 // pins gather into numbered circles up to this zoom; from the next whole zoom level up,
@@ -18,12 +19,12 @@ const FILTERS = [
   { id: "ongoing", label: STATUS.ongoing.label },
   { id: "delivered", label: STATUS.delivered.label },
 ];
-const pad = (n) => String(n).padStart(2, "0");
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const shownBy = (filter) => MAP_PLACES.filter((p) => filter === "all" || p.status === filter);
 
 const features = (filter) => ({
   type: "FeatureCollection",
-  features: PROJECTS.filter((p) => filter === "all" || p.status === filter).map((p) => ({
+  features: shownBy(filter).map((p) => ({
     type: "Feature",
     properties: { id: p.id, name: p.name, status: p.status },
     geometry: { type: "Point", coordinates: p.lngLat },
@@ -119,7 +120,8 @@ function addProjects(map) {
     filter: ["!", cluster],
     paint: {
       "circle-color": ["match", ["get", "status"], "ongoing", COLOR.ongoing, COLOR.delivered],
-      "circle-radius": 7.5,
+      // North Garden City, standing for many residences, is the larger pin
+      "circle-radius": ["case", ["==", ["get", "id"], "ngc"], 10, 7.5],
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 2.5,
     },
@@ -147,8 +149,11 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
   const mapRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [filter, setFilter] = useState("all");
-  const [picked, setPicked] = useState(initialPick);
-  const project = PROJECTS.find((p) => p.id === picked);
+  // the picked place: a project's own pin, or North Garden City's for its residences
+  // (`initialPick` may be either; `from` remembers which residence it came from)
+  const [picked, setPicked] = useState(() => placeOf(initialPick)?.id ?? null);
+  const [from] = useState(initialPick);
+  const project = MAP_PLACES.find((p) => p.id === picked);
 
   // Map setup, once
   useEffect(() => {
@@ -170,7 +175,7 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
     map.on("load", () => {
       theme(map);
       addProjects(map);
-      fitAll(map, PROJECTS, false);
+      fitAll(map, MAP_PLACES, false);
       setReady(true);
       if (!reduceMotion()) {
         const tick = (now) => {
@@ -230,7 +235,7 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
     const map = mapRef.current;
     if (!ready || !map) return;
     map.setFilter("jp-proj-picked", ["all", ["!", ["has", "point_count"]], ["==", ["get", "id"], picked ?? ""]]);
-    const p = PROJECTS.find((x) => x.id === picked);
+    const p = MAP_PLACES.find((x) => x.id === picked);
     if (p) map.flyTo({ center: p.lngLat, zoom: Math.max(map.getZoom(), 15.2), duration: reduceMotion() ? 0 : 1600, essential: true });
   }, [picked, ready]);
 
@@ -238,10 +243,8 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
     setFilter(f);
     if (project && f !== "all" && project.status !== f) setPicked(null);
     const map = mapRef.current;
-    if (map && ready) fitAll(map, PROJECTS.filter((p) => f === "all" || p.status === f), true);
+    if (map && ready) fitAll(map, shownBy(f), true);
   };
-
-  const count = (s) => PROJECTS.filter((p) => p.status === s).length;
 
   return (
     <div className="absolute inset-0 z-[5] bg-[#e7edf4]">
@@ -255,28 +258,15 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
           the top and the picked project at the bottom */}
       {/* the foot clears the chapter timeline, which sits over this panel */}
       <div className="max-lg:contents lg:absolute lg:bottom-[clamp(100px,12vh,128px)] lg:left-10 lg:top-[clamp(104px,12vh,140px)] lg:z-10 lg:flex lg:w-[25rem] lg:flex-col lg:gap-3 3xl:left-14">
-      {/* Title, the numbers, and the filter */}
+      {/* Title and the filter */}
       <div className="jp-caption-in absolute inset-x-4 top-[84px] z-10 shrink-0 rounded-2xl border border-white/15 bg-navy-950/80 p-4 text-white shadow-premium backdrop-blur-xl sm:inset-x-10 sm:top-[100px] sm:p-5 lg:static lg:p-6 short:inset-x-auto short:left-4 short:top-[84px] short:w-[min(18rem,44%)] short:p-3">
         <span className="flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/70 sm:text-[11px] short:hidden">
           {eyebrow}
         </span>
         <h2 className="mt-2 font-display text-3xl uppercase leading-none sm:text-4xl lg:text-[clamp(2.4rem,5vh,3.6rem)] short:mt-0 short:text-xl">
-          Our <span className="text-red-600">Legacy</span>
+          The Journey <span className="text-red-600">so far</span>
         </h2>
-        <dl className="mt-3 grid grid-cols-3 gap-2 border-y border-white/10 py-3 lg:mt-4 short:hidden">
-          {[
-            [pad(count("delivered")), "Delivered"],
-            [pad(count("ongoing")), "Ongoing"],
-            ["2006", "Since"],
-          ].map(([n, label]) => (
-            <div key={label}>
-              <dt className="sr-only">{label}</dt>
-              <dd className="font-display text-3xl leading-none lg:text-4xl">{n}</dd>
-              <dd className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">{label}</dd>
-            </div>
-          ))}
-        </dl>
-        <div role="radiogroup" aria-label="Show projects" className="mt-3 flex rounded-full border border-white/20 p-1 lg:mt-4 short:mt-2">
+        <div role="radiogroup" aria-label="Show projects" className="mt-4 flex rounded-full border border-white/20 p-1 lg:mt-5 short:mt-2">
           {FILTERS.map((f) => (
             <button
               key={f.id}
@@ -312,14 +302,27 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
       {project && (
         <div
           key={project.id}
-          className="jp-caption-in absolute inset-x-4 bottom-[76px] z-10 flex items-center gap-3 rounded-2xl border border-white/15 bg-navy-950/85 p-2.5 text-white shadow-premium backdrop-blur-xl sm:inset-x-auto sm:bottom-[96px] sm:right-10 sm:w-[24rem] lg:relative lg:inset-auto lg:min-h-0 lg:w-auto lg:flex-col lg:items-stretch lg:p-3 short:inset-x-auto short:right-4 short:bottom-[68px] short:w-[min(20rem,48%)]"
+          className="jp-caption-in absolute inset-x-4 bottom-[76px] z-10 flex items-center gap-3 overflow-hidden rounded-2xl border border-white/15 bg-navy-950/85 p-2.5 text-white shadow-premium backdrop-blur-xl sm:inset-x-auto sm:bottom-[96px] sm:right-10 sm:w-[24rem] lg:relative lg:inset-auto lg:min-h-0 lg:w-auto lg:flex-col lg:items-stretch lg:p-3 short:inset-x-auto short:right-4 short:bottom-[68px] short:w-[min(20rem,48%)]"
         >
-          <img
-            src={project.image}
-            alt={`${project.name}, ${project.area}`}
-            decoding="async"
-            className="h-20 w-20 shrink-0 rounded-xl object-cover lg:h-[clamp(8rem,24vh,15rem)] lg:min-h-0 lg:w-full short:h-14 short:w-14"
-          />
+          {/* The photo, whole: the photos are square, so in the wide frame of a big screen a
+              blurred copy fills either side rather than the photo being cropped to a strip. On
+              wide screens the frame gives up height (down to a strip) so the card always fits
+              above the chapter timeline instead of running under it. */}
+          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-navy-950 lg:h-[clamp(8rem,24vh,15rem)] lg:min-h-[4.5rem] lg:w-full lg:shrink short:h-14 short:w-14">
+            <img
+              src={project.image}
+              alt=""
+              aria-hidden="true"
+              decoding="async"
+              className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl"
+            />
+            <img
+              src={project.image}
+              alt={`${project.name}, ${project.area}`}
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-contain"
+            />
+          </div>
           <div className="min-w-0 flex-1 lg:flex-none lg:px-1 lg:pb-1">
             <div className="min-w-0">
               <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">
@@ -328,6 +331,17 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
               </span>
               <p className="mt-1 truncate font-display text-2xl uppercase leading-none lg:text-3xl short:text-lg">{project.name}</p>
               <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-white/55">{project.area}</p>
+              {/* North Garden City: the residences it stands for (the one this came from lit) */}
+              {project.members && (
+                <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-white/60 [@media(max-height:700px)]:hidden [@media(min-width:1024px)_and_(min-height:760px)]:line-clamp-none">
+                  {project.members.map((m, i) => (
+                    <span key={m.id} className={m.id === from ? "font-semibold text-white" : undefined}>
+                      {i > 0 && " · "}
+                      {m.name}
+                    </span>
+                  ))}
+                </p>
+              )}
             </div>
           </div>
           <button

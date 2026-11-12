@@ -45,11 +45,14 @@ const MOODS = [
   { id: "twilight", label: "Twilight", icon: "moon", scene: terraceScene("1-dji_0075_d") },
 ];
 
-// Where to look from, top down: the terrace (at any time of day), then every floor shot from
-// the middle of the building (by day)
+// Where to look from, top down: the terrace (at any time of day), then the floors shot from
+// the middle of the building (by day). Only these are offered, every second height: the
+// others (41st, 35th … 11th) are left out of the list, though their panoramas stay in
+// data/towerViews.js.
+const SHOWN_FLOORS = [44, 38, 32, 26, 20, 14, 8];
 const FLOORS = [
   { key: "T", label: "Terrace" },
-  ...CENTRE_VIEWS.filter((v) => v.floor)
+  ...CENTRE_VIEWS.filter((v) => SHOWN_FLOORS.includes(v.floor))
     .reverse()
     .map((v) => ({ key: v.key, label: v.label, scene: v.scene })),
 ];

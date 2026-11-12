@@ -52,7 +52,7 @@ const CONTACT_ITEMS = [
       "3rd Floor, Viraj Tower, Western Express Hwy, Near WEH Metro Station, Gundavali, Andheri East, Mumbai 400093",
   },
   { icon: IconPhone, label: "Phone", value: "1800-313-9999", href: "tel:18003139999" },
-  { icon: IconMail, label: "Email", value: "enquiry@jpinfra.com", href: "mailto:enquiry@jpinfra.com" },
+  { icon: IconMail, label: "Email", value: "sales@jpinfra.com", href: "mailto:sales@jpinfra.com" },
 ];
 
 export default function Contact({ onBack }) {
@@ -143,7 +143,7 @@ export default function Contact({ onBack }) {
               Reach Out
             </span>
             <h1 className="mt-2 font-display uppercase text-3xl leading-[1.05] text-white sm:text-4xl lg:text-5xl xl:text-6xl 3xl:text-7xl">
-              Get In <span className="text-red-600">Touch</span>
+              Your Next Chapter <span className="text-red-600">Starts Here.</span>
             </h1>
           </div>
 

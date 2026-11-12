@@ -5,10 +5,10 @@ import BackButton from "../components/BackButton";
 import CurtainStage from "../components/CurtainStage";
 import ProjectsPanel from "../components/ProjectsPanel";
 import { useCurtainSlider } from "../hooks/useCurtainSlider";
-import storyImg from "../assets/aboutUs.png";
+import storyImg from "../assets/NGC.jpeg";
 import peopleImg from "../assets/Amenities final webp/Yoga & Meditation Lawn.webp";
 import natureImg from "../assets/Amenities final webp/Urban Forest.webp";
-import valuesImg from "../assets/gallery/Club North.webp";
+import valuesImg from "../assets/gallery/CLUB-MARVEL.jpg";
 
 // the map (and MapLibre with it) loads only when Our Legacy is opened
 const LegacyMap = lazy(() => import("../components/LegacyMap"));
@@ -27,21 +27,21 @@ const CHAPTERS = [
     short: "People",
     label: "Our People",
     image: peopleImg,
-    title: "People at the heart of every place.",
-    text: "Our approach begins with the people who call our developments home. By bringing together thoughtfully designed residences, shared spaces and lifestyle amenities, we create environments that encourage connection and enrich everyday living.",
+    title: "People at the core.",
+    text: "People are at the heart of our journey—from the 6,500+ happy families who call our developments home to our employees, channel partners, business associates, investors and the wider community. Their trust inspires us to build thoughtfully, nurture lasting relationships and create value for everyone who grows with us.",
   },
   {
     id: "places",
     short: "Places",
     label: "Our Places",
     image: "/images/jpinfra-hero.webp", // the building elevation, as the light WebP the intro loads
-    title: "Thoughtfully designed. Made for living.",
-    text: "From integrated communities to design-led luxury residences and curated city addresses, our developments respond to different lifestyles and aspirations. Each brings together purposeful planning, considered details and experiences that make a place feel like home.",
+    title: "Spaces for every aspiration.",
+    text: "From integrated communities to luxury residences and well-connected city addresses, our developments cater to diverse lifestyles and aspirations. Each brings together comfortable homes, inviting shared spaces and everyday conveniences.",
   },
   {
     id: "sustainability",
     short: "Sustainability",
-    label: "Sustainability",
+    label: "Conscious Capitalism",
     image: natureImg,
     title: "Building with a bigger purpose.",
     text: "Our philosophy of conscious capitalism guides us to look beyond the spaces we build. It reflects an approach that considers the wider impact of development, with care and responsibility shaping our vision for the future.",
@@ -51,14 +51,14 @@ const CHAPTERS = [
     short: "Values",
     label: "Our Values",
     image: valuesImg,
-    title: "Thoughtful in design. Purposeful in approach.",
-    text: "Design innovation, integrated living, care and conscious capitalism guide our approach. Together, they express our commitment to creating living environments where thoughtful spaces and meaningful experiences come together.",
+    title: "Guided by values. Defined by action.",
+    text: "Design innovation, integrated living, care and conscious capitalism guide the way we work. These values shape our decisions—from exploring new ideas and bringing people together to acting responsibly and balancing business growth with the interests of our stakeholders.",
   },
 ];
 // After the story: two panels of their own, over the story's last photo
 const PANELS = [
   { id: "projects", short: "Our Projects" },
-  { id: "legacy", short: "Our Legacy" },
+  { id: "legacy", short: "Our Presence" },
 ];
 const STEPS = [...CHAPTERS, ...PANELS]; // the timeline
 const SRCS = CHAPTERS.map((c) => c.image);
@@ -181,7 +181,7 @@ export default function AboutUs({ onBack }) {
         <Suspense fallback={<div className="absolute inset-0 z-[5] bg-[#e7edf4]" />}>
           <LegacyMap
             key={mapPick ?? "all"}
-            eyebrow={counter(step, "Our Legacy")}
+            eyebrow={counter(step, "Our Presence")}
             initialPick={mapPick}
             onOpenProjects={() => setPanel("projects")}
           />

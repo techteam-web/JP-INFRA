@@ -5,7 +5,7 @@ import BackButton from "../components/BackButton";
 import FloorPlanStudio from "../components/FloorPlanStudio";
 import TowerView from "../components/TowerView";
 import { PLAN_FLOOR } from "../data/units";
-import { ALL, BUILDINGS, OFFSET, PLANS_TOWER, TOP, VIEW_H, VIEW_W, towerImg as renderImg } from "../data/tower";
+import { ALL, BUILDINGS, OFFSET, ORDER, PLANS_TOWER, TOP, VIEW_H, VIEW_W, towerImg as renderImg } from "../data/tower";
 
 const same = (x, y) => !!x && !!y && x.b === y.b && x.n === y.n;
 
@@ -113,6 +113,110 @@ function IconArrow({ dir = "right", className = "h-3 w-3" }) {
   );
 }
 
+// A picker in the bottom bar: the button shows what's picked (or "Select …"), and opens a
+// list upwards in the site's own navy panel — the browser's own dropdown can't be themed (it
+// drew white text on a white list). One column, like the wing's; a long list (`scroll`, the
+// floors) scrolls inside the panel and opens on the current choice. Esc or a click outside
+// closes it; while it's open the arrow keys move through it rather than stepping floors.
+function BarPicker({ label, display, options, value, onChange, scroll = false, className = "" }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const buttonRef = useRef(null);
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    listRef.current?.querySelector('[aria-checked="true"]')?.focus() ?? listRef.current?.querySelector("button")?.focus();
+    const onDown = (e) => {
+      if (!rootRef.current?.contains(e.target)) setOpen(false);
+    };
+    // at the window's capture phase, so the page's own keys (Esc clears the floor, the arrows
+    // step it) don't act as well
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+        buttonRef.current?.focus();
+      } else if (e.key.startsWith("Arrow")) {
+        e.stopPropagation();
+        e.preventDefault();
+        const by = { ArrowDown: 1, ArrowUp: -1 }[e.key];
+        if (!by) return;
+        const items = [...listRef.current.querySelectorAll("button")];
+        const i = items.indexOf(document.activeElement);
+        items[Math.min(items.length - 1, Math.max(0, (i < 0 ? 0 : i) + by))]?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey, true);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => setOpen((o) => !o)}
+        className={`flex h-9 items-center gap-2 rounded-lg px-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors hover:bg-white/10 sm:text-[11px] sm:tracking-[0.22em] ${
+          open ? "bg-white/10" : ""
+        } ${className}`}
+      >
+        <span className="flex-1 text-center">{display}</span>
+        <IconArrow dir={open ? "up" : "down"} className="h-3.5 w-3.5 shrink-0 text-white/60" />
+      </button>
+      {open && (
+        <div className="absolute bottom-full left-1/2 mb-3 -translate-x-1/2">
+          <div className="jp-caption-in w-max min-w-[9rem] rounded-2xl border border-white/20 bg-navy-950/95 p-2 shadow-premium backdrop-blur-xl [animation-duration:0.35s]">
+            <span className="flex items-center gap-2 px-2 pb-1.5 pt-0.5 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/50">
+              <span className="h-px w-5 bg-red-600" />
+              {label}
+            </span>
+            <div
+              ref={listRef}
+              role="menu"
+              aria-label={label}
+              className={`grid gap-1 ${
+                scroll
+                  ? "max-h-[min(50svh,20rem)] overflow-y-auto overscroll-contain pr-1 [scrollbar-color:rgba(255,255,255,0.25)_transparent] [scrollbar-width:thin]"
+                  : ""
+              }`}
+            >
+            {options.map((o) => {
+              const on = o.value === value;
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={on}
+                  onClick={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                    buttonRef.current?.focus();
+                  }}
+                  className={`rounded-lg px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.14em] outline-none transition-colors ${
+                    on ? "bg-red-600 text-white" : "text-white/80 hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // The building render with every floor selectable. On arrival a band of light climbs the
 // building floor by floor; hovering a floor lights it, and choosing one lights that floor
 // and opens its card — Floor Plan or the 360° view.
@@ -182,8 +286,20 @@ export default function FloorPlans({ onBack }) {
     sweepRef.current?.progress(1); // a choice made while it's still climbing ends it at once
     setSelected(f ? { b: f.b, n: f.n } : null);
     setAnchorN(f ? f.n : null); // a floor chosen on the building always re-places the card
+    if (f) setWingPick(f.b);
     setStudio(null);
   };
+
+  // The bar's Select wing / Select floor: the wing is the open floor's, or the one last
+  // picked. Changing it with a floor open moves to the same floor in that wing; a floor picked
+  // before any wing is in Wing A.
+  const [wingPick, setWingPick] = useState(null);
+  const wing = selected?.b ?? wingPick;
+  const pickWing = (w) => {
+    setWingPick(w);
+    if (selected) choose(BUILDINGS[w][selected.n - 1]);
+  };
+  const pickFloor = (n) => choose(BUILDINGS[wing ?? ORDER[0]][n - 1]);
 
   // Up / down move between floors (not while the Floor Plan screen or a floor's view is
   // open); Esc closes those, then the selection
@@ -508,12 +624,29 @@ export default function FloorPlans({ onBack }) {
         </div>
       </div>
 
-      {/* Floor stepper, and Explore Units beside it */}
+      {/* Select wing, Select floor (with steps either side), and Explore Units beside them */}
       <div
         data-anim
-        className="absolute inset-x-0 bottom-6 z-20 mx-auto flex w-fit items-center gap-2 sm:bottom-8 3xl:bottom-12"
+        className="absolute inset-x-0 bottom-6 z-20 mx-auto flex w-fit max-w-[calc(100%-1.5rem)] items-center gap-2 sm:bottom-8 3xl:bottom-12"
       >
         <div className="flex items-center gap-1 rounded-xl border border-white/25 bg-navy-950/60 p-1 text-white shadow-premium backdrop-blur-xl">
+        <BarPicker
+          label="Select wing"
+          display={
+            wing ? (
+              <>
+                Wing <span className="text-red-500">{wing}</span>
+              </>
+            ) : (
+              "Select wing"
+            )
+          }
+          options={ORDER.map((b) => ({ value: b, label: `Wing ${b}` }))}
+          value={wing}
+          onChange={pickWing}
+          className="min-w-[5.5rem] sm:min-w-[7rem]"
+        />
+        <span className="h-6 w-px bg-white/15" aria-hidden="true" />
         <button
           type="button"
           aria-label="Floor below"
@@ -523,16 +656,24 @@ export default function FloorPlans({ onBack }) {
         >
           <IconArrow dir="down" className="h-4 w-4" />
         </button>
-        <span className="min-w-[11rem] text-center text-[11px] font-semibold uppercase tracking-[0.22em]">
-          {selected ? (
-            <>
-              {selected.b} · Floor <span className="text-red-500">{pad(selected.n)}</span>
-              <span className="text-white/45"> / {TOP}</span>
-            </>
-          ) : (
-            "Select a floor"
-          )}
-        </span>
+        <BarPicker
+          label="Select floor"
+          display={
+            selected ? (
+              <>
+                Floor <span className="text-red-500">{pad(selected.n)}</span>
+                <span className="text-white/45"> / {TOP}</span>
+              </>
+            ) : (
+              "Select floor"
+            )
+          }
+          options={Array.from({ length: TOP }, (_, i) => TOP - i).map((n) => ({ value: n, label: `Floor ${pad(n)}` }))}
+          value={selected?.n ?? null}
+          onChange={pickFloor}
+          scroll
+          className="min-w-[7.5rem] sm:min-w-[10rem]"
+        />
         <button
           type="button"
           aria-label="Floor above"

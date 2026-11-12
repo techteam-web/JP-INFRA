@@ -33,9 +33,11 @@ const CLEAR_FROM = CUT - 1.4 // chrome and grading fade out from here to the las
 
 // Captions are timed to the footage (timeline units, 10 = end of clip):
 // clouds (0–2.5) → city (2.5–6.2) → tower crown (6.2–7.5) → full tower (7.5–8.7) → street.
+// Read together, the two make one line: "Every great story / deserves a grand finale". A
+// chapter can carry a small `eyebrow` label above its title; these two don't.
 const CHAPTERS = [
-  { n: '01', eyebrow: 'The city', title: 'Above it all,\nyet at its heart', at: 2.6, until: 5.8 },
-  { n: '02', eyebrow: 'The address', title: 'A landmark\ntakes its place', at: 6.4, until: 8.5 },
+  { n: '01', title: 'Every\ngreat story', at: 2.6, until: 5.8 },
+  { n: '02', title: 'Deserves\na grand finale', at: 6.4, until: 8.5 },
 ]
 const LAST_FRAME = Math.round((CUT / VIDEO_END) * (FRAME_COUNT - 1))
 // Enter opens the intro once this many leading frames are in (the opening scroll:
@@ -264,7 +266,7 @@ export default function CinematicIntro({ onEndChange }) {
           { opacity: 1, yPercent: 0, duration: 0.8, ease: 'power3.out', stagger: 0.12 },
           c.at,
         )
-        tl.fromTo(`${el} .js-ch-rule`, { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: 'power2.out' }, c.at)
+        if (c.eyebrow) tl.fromTo(`${el} .js-ch-rule`, { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: 'power2.out' }, c.at)
         tl.to(el, { opacity: 0, y: -24, duration: 0.7, ease: 'power2.in' }, c.until)
       })
       tl.fromTo('.js-floor', { opacity: 0.35 }, { opacity: 1, duration: 1.2 }, CHAPTERS[0].at - 0.4)
@@ -347,7 +349,7 @@ export default function CinematicIntro({ onEndChange }) {
 
       {/* Chapters */}
       {CHAPTERS.map((c, i) => (
-        <Caption key={c.n} className={`js-ch-${i}`} eyebrow={`${c.n} — ${c.eyebrow}`} title={c.title} />
+        <Caption key={c.n} className={`js-ch-${i}`} eyebrow={c.eyebrow && `${c.n} — ${c.eyebrow}`} title={c.title} />
       ))}
       </div>
 
@@ -385,10 +387,12 @@ function Caption({ className, eyebrow, title, large = false }) {
     <div
       className={`${className} pointer-events-none absolute left-[clamp(20px,6vw,96px)] right-[clamp(20px,6vw,96px)] bottom-[clamp(116px,17svh,180px)] max-w-[40rem]`}
     >
-      <div className="mb-5 flex items-center gap-4 overflow-hidden">
-        <span className="js-ch-rule block h-px w-10 origin-left scale-x-0 bg-[#C6A46A]" />
-        <span className="js-line jp-meta inline-block opacity-0">{eyebrow}</span>
-      </div>
+      {eyebrow && (
+        <div className="mb-5 flex items-center gap-4 overflow-hidden">
+          <span className="js-ch-rule block h-px w-10 origin-left scale-x-0 bg-[#C6A46A]" />
+          <span className="js-line jp-meta inline-block opacity-0">{eyebrow}</span>
+        </div>
+      )}
       <h2 className={large ? 'jp-headline jp-headline--lg' : 'jp-headline'}>
         {title.split('\n').map((line) => (
           <span key={line} className="block overflow-hidden pb-[0.08em]">

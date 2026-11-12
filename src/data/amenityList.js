@@ -32,7 +32,7 @@ export const AMENITY_CATEGORIES = [
     title: "Nature",
     items: [
       // { label: "Open Lawn Area" }, // no photo yet
-      { label: 'Terrace Gardens', photo: 'Terrace Garden' },
+      { label: 'Terrace Garden', photo: 'Terrace Garden' },
       { label: 'Sculpture Garden', photo: 'Sculpture Garden' },
       { label: 'Butterfly Garden', photo: 'Butterfly Garden' },
       // { label: "Leisure Lawn" }, // no photo yet
@@ -56,7 +56,7 @@ export const AMENITY_CATEGORIES = [
       { label: 'Tennis Court', photo: 'Lawn Tennis Court' },
       // { label: 'Indoor Badminton Courts' }, // no photo yet
       { label: 'Padel Tennis Court', photo: 'Padel Tennis Court' },
-      { label: 'Skating Rink', photo: 'Skating Rink' },
+      // { label: 'Skating Rink' }, // removed on the client's feedback (its photo is hidden in amenities.js)
       { label: 'Cricket Turf', photo: 'Cricket Turf' },
       { label: 'Futsal Court', photo: 'Futsal Court' },
       { label: 'Lawn Tennis Court', photo: 'Lawn Tennis Court' },
@@ -94,7 +94,7 @@ export const AMENITY_CATEGORIES = [
       { label: 'Co-Working Spaces', photo: 'Co-Working Spaces' },
       { label: 'Meeting Rooms', photo: 'Meeting Room' },
       { label: 'Guest Rooms', photo: 'Guest Room' },
-      { label: 'Marvel Lounge Rooms', photo: 'Guest Room Lounge' },
+      { label: 'Marvel Lounge', photo: 'Guest Room Lounge' },
       // { label: "Culinary Utilities" }, // no photo yet
       // { label: "Chess" }, // no photo yet
       // { label: "Foosball" }, // no photo yet
