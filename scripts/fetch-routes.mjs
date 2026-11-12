@@ -81,7 +81,7 @@ async function osrmAll(from, to, via) {
 
 // Places where OpenStreetMap's car data blocks a short link that exists in reality (the car
 // routers send the line a long way round): these follow the bike router's short road instead.
-const BIKE = new Set(['Western Express Highway', 'Surya Legacy', 'Hotel Western', "Dara's Dhaba", 'Royal Hometel Suites'])
+const BIKE = new Set(['Western Express Highway', 'Hotel Western', "Dara's Dhaba", 'Royal Hometel Suites'])
 
 // Places where the shortest road is a chain of back lanes nobody actually drives: these keep
 // the car router's main-road drive from the site, the way a phone's navigation gives it.
@@ -129,7 +129,12 @@ function pick(found) {
 // Places whose lines are drawn by hand in locationRoutes.json and must survive a re-run.
 // The lanes around the site aren't in OpenStreetMap, so every router leaves the wrong way
 // and loops back — 1.2 km of driving for a 260 m walk. Their routes are kept as they are.
-const HAND_DRAWN = new Set(['Shree Ganesha Temple (JP North Vinay Nagar)'])
+const HAND_DRAWN = new Set([
+  // these two sit in the lanes beside the site, which OpenStreetMap doesn't have: every
+  // router stops on the main road ~80 m short of the pin
+  'Euro Kids (Vinay Nagar)',
+  'Bhaktivedanta Wellness Centre',
+])
 
 const only = process.argv.slice(2)
 // a full run starts from scratch, but the hand-drawn lines are carried over from the file

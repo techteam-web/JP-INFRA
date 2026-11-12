@@ -9,12 +9,11 @@ export const BANDS = [
     id: '2',
     label: '2 Min',
     places: [
-      { name: 'Shree Ganesha Temple (JP North Vinay Nagar)', category: 'Spiritual', lngLat: [72.887981, 19.280274] },
+      { name: 'Shree Ganesha Temple (JP North Vinay Nagar)', category: 'Spiritual', lngLat: [72.886149, 19.281889] },
       { name: 'Podar International School (Mira Road)', category: 'Education', lngLat: [ 72.88778556606593,19.28329211047906] },
-      { name: 'Euro Kids (Vinay Nagar)', category: 'Education', lngLat: [ 72.88626125023839,19.281959659865716] },
-      { name: 'Surya Legacy', category: 'Restaurant', lngLat: [72.889410, 19.276890] },
+      { name: 'Euro Kids (Vinay Nagar)', category: 'Education', lngLat: [72.888037, 19.280292] },
       { name: 'Western Express Highway', category: 'Highway', lngLat: [72.88983321835849, 19.277428612169455] },
-      { name: 'Bhaktivedanta Wellness Centre', category: 'Hospital', lngLat: [72.877450, 19.266280] },
+      { name: 'Bhaktivedanta Wellness Centre', category: 'Hospital', lngLat: [72.888037, 19.280292] },
     ],
   },
   {
@@ -79,7 +78,6 @@ export const BANDS = [
       { name: 'Vardhman Fantasy Amusement Park', category: 'Amusement Park', lngLat: [72.869850, 19.287920] },
       { name: 'Dahisar Mangroves', category: 'Garden', lngLat: [72.845800, 19.261200] },
       { name: 'Galaxy Hospital', category: 'Hospital', lngLat: [ 72.87528533698301,19.296580888187055,] },
-      { name: 'Rassaz Multiplex', category: 'Entertainment', lngLat: [ 72.86313969547336,19.284875851005964,    ] },
       { name: 'Diamond Industrial Estate', category: 'Commercial', lngLat: [ 72.87125580895707,19.25565543000068] },
     
       { name: 'Dahisar East Metro Station', category: 'Metro Station', lngLat: [ 72.86683490995799,19.251759563600405] },
