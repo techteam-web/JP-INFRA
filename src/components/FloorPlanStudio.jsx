@@ -4,7 +4,7 @@ import { ALL, OFFSET, PLANS_TOWER, VIEW_H, VIEW_W, towerImg } from "../data/towe
 import { facingScene, viewFor } from "../data/towerViews";
 import PanoPane from "./PanoPane";
 import TowerView from "./TowerView";
-import { SAMPLE_DATA, PLAN_FLOOR, PLAN_W, PLAN_H, WINGS, WING_BY_ID, TYPES, UNITS, UNIT_BY_ID, unitsIn } from "../data/units";
+import { PLAN_FLOOR, PLAN_W, PLAN_H, WINGS, WING_BY_ID, TYPES, UNITS, UNIT_BY_ID, unitsIn } from "../data/units";
 
 // The Floor Plan screen (Explore Units), over the Floor Plans page: three tabs, all reading
 // the homes in data/units.js (the 8th floor of wings A1 and A2) —
@@ -1292,14 +1292,6 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          {SAMPLE_DATA && (
-            <span
-              title="Homes, types and plans are real; carpet areas and availability are sample figures until the final unit list is added"
-              className="hidden rounded-full border border-white/25 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white/60 sm:inline"
-            >
-              Sizes &amp; availability · sample
-            </span>
-          )}
           <button
             type="button"
             onClick={onClose}
@@ -1335,9 +1327,6 @@ export default function FloorPlanStudio({ startWing = WING_IDS[0], startTab = "p
           );
         })}
       </div>
-      {SAMPLE_DATA && (
-        <p className="mt-1.5 px-5 text-[9px] font-bold uppercase tracking-[0.2em] text-white/45 sm:hidden">Sizes &amp; availability · sample</p>
-      )}
 
       {/* Body: fills the rest of the screen and never scrolls; bottom room for the Brainwing credit on large screens */}
       <div role="tabpanel" aria-label={active.label} className="mt-4 min-h-0 flex-1 overflow-hidden px-5 pb-5 sm:px-10 lg:px-14 lg:pb-[clamp(56px,7vh,84px)] short:mt-2 short:pb-2">
