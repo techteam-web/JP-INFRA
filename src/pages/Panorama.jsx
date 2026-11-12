@@ -41,8 +41,8 @@ const terraceScene = (id) => {
 // export its tiles to public/assets/360pano/tiles/, put its scene in data.js and name it here.
 const MOODS = [
   { id: "day", label: "Day", icon: "sun", scene: terraceScene("0-dji_0001_terrace-150") },
-  { id: "evening", label: "Evening", icon: "sunset", scene: terraceScene("2-dji_0071_d") },
-  { id: "twilight", label: "Twilight", icon: "moon", scene: terraceScene("1-dji_0075_d") },
+  { id: "evening", label: "Evening", icon: "sunset", scene: terraceScene("1-dji_0075_d") },
+  { id: "twilight", label: "Twilight", icon: "moon", scene: terraceScene("2-dji_0071_d") },
 ];
 
 // Where to look from, top down: the terrace (at any time of day), then the floors shot from
