@@ -208,16 +208,13 @@ function FloorMenu({ value, onChange }) {
                     setOpen(false);
                     buttonRef.current?.focus();
                   }}
-                  className={`flex items-center justify-between gap-3 rounded-xl px-3.5 py-2 text-left text-[11px] font-bold uppercase tracking-[0.16em] outline-none transition-colors [@media(max-height:720px)]:min-w-[7.5rem] short:py-1.5 ${
+                  className={`flex items-center justify-center rounded-xl px-3.5 py-2 text-center text-[11px] font-bold uppercase tracking-[0.16em] outline-none transition-colors [@media(max-height:720px)]:min-w-[7.5rem] short:py-1.5 ${
                     on
                       ? "bg-red-600 text-white"
                       : "text-white/80 hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white"
                   }`}
                 >
                   {f.label}
-                  {f.key === TERRACE && (
-                    <span className={`text-[8px] tracking-[0.18em] [@media(max-height:720px)]:hidden ${on ? "text-white/75" : "text-white/40"}`}>Day to Twilight</span>
-                  )}
                 </button>
               );
             })}
