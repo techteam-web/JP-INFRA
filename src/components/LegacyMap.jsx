@@ -134,8 +134,13 @@ function addProjects(map) {
       "text-font": ["Noto Sans Bold"],
       "text-size": 10.5,
       "text-letter-spacing": 0.08,
-      "text-anchor": "top",
-      "text-offset": [0, 1.1],
+      // the name sits under its pin where it fits, and takes any other free side when it
+      // doesn't: with every project on its own pin, names crowd each other in Mira Road,
+      // and a fixed place below would leave some (North Alexa) dropped on All
+      "text-variable-anchor": ["top", "bottom", "left", "right", "top-left", "top-right", "bottom-left", "bottom-right"],
+      "text-radial-offset": 1.1,
+      "text-justify": "auto",
+      "text-padding": 1,
       "text-optional": true,
     },
     paint: { "text-color": "#0a1f36", "text-halo-color": "#ffffff", "text-halo-width": 1.6 },
