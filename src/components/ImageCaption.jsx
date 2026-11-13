@@ -3,6 +3,8 @@
 // per photo so it eases in afresh each time the slide changes. Sits above
 // the centred counter on small screens, beside it from sm up.
 export default function ImageCaption({ id, label, name, detail }) {
+  // nothing to name — the Gallery's elevation render — so not even the red rule shows
+  if (!label && !name && !detail) return null;
   return (
     <div
       data-anim

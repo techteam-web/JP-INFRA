@@ -102,7 +102,7 @@ export default function Gallery({ onBack }) {
             <IconChevron dir="right" />
           </button>
 
-          <ImageCaption id={GALLERY_IMAGES[index].id} label="Gallery" name={GALLERY_IMAGES[index].name} />
+          <ImageCaption id={GALLERY_IMAGES[index].id}  name={GALLERY_IMAGES[index].name} />
 
           {/* Counter */}
           <div
