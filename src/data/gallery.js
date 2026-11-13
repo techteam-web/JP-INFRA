@@ -8,7 +8,7 @@ import clubNorth from "../assets/gallery/Club North.webp";
 import elevation from "../assets/home-hero.webp";
 
 export const GALLERY_IMAGES = [
-  { id: "elevation", name: "Elevation", image: elevation },
+  { id: "elevation", image: elevation },
   { id: "club-marvel", name: "Club Marvel", image: clubMarvel },
   { id: "club-north", name: "Club North", image: clubNorth },
 ];

@@ -18,7 +18,7 @@ const CHAPTERS = [
   {
     id: "story",
     short: "Our Story",
-    label: "Since 2006",
+    label: "Our Legacy",
     image: storyImg,
     text: "Since 2006, JP Infra has been shaping living spaces that bring thoughtful design, modern amenities and community living together. With a focus on elevating everyday experiences, we create places that reflect today's aspirations and tomorrow's possibilities.",
   },

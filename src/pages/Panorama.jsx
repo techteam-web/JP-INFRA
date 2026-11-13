@@ -45,14 +45,12 @@ const MOODS = [
   { id: "twilight", label: "Twilight", icon: "moon", scene: terraceScene("2-dji_0071_d") },
 ];
 
-// Where to look from, top down: the terrace (at any time of day), then the floors shot from
-// the middle of the building (by day). Only these are offered, every second height: the
-// others (41st, 35th … 11th) are left out of the list, though their panoramas stay in
-// data/towerViews.js.
-const SHOWN_FLOORS = [44, 38, 32, 26, 20, 14, 8];
+// Where to look from, top down: the terrace (at any time of day), then every floor shot from
+// the middle of the building (by day), from the 44th down to the 8th. The centre set's own
+// terrace shot (floor 0) is left out: the terrace is the entry above it.
 const FLOORS = [
   { key: "T", label: "Terrace" },
-  ...CENTRE_VIEWS.filter((v) => SHOWN_FLOORS.includes(v.floor))
+  ...CENTRE_VIEWS.filter((v) => v.floor > 0)
     .reverse()
     .map((v) => ({ key: v.key, label: v.label, scene: v.scene })),
 ];
@@ -188,8 +186,9 @@ function FloorMenu({ value, onChange }) {
             role="menu"
             aria-label="View from"
             onKeyDown={onListKey}
-            /* the same width as the button above it; only the short-screen grids run wider */
-            className="jp-caption-in grid w-full gap-0.5 rounded-2xl border border-white/20 bg-navy-950/90 p-1.5 shadow-premium backdrop-blur-xl [animation-duration:0.35s] [@media(min-height:501px)_and_(max-height:720px)]:w-max [@media(min-height:501px)_and_(max-height:720px)]:grid-cols-2 short:w-max short:grid-cols-3"
+            /* the same width as the button above it; only the short-screen grids run wider.
+               With every floor listed it scrolls rather than run off the bottom. */
+            className="jp-caption-in grid max-h-[calc(100vh-9rem)] w-full gap-0.5 overflow-y-auto overscroll-contain rounded-2xl border border-white/20 bg-navy-950/90 p-1.5 shadow-premium backdrop-blur-xl [animation-duration:0.35s] [@media(min-height:501px)_and_(max-height:720px)]:w-max [@media(min-height:501px)_and_(max-height:720px)]:grid-cols-2 short:w-max short:grid-cols-3"
           >
             <span className="col-span-full flex items-center gap-2 px-3 pb-1.5 pt-1 text-[9px] font-semibold uppercase tracking-[0.3em] text-white/50">
               <span className="h-px w-5 bg-red-600" />
@@ -348,17 +347,18 @@ export default function Panorama({ onBack }) {
             aria-label="Time of day"
             className="flex max-w-full items-center gap-1 rounded-2xl border border-white/20 bg-navy-950/80 p-1.5 shadow-premium backdrop-blur-xl short:p-1 3xl:gap-2 3xl:p-2"
           >
-            {MOODS.map((m) => {
+            {/* away from the terrace there is only the day's view, so Evening and Twilight
+                are not offered there at all */}
+            {MOODS.filter((m) => atTerrace || m.id === "day").map((m) => {
               const on = atTerrace ? m.id === moodId : m.id === "day";
-              // away from the terrace there is only the day's view
-              const usable = !!m.scene && (atTerrace || m.id === "day");
+              const usable = !!m.scene;
               return (
                 <button
                   key={m.id}
                   type="button"
                   aria-pressed={on}
                   disabled={!usable}
-                  title={!m.scene ? "Coming soon" : usable ? undefined : "From the terrace only"}
+                  title={m.scene ? undefined : "Coming soon"}
                   onClick={() => setMoodId(m.id)}
                   style={on || !usable ? undefined : { "--btn-fill-color": "rgba(255,255,255,0.14)" }}
                   className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.16em] transition-[color,background-color,transform] duration-200 sm:px-5 sm:text-xs short:px-3 short:py-2 3xl:px-6 3xl:py-3 3xl:text-sm 4xl:text-base ${

@@ -7,7 +7,6 @@ import { MAP_PLACES, STATUS, placeOf } from "../data/projects";
 // About Us → Our Presence: every JP Infra project as a pin on the Mumbai map, in the
 // Location page's map style. Red pins are ongoing, navy pins delivered; pins close together
 // gather into a numbered circle that opens up on a click. A pin shows its project's card.
-// North Garden City is one pin (data/projects.js), its card listing the residences there.
 
 const COLOR = { ongoing: "#ee3134", delivered: "#19497c" };
 // pins gather into numbered circles up to this zoom; from the next whole zoom level up,
@@ -120,8 +119,7 @@ function addProjects(map) {
     filter: ["!", cluster],
     paint: {
       "circle-color": ["match", ["get", "status"], "ongoing", COLOR.ongoing, COLOR.delivered],
-      // North Garden City, standing for many residences, is the larger pin
-      "circle-radius": ["case", ["==", ["get", "id"], "ngc"], 10, 7.5],
+      "circle-radius": 7.5,
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 2.5,
     },
@@ -149,10 +147,8 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
   const mapRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [filter, setFilter] = useState("all");
-  // the picked place: a project's own pin, or North Garden City's for its residences
-  // (`initialPick` may be either; `from` remembers which residence it came from)
+  // the picked place: the project's own pin
   const [picked, setPicked] = useState(() => placeOf(initialPick)?.id ?? null);
-  const [from] = useState(initialPick);
   const project = MAP_PLACES.find((p) => p.id === picked);
 
   // Map setup, once
@@ -331,17 +327,6 @@ export default function LegacyMap({ eyebrow, initialPick = null, onOpenProjects 
               </span>
               <p className="mt-1 truncate font-display text-2xl uppercase leading-none lg:text-3xl short:text-lg">{project.name}</p>
               <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-white/55">{project.area}</p>
-              {/* North Garden City: the residences it stands for (the one this came from lit) */}
-              {project.members && (
-                <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-white/60 [@media(max-height:700px)]:hidden [@media(min-width:1024px)_and_(min-height:760px)]:line-clamp-none">
-                  {project.members.map((m, i) => (
-                    <span key={m.id} className={m.id === from ? "font-semibold text-white" : undefined}>
-                      {i > 0 && " · "}
-                      {m.name}
-                    </span>
-                  ))}
-                </p>
-              )}
             </div>
           </div>
           <button

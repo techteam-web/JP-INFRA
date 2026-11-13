@@ -26,10 +26,10 @@ import unityTower from "../assets/Deliver project/Unity Tower - 1080x1080.jpg";
 // Map pins (`lngLat`, [longitude, latitude]): the ongoing projects are EXACT, from the
 // client's Google Maps links (The Palace, Codename StarLife, JP Parkway, Codename Matunga
 // Origins, Icons 71, North Imperial Greens, JP Connect). North West~End and the delivered
-// projects are still APPROXIMATE — each in its area — until their links come in.
-//
-// North Garden City: the delivered residences there (`group: "ngc"`) are one place on the map
-// — a single North Garden City pin listing them — rather than a pin each.
+// projects are still APPROXIMATE — each in its area — until their links come in, EXCEPT the
+// North Garden City residences, whose pins come from the listing sites (houssed.com and
+// squareyards.com) and are good to roughly a block. JP Eminence is the one still invented:
+// no Mira Road listing for it was found (Square Yards puts a JP Eminence in Andheri West).
 
 export const STATUS = {
   ongoing: { label: "Ongoing", plural: "Ongoing Projects" },
@@ -47,43 +47,27 @@ export const PROJECTS = [
   { id: "north-imperial-greens", name: "North Imperial Greens", area: "Thane", status: "ongoing", image: imperialGreens, lngLat: [72.959040, 19.270215] },
   { id: "jp-parkway", name: "JP Parkway", area: "Andheri", status: "ongoing", image: parkway, lngLat: [72.858019, 19.137503] },
 
-  { id: "north-barcelona", name: "North Barcelona", area: "Mira Road", status: "delivered", image: northBarcelona, lngLat: [72.8868, 19.2792], group: "ngc" },
-  { id: "north-alexa", name: "North Alexa", area: "Mira Road", status: "delivered", image: northAlexa, lngLat: [72.8861, 19.2807], group: "ngc" },
-  { id: "north-aviva", name: "North Aviva", area: "Mira Road", status: "delivered", image: northAviva, lngLat: [72.8846, 19.2814], group: "ngc" },
-  { id: "north-imperia", name: "North Imperia", area: "Mira Road", status: "delivered", image: northImperia, lngLat: [72.8830, 19.2810], group: "ngc" },
-  { id: "jp-eminence", name: "JP Eminence", area: "Mira Road", status: "delivered", image: jpEminence, lngLat: [72.8806, 19.2836], group: "ngc" },
-  { id: "north-euphoria", name: "North Euphoria", area: "Mira Road", status: "delivered", image: euphoria, lngLat: [72.8822, 19.2796], group: "ngc" },
-  { id: "north-elara", name: "North Elara", area: "Mira Road", status: "delivered", image: elara, lngLat: [72.8827, 19.2780], group: "ngc" },
-  { id: "north-atria", name: "North Atria", area: "Mira Road", status: "delivered", image: atria, lngLat: [72.8842, 19.2770], group: "ngc" },
-  { id: "north-estella", name: "North Estella", area: "Mira Road", status: "delivered", image: estella, lngLat: [72.8858, 19.2773], group: "ngc" },
-  { id: "north-celeste", name: "North Celeste", area: "Mira Road", status: "delivered", image: celeste, lngLat: [72.8870, 19.2779], group: "ngc" },
+  { id: "north-barcelona", name: "North Barcelona", area: "Mira Road", status: "delivered", image: northBarcelona, lngLat: [72.886370, 19.284069] },
+  { id: "north-alexa", name: "North Alexa", area: "Mira Road", status: "delivered", image: northAlexa, lngLat: [72.886230, 19.282859] },
+  { id: "north-aviva", name: "North Aviva", area: "Mira Road", status: "delivered", image: northAviva, lngLat: [72.885171, 19.280928] },
+  { id: "north-imperia", name: "North Imperia", area: "Mira Road", status: "delivered", image: northImperia, lngLat: [72.883438, 19.279896] },
+  { id: "jp-eminence", name: "JP Eminence", area: "Mira Road", status: "delivered", image: jpEminence, lngLat: [72.88350, 19.28250] },
+  { id: "north-euphoria", name: "North Euphoria", area: "Mira Road", status: "delivered", image: euphoria, lngLat: [72.8878655227819,19.28039627166924, ] },
+  { id: "north-elara", name: "North Elara", area: "Mira Road", status: "delivered", image: elara, lngLat: [ 72.88790049024803,19.282291120947217,] },
+  { id: "north-atria", name: "North Atria", area: "Mira Road", status: "delivered", image: atria, lngLat: [72.886807, 19.28198] },
+  { id: "north-estella", name: "North Estella", area: "Mira Road", status: "delivered", image: estella, lngLat: [72.887022, 19.282250] },
+  { id: "north-celeste", name: "North Celeste", area: "Mira Road", status: "delivered", image: celeste, lngLat: [72.884407, 19.281661] },
   { id: "jp-decks", name: "JP Decks", area: "Goregaon", status: "delivered", image: jpDecks, lngLat: [72.862, 19.166] },
   { id: "unity-tower", name: "Unity Tower", area: "Worli", status: "delivered", image: unityTower, lngLat: [72.818, 19.011] },
   { id: "chalet-amar", name: "Chalet Amar", area: "Juhu", status: "delivered", image: chaletAmar, lngLat: [72.827, 19.103] },
   { id: "dreamland", name: "Dreamland Apartment", area: "Khar", status: "delivered", image: dreamland, lngLat: [72.836, 19.071] },
 ];
 
-// North Garden City on the map: one place standing for its residences, at their middle
-const NGC_MEMBERS = PROJECTS.filter((p) => p.group === "ngc");
-const mid = (i) => NGC_MEMBERS.reduce((t, p) => t + p.lngLat[i], 0) / NGC_MEMBERS.length;
-export const NORTH_GARDEN_CITY = {
-  id: "ngc",
-  name: "North Garden City",
-  area: "Mira Road",
-  status: "delivered",
-  image: northBarcelona,
-  lngLat: [mid(0), mid(1)],
-  members: NGC_MEMBERS,
-};
-
-// What the map pins: every project, except North Garden City's residences, which share the
-// one North Garden City pin
-export const MAP_PLACES = [...PROJECTS.filter((p) => !p.group), NORTH_GARDEN_CITY];
-// the map place a project is found at (its own pin, or North Garden City's)
-export const placeOf = (id) => {
-  const p = PROJECTS.find((x) => x.id === id);
-  return p?.group === "ngc" ? NORTH_GARDEN_CITY : MAP_PLACES.find((x) => x.id === id) ?? null;
-};
+// What the map pins: every project on its own pin, North Garden City's residences included
+// (pins close together gather into a numbered circle that opens up on a click)
+export const MAP_PLACES = PROJECTS;
+// the map place a project is found at (its own pin)
+export const placeOf = (id) => MAP_PLACES.find((x) => x.id === id) ?? null;
 
 // each status's projects, as fixed lists (the same array every time, so a slideshow of one
 // doesn't restart when the page re-renders)
