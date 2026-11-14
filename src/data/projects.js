@@ -28,8 +28,8 @@ import unityTower from "../assets/Deliver project/Unity Tower - 1080x1080.jpg";
 // Origins, Icons 71, North Imperial Greens, JP Connect). North West~End and the delivered
 // projects are still APPROXIMATE — each in its area — until their links come in, EXCEPT the
 // North Garden City residences, whose pins come from the listing sites (houssed.com and
-// squareyards.com) and are good to roughly a block. JP Eminence is the one still invented:
-// no Mira Road listing for it was found (Square Yards puts a JP Eminence in Andheri West).
+// squareyards.com) and are good to roughly a block. JP Eminence's pin is EXACT, from the
+// client: it stands in Andheri West, not Mira Road.
 
 export const STATUS = {
   ongoing: { label: "Ongoing", plural: "Ongoing Projects" },
@@ -51,7 +51,7 @@ export const PROJECTS = [
   { id: "north-alexa", name: "North Alexa", area: "Mira Road", status: "delivered", image: northAlexa, lngLat: [72.886230, 19.282859] },
   { id: "north-aviva", name: "North Aviva", area: "Mira Road", status: "delivered", image: northAviva, lngLat: [72.885171, 19.280928] },
   { id: "north-imperia", name: "North Imperia", area: "Mira Road", status: "delivered", image: northImperia, lngLat: [72.883438, 19.279896] },
-  { id: "jp-eminence", name: "JP Eminence", area: "Mira Road", status: "delivered", image: jpEminence, lngLat: [72.88350, 19.28250] },
+  { id: "jp-eminence", name: "JP Eminence", area: "Andheri West", status: "delivered", image: jpEminence, lngLat: [72.8382248976406, 19.12668555010279] },
   { id: "north-euphoria", name: "North Euphoria", area: "Mira Road", status: "delivered", image: euphoria, lngLat: [72.8878655227819,19.28039627166924, ] },
   { id: "north-elara", name: "North Elara", area: "Mira Road", status: "delivered", image: elara, lngLat: [ 72.88790049024803,19.282291120947217,] },
   { id: "north-atria", name: "North Atria", area: "Mira Road", status: "delivered", image: atria, lngLat: [72.886807, 19.28198] },
