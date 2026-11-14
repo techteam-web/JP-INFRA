@@ -253,7 +253,7 @@ function ZoomBox({ children, label }) {
 // lights on hover; the chosen one is red; sold ones are shaded and on-hold ones dashed;
 // homes outside the filter fade back. Homes in compare carry a red tick.
 // Every home also carries an eye, out in the sheet's margin: it opens the view from that home.
-function WingPlan({ wing, selectedId, compareIds = [], match, onPick }) {
+function WingPlan({ wing, selectedId, compareIds = [], match, onPick, onPeek }) {
   const w = WING_BY_ID[wing];
   const units = unitsIn(wing);
   const { floor, showView } = useContext(FloorCtx);
@@ -261,7 +261,13 @@ function WingPlan({ wing, selectedId, compareIds = [], match, onPick }) {
   return (
     <>
       <img src={w.plan} alt={`Wing ${wing}, floor ${floor} plan`} draggable={false} className="absolute inset-0 h-full w-full object-contain" />
-      <svg viewBox={`0 0 ${PLAN_W} ${PLAN_H}`} className="absolute inset-0 h-full w-full" role="group" aria-label={`Wing ${wing}: homes`}>
+      <svg
+        viewBox={`0 0 ${PLAN_W} ${PLAN_H}`}
+        className="absolute inset-0 h-full w-full"
+        role="group"
+        aria-label={`Wing ${wing}: homes`}
+        onPointerLeave={() => onPeek?.(null)}
+      >
         {units.map((u) => {
           const on = u.id === selectedId;
           const compared = compareIds.includes(u.id);
@@ -280,6 +286,10 @@ function WingPlan({ wing, selectedId, compareIds = [], match, onPick }) {
               aria-pressed={on}
               onClick={pick}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick())}
+              onPointerEnter={(e) => e.pointerType === "mouse" && onPeek?.({ unit: u, x: e.clientX, y: e.clientY })}
+              onPointerMove={(e) => e.pointerType === "mouse" && onPeek?.({ unit: u, x: e.clientX, y: e.clientY })}
+              onPointerLeave={() => onPeek?.(null)}
+              onPointerDown={() => onPeek?.(null)}
               strokeDasharray={hold && !on && !compared ? "8 6" : undefined}
               className={`cursor-pointer outline-none transition-[fill,stroke] duration-200 ${
                 on
@@ -339,6 +349,39 @@ function WingPlan({ wing, selectedId, compareIds = [], match, onPick }) {
         ))}
       </svg>
     </>
+  );
+}
+
+// The home's own plan, popped up beside the cursor while it rests on that home's outline on
+// the wing plan: the plan itself, with the home's name, type, carpet area and availability.
+// It sits outside the zoom box, so it keeps its size however far the plan is zoomed in.
+const PEEK_W = 232; // the card's width
+const PEEK_H = 214; // and its height, so it can be kept inside the sheet
+function UnitPeek({ peek, stage, floor }) {
+  const { unit } = peek;
+  // beside the cursor, flipped to the other side (and nudged) rather than spilling off the sheet
+  const gap = 18;
+  const clamp = (v, max) => Math.min(Math.max(v, 8), Math.max(8, max - 8));
+  const x = peek.x + gap + PEEK_W > stage.w ? peek.x - gap - PEEK_W : peek.x + gap;
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute z-20 overflow-hidden rounded-xl border border-white/15 bg-navy-950/95 shadow-premium backdrop-blur-sm"
+      style={{ width: PEEK_W, left: clamp(x, stage.w - PEEK_W), top: clamp(peek.y - PEEK_H / 2, stage.h - PEEK_H) }}
+    >
+      <div className="relative h-[150px] bg-white">
+        <img src={unit.image} alt="" className="absolute inset-0 h-full w-full object-contain p-2" />
+      </div>
+      <div className="flex flex-col gap-1 p-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white">{unit.id}</span>
+          <StatusBadge status={unit.status} />
+        </div>
+        <span className="text-[10px] text-white/60">
+          {typeName(unit)} · <span className="font-semibold text-white/85">{sqft(unit.carpet)}</span> carpet · Floor {pad(floor)}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -496,6 +539,13 @@ function PlanTab({ wing, setWing, view, setView, selectedId, setSelectedId, comp
   const inCompare = Object.fromEntries(WING_IDS.map((w) => [w, compareIds.filter((id) => UNIT_BY_ID.get(id)?.wing === w).length]));
   const showHome = view === "Home" && !!unit;
   const planRef = useRef(null);
+  const stageRef = useRef(null);
+  // the home the cursor rests on, on the wing plan, and where it rests (in the sheet's own box)
+  const [peek, setPeek] = useState(null);
+  const onPeek = (p) => {
+    const r = stageRef.current?.getBoundingClientRect();
+    setPeek(p && r ? { unit: p.unit, x: p.x - r.left, y: p.y - r.top } : null);
+  };
   const area = useSize(planRef);
   const homeRatio = useImageRatio(showHome ? unit.image : null);
   const box = fitBox(area.w, area.h, showHome ? homeRatio : PLAN_W / PLAN_H);
@@ -549,7 +599,7 @@ function PlanTab({ wing, setWing, view, setView, selectedId, setSelectedId, comp
         {/* the plan takes whatever height is left, its sheet cut to the drawing's own shape */}
         <div ref={planRef} className="relative mt-3 flex min-h-0 flex-1 items-center justify-center short:mt-2">
           {box && (
-            <div className="relative" style={{ width: box.width, height: box.height }}>
+            <div ref={stageRef} className="relative" style={{ width: box.width, height: box.height }}>
               {showHome ? (
                 <ZoomBox key={unit.id} label={`${unit.id} plan`}>
                   <img src={unit.image} alt={`Home ${unit.id} plan`} draggable={false} className="absolute inset-0 h-full w-full object-contain" />
@@ -567,9 +617,11 @@ function PlanTab({ wing, setWing, view, setView, selectedId, setSelectedId, comp
                       setSelectedId(next);
                       setView(next ? "Home" : "Floor");
                     }}
+                    onPeek={onPeek}
                   />
                 </ZoomBox>
               )}
+              {!showHome && peek && <UnitPeek peek={peek} stage={{ w: box.width, h: box.height }} floor={floor} />}
             </div>
           )}
         </div>
