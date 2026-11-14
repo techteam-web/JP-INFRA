@@ -216,7 +216,7 @@ function AmenityList({ onPick }) {
               id="amenity-list-title"
               className="whitespace-nowrap font-display text-[clamp(2rem,5.2vh,4.75rem)] uppercase leading-none text-white short:text-3xl"
             >
-              All <span className="text-red-600">Amenities</span>
+              Modern <span className="text-red-600">lifestyle amenities</span>
             </h1>
           </div>
         </div>
