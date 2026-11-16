@@ -23,13 +23,13 @@ import northBarcelona from "../assets/Deliver project/North Barcelona - 1080x108
 import northImperia from "../assets/Deliver project/North Imperia - 1080x1080.jpg";
 import unityTower from "../assets/Deliver project/Unity Tower - 1080x1080.jpg";
 
-// Map pins (`lngLat`, [longitude, latitude]): the ongoing projects are EXACT, from the
-// client's Google Maps links (The Palace, Codename StarLife, JP Parkway, Codename Matunga
-// Origins, Icons 71, North Imperial Greens, JP Connect). North West~End and the delivered
-// projects are still APPROXIMATE — each in its area — until their links come in, EXCEPT the
-// North Garden City residences, whose pins come from the listing sites (houssed.com and
-// squareyards.com) and are good to roughly a block. JP Eminence's pin is EXACT, from the
-// client: it stands in Andheri West, not Mira Road.
+// Map pins (`lngLat`, [longitude, latitude]): EVERY ongoing project is EXACT, from the
+// client (The Palace, Codename StarLife, JP Parkway, Codename Matunga Origins, Icons 71,
+// North Imperial Greens, JP Connect, North West~End). The delivered projects are still
+// APPROXIMATE — each in its area — until their links come in, EXCEPT the North Garden City
+// residences, whose pins come from the listing sites (houssed.com and squareyards.com) and
+// are good to roughly a block, and JP Eminence, whose pin is EXACT, from the client: it
+// stands in Andheri West, not Mira Road.
 
 export const STATUS = {
   ongoing: { label: "Ongoing", plural: "Ongoing Projects" },
@@ -39,13 +39,13 @@ export const STATUS = {
 // in the client's order
 export const PROJECTS = [
   { id: "jp-connect", name: "JP Connect", area: "Mira Road", status: "ongoing", image: jpConnect, lngLat: [72.885713, 19.282896] },
-  { id: "icons-71", name: "Icons 71", area: "Chembur", status: "ongoing", image: icons71, lngLat: [72.906086, 19.049311] },
+  { id: "icons-71", name: "Icons 71", area: "Chembur", status: "ongoing", image: icons71, lngLat: [72.9127637775646, 19.05015119280409] },
   { id: "matunga-origins", name: "Codename Matunga Origins", area: "Matunga", status: "ongoing", image: matungaOrigins, lngLat: [72.852761, 19.031491] },
   { id: "the-palace", name: "The Palace", area: "Mira Road", status: "ongoing", image: thePalace, lngLat: [72.8875360, 19.2792636] },
   { id: "starlife", name: "Codename StarLife", area: "Mira Road", status: "ongoing", image: starLife, lngLat: [72.886434, 19.280054] },
-  { id: "north-west-end", name: "North West~End", area: "Bhayander", status: "ongoing", image: northWestEnd, lngLat: [72.846, 19.301] },
-  { id: "north-imperial-greens", name: "North Imperial Greens", area: "Thane", status: "ongoing", image: imperialGreens, lngLat: [72.959040, 19.270215] },
-  { id: "jp-parkway", name: "JP Parkway", area: "Andheri", status: "ongoing", image: parkway, lngLat: [72.858019, 19.137503] },
+  { id: "north-west-end", name: "North West~End", area: "Bhayander", status: "ongoing", image: northWestEnd, lngLat: [72.84370000629691, 19.29513317102425] },
+  { id: "north-imperial-greens", name: "North Imperial Greens", area: "Thane", status: "ongoing", image: imperialGreens, lngLat: [72.9610601479263, 19.2664896291952] },
+  { id: "jp-parkway", name: "JP Parkway", area: "Andheri", status: "ongoing", image: parkway, lngLat: [72.85817894402817, 19.13512998501199] },
 
   { id: "north-barcelona", name: "North Barcelona", area: "Mira Road", status: "delivered", image: northBarcelona, lngLat: [72.886370, 19.284069] },
   { id: "north-alexa", name: "North Alexa", area: "Mira Road", status: "delivered", image: northAlexa, lngLat: [72.886230, 19.282859] },
