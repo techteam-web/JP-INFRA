@@ -620,7 +620,6 @@ export default function Location({ label, active, onBack }) {
               >
                 <span className="jp-loc-item-n">{String(i + 1).padStart(2, '0')}</span>
                 <span className="jp-loc-item-name">{place.name}</span>
-                <span className="jp-loc-item-km">{place.lngLat ? `${(ROUTES[place.name]?.km ?? km(PROJECT.lngLat, place.lngLat)).toFixed(1)} km` : ''}</span>
               </button>
             </li>
           ))}

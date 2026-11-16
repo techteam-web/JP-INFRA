@@ -756,18 +756,6 @@ html.jp-lock #home { position: fixed !important; inset: 0 !important; width: 100
 .jp-loc-item[aria-pressed="true"] .jp-loc-item-n {
   color: var(--color-red-600);
 }
-.jp-loc-item-km {
-  flex: none;
-  font-family: var(--font-body);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
-}
-.jp-loc-item[aria-pressed="true"] .jp-loc-item-km {
-  color: var(--color-red-500);
-}
 
 @media (min-width: 1024px) {
   .jp-loc-panel {
