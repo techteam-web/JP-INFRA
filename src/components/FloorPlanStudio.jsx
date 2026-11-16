@@ -40,16 +40,15 @@ const typeName = (u) => (u.code ? `${u.type} · ${u.code}` : u.type);
 const AREA_STEP = 10;
 const AREA_MIN = Math.floor(Math.min(...UNITS.map((u) => u.carpet)) / AREA_STEP) * AREA_STEP;
 const AREA_MAX = Math.ceil(Math.max(...UNITS.map((u) => u.carpet)) / AREA_STEP) * AREA_STEP;
-const DEFAULT_FILTERS = { wing: "All", types: [], min: AREA_MIN, max: AREA_MAX, availableOnly: false };
+const DEFAULT_FILTERS = { wing: "All", types: [], min: AREA_MIN, max: AREA_MAX };
 const isDefault = (f) => JSON.stringify(f) === JSON.stringify(DEFAULT_FILTERS);
 const activeCount = (f) =>
-  (f.wing !== "All") + (f.types.length > 0) + (f.min !== AREA_MIN || f.max !== AREA_MAX) + f.availableOnly;
+  (f.wing !== "All") + (f.types.length > 0) + (f.min !== AREA_MIN || f.max !== AREA_MAX);
 const matcher = (f) => (u) =>
   (f.wing === "All" || u.wing === f.wing) &&
   (!f.types.length || f.types.includes(u.type)) &&
   u.carpet >= f.min &&
-  u.carpet <= f.max &&
-  (!f.availableOnly || u.status === "Available");
+  u.carpet <= f.max;
 const SORTS = {
   wing: { label: "Wing order", by: (a, b) => a.id.localeCompare(b.id) },
   small: { label: "Size: small first", by: (a, b) => a.carpet - b.carpet || a.id.localeCompare(b.id) },
@@ -127,20 +126,6 @@ function Segmented({ value, options, onChange, label, disabled = [], badges = {}
         </button>
       ))}
     </div>
-  );
-}
-
-function StatusBadge({ status }) {
-  const tone =
-    status === "Available"
-      ? "border-emerald-400/50 text-emerald-300"
-      : status === "On Hold"
-        ? "border-white/35 text-white/70"
-        : "border-white/15 text-white/40";
-  return (
-    <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.18em] sm:text-[9px] ${tone}`}>
-      {status}
-    </span>
   );
 }
 
@@ -250,8 +235,8 @@ function ZoomBox({ children, label }) {
 // ---- The plan, with its homes ------------------------------------------------------------------
 
 // The wing's plan with every home's outline over it, in the plan's own drawing space. A home
-// lights on hover; the chosen one is red; sold ones are shaded and on-hold ones dashed;
-// homes outside the filter fade back. Homes in compare carry a red tick.
+// lights on hover; the chosen one is red; homes outside the filter fade back. Homes in
+// compare carry a red tick.
 // Every home also carries an eye, out in the sheet's margin: it opens the view from that home.
 function WingPlan({ wing, selectedId, compareIds = [], match, onPick, onPeek }) {
   const w = WING_BY_ID[wing];
@@ -272,8 +257,6 @@ function WingPlan({ wing, selectedId, compareIds = [], match, onPick, onPeek }) 
           const on = u.id === selectedId;
           const compared = compareIds.includes(u.id);
           const dim = match && !match(u);
-          const sold = u.status === "Sold";
-          const hold = u.status === "On Hold";
           const pick = () => onPick(u.id);
           return (
             <path
@@ -282,7 +265,7 @@ function WingPlan({ wing, selectedId, compareIds = [], match, onPick, onPeek }) 
               d={u.shape}
               role="button"
               tabIndex={0}
-              aria-label={`Home ${u.id}, ${u.type}, ${u.status}`}
+              aria-label={`Home ${u.id}, ${u.type}`}
               aria-pressed={on}
               onClick={pick}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick())}
@@ -290,17 +273,14 @@ function WingPlan({ wing, selectedId, compareIds = [], match, onPick, onPeek }) 
               onPointerMove={(e) => e.pointerType === "mouse" && onPeek?.({ unit: u, x: e.clientX, y: e.clientY })}
               onPointerLeave={() => onPeek?.(null)}
               onPointerDown={() => onPeek?.(null)}
-              strokeDasharray={hold && !on && !compared ? "8 6" : undefined}
               className={`cursor-pointer outline-none transition-[fill,stroke] duration-200 ${
                 on
                   ? "fill-red-600/30 stroke-red-600 [stroke-width:3]"
                   : compared
                     ? "fill-red-600/25 stroke-red-600 [stroke-width:2.5] hover:fill-red-600/35"
                     : dim
-                    ? "fill-white/75 stroke-transparent"
-                    : sold
-                      ? "fill-navy-950/35 stroke-navy-950/40 [stroke-width:1.2] hover:fill-navy-950/45"
-                      : `fill-transparent ${hold ? "stroke-navy-950/60" : "stroke-transparent"} [stroke-width:1.5] hover:fill-red-600/15 hover:stroke-red-600 focus-visible:fill-red-600/15 focus-visible:stroke-red-600`
+                      ? "fill-white/75 stroke-transparent"
+                      : "fill-transparent stroke-transparent [stroke-width:1.5] hover:fill-red-600/15 hover:stroke-red-600 focus-visible:fill-red-600/15 focus-visible:stroke-red-600"
               }`}
             />
           );
@@ -373,10 +353,7 @@ function UnitPeek({ peek, stage, floor }) {
         <img src={unit.image} alt="" className="absolute inset-0 h-full w-full object-contain p-2" />
       </div>
       <div className="flex flex-col gap-1 p-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white">{unit.id}</span>
-          <StatusBadge status={unit.status} />
-        </div>
+        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white">{unit.id}</span>
         <span className="text-[10px] text-white/60">
           {typeName(unit)} · <span className="font-semibold text-white/85">{sqft(unit.carpet)}</span> carpet · Floor {pad(floor)}
         </span>
@@ -386,17 +363,14 @@ function UnitPeek({ peek, stage, floor }) {
 }
 
 function Legend() {
-  const item = (cls, text, dashed) => (
+  const item = (cls, text) => (
     <span className="flex items-center gap-1.5">
-      <span className={`h-2.5 w-4 rounded-sm border ${cls} ${dashed ? "border-dashed" : ""}`} />
+      <span className={`h-2.5 w-4 rounded-sm border ${cls}`} />
       {text}
     </span>
   );
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/60 sm:text-[10px]">
-      {item("border-white/60 bg-white", "Available")}
-      {item("border-white/60 bg-white", "On hold", true)}
-      {item("border-white/30 bg-white/40", "Sold")}
       {item("border-red-600 bg-red-600/40", "Selected")}
       <span className="flex items-center gap-1.5">
         <span className="grid h-3.5 w-3.5 place-items-center rounded-full bg-red-600">
@@ -816,10 +790,6 @@ function FilterPanel({ filters, set, count, sort, setSort, onDone, compareIds, t
       )}
       {group("Carpet area", <div className="w-full"><AreaRange min={filters.min} max={filters.max} onChange={set} /></div>)}
       <div className="flex flex-col gap-2.5 border-t border-white/10 pt-[min(12px,1.6vh)] short:pt-1.5">
-        <label className="flex cursor-pointer items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/80 sm:text-[11px]">
-          <input type="checkbox" checked={filters.availableOnly} onChange={(e) => set({ availableOnly: e.target.checked })} className="h-4 w-4 accent-red-600" />
-          Available only
-        </label>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <button
             type="button"
@@ -847,7 +817,7 @@ function FilterPanel({ filters, set, count, sort, setSort, onDone, compareIds, t
   );
 }
 
-// A home in the results: its plan, a tick box to compare it, its status, its name and size
+// A home in the results: its plan, a tick box to compare it, its name and size
 function UnitCard({ u, planH, inCompare, compareFull, toggleCompare, showOnPlan }) {
   const { floor } = useContext(FloorCtx);
   const locked = !inCompare && compareFull;
@@ -881,9 +851,6 @@ function UnitCard({ u, planH, inCompare, compareFull, toggleCompare, showOnPlan 
         <input type="checkbox" className="sr-only" checked={inCompare} disabled={locked} onChange={() => toggleCompare(u.id)} aria-label={`Compare ${u.id}`} />
         <Icon d={ICONS.check} className="h-3.5 w-3.5" />
       </label>
-      <span className="absolute right-2.5 top-2.5 rounded-full bg-navy-950/90 p-0.5">
-        <StatusBadge status={u.status} />
-      </span>
       <div className="flex min-w-0 flex-col justify-center px-3.5" style={{ height: CARD_TEXT_H }}>
         <p className="truncate font-display text-xl leading-none sm:text-2xl">
           {u.id} <span className="text-white/35">—</span> {u.type}
@@ -908,7 +875,6 @@ function FilterTab({ filters, setFilters, compareIds, toggleCompare, clearCompar
     setPage(0);
   };
   const results = UNITS.filter(matcher(filters)).sort(SORTS[sort].by);
-  const available = results.filter((u) => u.status === "Available").length;
   const full = compareIds.length >= MAX_COMPARE;
   const { cols, rows, planH } = cardGrid(w, h, results.length);
   const perPage = cols * rows;
@@ -952,7 +918,6 @@ function FilterTab({ filters, setFilters, compareIds, toggleCompare, clearCompar
             <p className="mt-1 font-display text-3xl uppercase leading-none text-white sm:text-4xl short:mt-0 short:text-2xl">
               {results.length} {results.length === 1 ? "residence" : "residences"}
             </p>
-            <p className="mt-1 text-[11px] text-white/45">{available} available</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -1095,18 +1060,13 @@ function CompareHead({ unit, action, onImage }) {
   const box = fitBox(w, h, ratio);
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/12 bg-white/[0.03] transition-colors hover:border-white/30">
-      {/* the name and the status share one line, so the plan below keeps the height */}
+      {/* the name and its action share one line, so the plan below keeps the height */}
       <div className="flex shrink-0 items-center justify-between gap-2 px-2.5 pt-2.5 short:px-2 short:pt-2">
         <div className="flex min-w-0 items-baseline gap-2">
           <p className="truncate font-display text-lg leading-none sm:text-2xl short:text-base">{unit.id}</p>
           <span className="truncate text-[10px] text-white/50">{typeName(unit)}</span>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className="short:hidden">
-            <StatusBadge status={unit.status} />
-          </span>
-          {action}
-        </div>
+        <div className="flex shrink-0 items-center gap-1.5">{action}</div>
       </div>
       {/* the plan: measured padding-free, so the sheet fits the room exactly */}
       <div className="min-h-0 flex-1 px-2.5 pb-2.5 pt-1.5 short:hidden">
@@ -1176,7 +1136,6 @@ function UnitsTab({ compareIds, toggleCompare, goTo, showOnPlan, panel, setPanel
     ["Carpet (metric)", (u) => sqm(u.carpet), (u) => u.carpet],
     ["Per bedroom", (u) => sqft(Math.round(u.carpet / u.bed)), (u) => Math.round(u.carpet / u.bed)],
     ["Against largest", (u) => (u.carpet === largest ? "Largest" : `−${sqft(largest - u.carpet)}`), (u) => u.carpet],
-    ["Status", (u) => u.status],
   ];
   return (
     <div className="flex h-full min-h-0 flex-col">

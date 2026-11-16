@@ -3,9 +3,10 @@
 // src/assets/floor plan All/). Each wing's SVG holds every home's outline on its floor plan,
 // so the plan itself is what you pick homes on.
 //
-// The homes, their types and their plans are real. Their sizes (carpet area) and
-// availability are SAMPLE figures until the client's unit list arrives; while SAMPLE_DATA
-// is true the screen says so.
+// The homes, their types and their plans are real. Their sizes (carpet area) are SAMPLE
+// figures until the client's unit list arrives; while SAMPLE_DATA is true the screen says
+// so. Availability (available / sold / on hold) is not shown at all: the client's unit list
+// is the only place it could come from, so the screen never guesses at it.
 import a1Plan from "../assets/floor-plans/A1-8th-floor.webp";
 import a2Plan from "../assets/floor-plans/A2-8th-floor.webp";
 import a1Outlines from "../assets/floor-plans/A1-8th-floor.svg?raw";
@@ -105,9 +106,6 @@ const HOMES = [
   { id: "A2-05", type: "2 BHK", code: "R9", bed: 2, carpet: 750, image: a205 },
 ];
 
-// Sample availability: a fixed pattern (the same on every visit)
-const SAMPLE_STATUS = { "A1-02": "Sold", "A1-05": "On Hold", "A2-02": "Sold", "A2-04": "Sold" };
-
 // Which side of the building a home is on, which is the view its eye opens on: the plans'
 // bottom edge is the front (the mountains), their top edge the back. A home's eye sits on its
 // side, so it decides. A home can name one by hand with `faces`.
@@ -121,7 +119,6 @@ export const UNITS = HOMES.map((h) => {
     ...h,
     wing: h.id.slice(0, 2),
     floor: PLAN_FLOOR,
-    status: SAMPLE_STATUS[h.id] ?? "Available",
     shape,
     centre: [box.x + box.width / 2, box.y + box.height / 2],
     marker,
